@@ -27,7 +27,6 @@ namespace ecs::component
         {
             componentId_t componentTypeId = INVALID_COMPONENT_ID;
             bufferSize_t componentSize = 0;
-            void(*destructor)(void*) = nullptr;
 
             [[nodiscard]] inline StackHead* next() { return reinterpret_cast<StackHead*>(reinterpret_cast<byte*>(this) + sizeof(StackHead) + componentSize); }
         };

@@ -42,7 +42,7 @@ public:
     static constexpr componentId_t componentId = ComponentsType::DESTRUCTOR;
     bool& testBool1;
     _TestDestructor1(bool& a_testBool) : testBool1(a_testBool) {}
-    virtual ~_TestDestructor1() noexcept(false) { testBool1 = true; }
+    ~_TestDestructor1() override { testBool1 = true; }
 };
 
 class _TestDestructor2 : public _TestDestructor1
@@ -50,7 +50,7 @@ class _TestDestructor2 : public _TestDestructor1
     public:
         bool& testBool2;
         _TestDestructor2(bool& a_testBool1, bool& a_testBool2) : _TestDestructor1(a_testBool1), testBool2(a_testBool2) {}
-        virtual ~_TestDestructor2() noexcept(false) override { testBool2 = true; }
+        ~_TestDestructor2() override { testBool2 = true; }
 };
 
 TEST(ComponentsTest, Destructor)

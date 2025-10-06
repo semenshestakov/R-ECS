@@ -14,6 +14,7 @@ namespace ecs::component
     {
     public:
         static constexpr componentId_t componentId = INVALID_COMPONENT_ID;
+        virtual ~BaseComponent() = default;
     };
 
 }

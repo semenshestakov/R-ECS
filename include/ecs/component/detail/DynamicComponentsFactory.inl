@@ -33,8 +33,7 @@ namespace ecs::component
         {
             if (head->componentTypeId != INVALID_COMPONENT_ID)
             {
-                if (head->destructor)
-                    head->destructor(headByte + s_sizeOfStackHead);
+                reinterpret_cast<BaseComponent*>(headByte + s_sizeOfStackHead)->~BaseComponent();
             }
             headByte = reinterpret_cast<byte*>(head->next());
             head = head->next();
@@ -117,7 +116,6 @@ namespace ecs::component
 
         currentHead->componentTypeId = componentId;
         currentHead->componentSize = sizeOfClass;
-        currentHead->destructor = [](void* ptr) { static_cast<CLASS*>(ptr)->~CLASS(); };
 
         new (reinterpret_cast<byte*>(instance) + sizeOfClass) StackHead {};
     }

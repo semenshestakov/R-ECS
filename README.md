@@ -15,14 +15,14 @@ replicated across multiple clients and one server.
 | Roadmap / Feature               | Version  | Tests |
 |:--------------------------------|:--------:|:-----:|
 | DynamicComponentsFactory        | v0.1.0 ✅ |   ✅   |
-| BaseComponent                   | v0.1.0 ✅ |   ✅   |
-| ComponentsCollection            | v0.1.5 ❌ |   ❌   |
-| EntitiesFactory                 | v0.2.0 ❌ |   ❌   |
-| BindSystems                     | v0.2.5 ❌ |   ❌   |
-| custom-UDP                      | v0.3.0 ❌ |   ❌   |
-| ReplicationComponentsFactory    | v0.4.0 ❌ |   ❌   |
-| ReplicationBaseComponent        | v0.5.0 ❌ |   ❌   |
-| ReplicationAttrT                | v0.6.0 ❌ |   ❌   |
-| ReplicationEntitiesFactory      | v0.7.0 ❌ |   ❌   |
+| StaticComponentsFactory         | v0.2.0 ✅ |   ❌   |
+| ComponentsCollection            | v0.2.5 ❌ |   ❌   |
+| EntitiesFactory                 | v0.3.0 ❌ |   ❌   |
+| BindSystems                     | v0.4.5 ❌ |   ❌   |
+| custom-UDP                      | v0.5.0 ❌ |   ❌   |
+| ReplicationComponentsFactory    | v0.6.0 ❌ |   ❌   |
+| ReplicationBaseComponent        | v0.7.0 ❌ |   ❌   |
+| ReplicationAttrT                | v0.8.0 ❌ |   ❌   |
+| ReplicationEntitiesFactory      | v0.9.0 ❌ |   ❌   |
 | = = = = = = release = = = = = = | v1.0.0 ❌ |   ❌   |
 

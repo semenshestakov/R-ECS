@@ -1,4 +1,6 @@
 #pragma once
+#include <type_traits>
+
 
 namespace ecs::component
 {
@@ -9,6 +11,9 @@ namespace ecs::component
 
     // Special value indicating an invalid or uninitialized component ID
     constexpr componentId_t INVALID_COMPONENT_ID = 0;
+    constexpr componentId_t MAX_COMPONENT_ID = ~0;
+    constexpr unsigned int OVERFLOW_MAX_COMPONENT_ID = static_cast<unsigned int>(MAX_COMPONENT_ID) + 1;
+
 
     /**
      * @brief Base class for all ECS components
@@ -25,7 +30,20 @@ namespace ecs::component
 
         /// Virtual destructor to ensure proper cleanup of derived components
         virtual ~BaseComponent() = default;
+
+        struct ConditionArgs {};
+        /**
+         * @brief Condition for component creation that always return bool
+         * @param args Component constructor arguments
+         * @return Always true - component will always be created
+         *
+         * Default creation condition that unconditionally allows component instantiation.
+         */
+        static bool condition(const ConditionArgs args) { return true; }
+
+        using conditionFunction_t = bool(*)(const ConditionArgs*);
     };
+
 
     /**
      * @brief Concept constraining template parameters to BaseComponent derivatives
@@ -33,6 +51,6 @@ namespace ecs::component
      * Ensures type safety by restricting template arguments to classes
      * that inherit from BaseComponent, preventing invalid component types.
      */
-    template<typename T> concept BaseOfComponents = std::is_base_of_v<BaseComponent, T>;
+    template<typename T> concept BaseOfComponents = std::is_base_of_v<BaseComponent, T> && T::componentId != INVALID_COMPONENT_ID;
 
 }

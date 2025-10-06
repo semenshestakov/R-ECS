@@ -1,11 +1,13 @@
 #pragma once
+#include <cstdio>
 #include <cstring>
+#include <exception>
 #include <utility>
 
 namespace ecs::error
 {
 
-    class BaseError
+    class BaseError : public std::exception
     {
     public:
         template<typename... Args>
@@ -18,10 +20,11 @@ namespace ecs::error
         }
         virtual ~BaseError() = default;
 
-        inline const char* what() const noexcept{ return m_message; }
+        [[nodiscard]] const char* what() const noexcept{ return m_message; }
 
     protected:
-        char m_message[256];
+        char m_message[256] {};
+
     };
 
 }

@@ -78,7 +78,7 @@ namespace ecs::component
          * @tparam COMPONENT Component type to add (must inherit from BaseComponent)
          * @tparam Args Argument types for component constructor
          * @param args Arguments to forward to component constructor
-         * @throw ComponentError if component already exists or allocation fails
+         * @throw BaseComponentError if component already exists or allocation fails
          *
          * Constructs a new component in the factory's buffer. Automatically
          * resizes the buffer if necessary. Each component is prefixed with
@@ -90,7 +90,7 @@ namespace ecs::component
          * @brief Get a component by type
          * @tparam COMPONENT Component type to retrieve
          * @return Pointer to the component, or nullptr if not found
-         * @throw ComponentError if found component has insufficient size
+         * @throw BaseComponentError if found component has insufficient size
          *
          * Looks up a component by its type ID. Returns nullptr if the
          * component doesn't exist in the factory.

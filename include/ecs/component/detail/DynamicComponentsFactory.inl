@@ -69,7 +69,7 @@ namespace ecs::component
         static constexpr componentId_t componentId = getComponentsTypeId<COMPONENT>();
 
         if (findStackHeadById(componentId) != nullptr)
-            throw ComponentError("[add] findStackHeadById(componentId) != nullptr");
+            throw error::BaseComponentError("[add] findStackHeadById(componentId) != nullptr");
 
         // resize if need
         {
@@ -90,7 +90,7 @@ namespace ecs::component
         {
             StackHead* lastComponentHeadStack = getLastHead();
             if (lastComponentHeadStack == nullptr)
-                throw ComponentError("[add] lastComponentHeadStack == nullptr");
+                throw error::BaseComponentError("[add] lastComponentHeadStack == nullptr");
 
             if (lastComponentHeadStack->componentSize == 0)  // fist add
             {
@@ -104,13 +104,13 @@ namespace ecs::component
 
         // validation
         if (currentHead->componentSize != 0)
-            throw ComponentError("[add] componentSize(%u) != 0", currentHead->componentSize);
+            throw error::BaseComponentError("[add] componentSize(%u) != 0", currentHead->componentSize);
 
         if (currentHead->componentTypeId != INVALID_COMPONENT_ID)
-            throw ComponentError("[add] componentTypeId(%u) != INVALID_COMPONENT_ID", currentHead->componentTypeId);
+            throw error::BaseComponentError("[add] componentTypeId(%u) != INVALID_COMPONENT_ID", currentHead->componentTypeId);
 
         if (reinterpret_cast<byte*>(currentHead) + (sizeOfClass + s_sizeOfStackHead * 2) > m_buffer + m_bufferCapacity)
-            throw ComponentError("[add] newSize > capacity; sizeOfClass: %u, bufferCapacity: %u", sizeOfClass, m_bufferCapacity);
+            throw error::BaseComponentError("[add] newSize > capacity; sizeOfClass: %u, bufferCapacity: %u", sizeOfClass, m_bufferCapacity);
 
         auto* instance = new (reinterpret_cast<byte*>(currentHead) + s_sizeOfStackHead) COMPONENT(std::forward<Args>(args)...);
 
@@ -130,7 +130,7 @@ namespace ecs::component
             return nullptr;
 
         if (finedHead->componentSize < sizeof(COMPONENT))
-            throw ComponentError(
+            throw error::BaseComponentError(
                 "[get] finedHead->componentSize < sizeof(COMPONENT); finedHead.componentTypeId: %u, componentId: %u, className: %s",
                 finedHead->componentTypeId, componentId, typeid(COMPONENT).name()
                 );
@@ -200,7 +200,6 @@ namespace ecs::component
     template <BaseOfComponents COMPONENT>
     constexpr /* static */ componentId_t DynamicComponentsFactory::getComponentsTypeId()
     {
-        static_assert(std::is_base_of_v<BaseComponent, COMPONENT>);
         static_assert(COMPONENT::componentId != INVALID_COMPONENT_ID);
         return COMPONENT::componentId;
     }

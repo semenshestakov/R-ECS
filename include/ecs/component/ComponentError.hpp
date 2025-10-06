@@ -2,20 +2,24 @@
 #include "../utils/BaseError.hpp"
 
 
-namespace ecs::component
+namespace ecs::component::error
 {
 
-    class ComponentError final : public error::BaseError
+    class BaseComponentError : public ecs::error::BaseError
     {
     public:
         template<typename... Args>
-        explicit ComponentError(const char* message, Args&&... args) :
-            error::BaseError(message, std::forward<Args>(args)...)
+        explicit BaseComponentError(const char* message, Args&&... args) :
+            BaseError(message, std::forward<Args>(args)...)
         {
             static constexpr char msgPrefix[] = "ComponentError: ";
             memmove(m_message + strlen(msgPrefix), m_message, strlen(m_message) + 1);
             memcpy(m_message, msgPrefix, strlen(msgPrefix));
         }
     };
+
+    struct InvalidComponentId final : BaseComponentError { using BaseComponentError::BaseComponentError;};
+    struct RepeatComponent final : BaseComponentError { using BaseComponentError::BaseComponentError; };
+    struct InvalidSizeComponents final : BaseComponentError { using BaseComponentError::BaseComponentError; };
 
 }

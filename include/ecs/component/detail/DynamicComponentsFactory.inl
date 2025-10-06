@@ -1,19 +1,19 @@
 #pragma once
 #include <future>
-#include "../ComponentsFactory.hpp"
 #include "../ComponentError.hpp"
+#include "../DynamicComponentsFactory.hpp"
 
 
 namespace ecs::component
 {
 
-    inline ComponentsFactory::ComponentsFactory() :
-        ComponentsFactory(0)
+    inline DynamicComponentsFactory::DynamicComponentsFactory() :
+        DynamicComponentsFactory(0)
     {
 
     }
 
-    inline ComponentsFactory::ComponentsFactory(const bufferSize_t bufferSize) :
+    inline DynamicComponentsFactory::DynamicComponentsFactory(const bufferSize_t bufferSize) :
         m_bufferCapacity(bufferSize)
     {
         if (m_bufferCapacity != 0)
@@ -21,7 +21,7 @@ namespace ecs::component
     }
 
 
-    inline ComponentsFactory::~ComponentsFactory() noexcept
+    inline DynamicComponentsFactory::~DynamicComponentsFactory() noexcept
     {
         if (m_bufferCapacity == 0)
             return;
@@ -33,8 +33,7 @@ namespace ecs::component
         {
             if (head->componentTypeId != INVALID_COMPONENT_ID)
             {
-                if (head->destructor)
-                    head->destructor(headByte + s_sizeOfStackHead);
+                reinterpret_cast<BaseComponent*>(headByte + s_sizeOfStackHead)->~BaseComponent();
             }
             headByte = reinterpret_cast<byte*>(head->next());
             head = head->next();
@@ -44,33 +43,33 @@ namespace ecs::component
         m_buffer = nullptr;
     }
 
-    inline ComponentsFactory::ComponentsFactory(ComponentsFactory&& a_other) noexcept
+    inline DynamicComponentsFactory::DynamicComponentsFactory(DynamicComponentsFactory&& other) noexcept
     {
-        this->swap(a_other);
+        this->swap(other);
     }
 
-    inline ComponentsFactory& ComponentsFactory::operator=(ComponentsFactory&& a_other) noexcept
+    inline DynamicComponentsFactory& DynamicComponentsFactory::operator=(DynamicComponentsFactory&& other) noexcept
     {
-        this->swap(a_other);
+        this->swap(other);
         return *this;
     }
 
     
-    inline void ComponentsFactory::swap(ComponentsFactory& a_other) noexcept
+    inline void DynamicComponentsFactory::swap(DynamicComponentsFactory& other) noexcept
     {
-        std::swap(m_bufferCapacity, a_other.m_bufferCapacity);
-        std::swap(m_buffer, a_other.m_buffer);
+        std::swap(m_bufferCapacity, other.m_bufferCapacity);
+        std::swap(m_buffer, other.m_buffer);
     }
 
 
-    template <class CLASS, typename... Args>
-    void ComponentsFactory::add(Args&& ... args)
+    template <BaseOfComponents COMPONENT, typename... Args>
+    void DynamicComponentsFactory::add(Args&& ... args)
     {
-        static constexpr bufferSize_t sizeOfClass = sizeof(CLASS);
-        static constexpr componentId_t componentId = getComponentsTypeId<CLASS>();
+        static constexpr bufferSize_t sizeOfClass = sizeof(COMPONENT);
+        static constexpr componentId_t componentId = getComponentsTypeId<COMPONENT>();
 
         if (findStackHeadById(componentId) != nullptr)
-            throw ComponentError("[add] findStackHeadById(componentId) != nullptr");
+            throw error::BaseComponentError("[add] findStackHeadById(componentId) != nullptr");
 
         // resize if need
         {
@@ -91,7 +90,7 @@ namespace ecs::component
         {
             StackHead* lastComponentHeadStack = getLastHead();
             if (lastComponentHeadStack == nullptr)
-                throw ComponentError("[add] lastComponentHeadStack == nullptr");
+                throw error::BaseComponentError("[add] lastComponentHeadStack == nullptr");
 
             if (lastComponentHeadStack->componentSize == 0)  // fist add
             {
@@ -105,43 +104,42 @@ namespace ecs::component
 
         // validation
         if (currentHead->componentSize != 0)
-            throw ComponentError("[add] componentSize(%u) != 0", currentHead->componentSize);
+            throw error::BaseComponentError("[add] componentSize(%u) != 0", currentHead->componentSize);
 
         if (currentHead->componentTypeId != INVALID_COMPONENT_ID)
-            throw ComponentError("[add] componentTypeId(%u) != INVALID_COMPONENT_ID", currentHead->componentTypeId);
+            throw error::BaseComponentError("[add] componentTypeId(%u) != INVALID_COMPONENT_ID", currentHead->componentTypeId);
 
         if (reinterpret_cast<byte*>(currentHead) + (sizeOfClass + s_sizeOfStackHead * 2) > m_buffer + m_bufferCapacity)
-            throw ComponentError("[add] newSize > capacity; sizeOfClass: %u, bufferCapacity: %u", sizeOfClass, m_bufferCapacity);
+            throw error::BaseComponentError("[add] newSize > capacity; sizeOfClass: %u, bufferCapacity: %u", sizeOfClass, m_bufferCapacity);
 
-        auto* instance = new (reinterpret_cast<byte*>(currentHead) + s_sizeOfStackHead) CLASS(std::forward<Args>(args)...);
+        auto* instance = new (reinterpret_cast<byte*>(currentHead) + s_sizeOfStackHead) COMPONENT(std::forward<Args>(args)...);
 
         currentHead->componentTypeId = componentId;
         currentHead->componentSize = sizeOfClass;
-        currentHead->destructor = [](void* ptr) { static_cast<CLASS*>(ptr)->~CLASS(); };
 
         new (reinterpret_cast<byte*>(instance) + sizeOfClass) StackHead {};
     }
 
-    template <class CLASS>
-    CLASS* ComponentsFactory::get()
+    template <BaseOfComponents COMPONENT>
+    COMPONENT* DynamicComponentsFactory::get()
     {
-        static constexpr componentId_t componentId = getComponentsTypeId<CLASS>();
+        static constexpr componentId_t componentId = getComponentsTypeId<COMPONENT>();
 
         StackHead* finedHead = findStackHeadById(componentId);
         if (finedHead == nullptr)
             return nullptr;
 
-        if (finedHead->componentSize < sizeof(CLASS))
-            throw ComponentError(
-                "[get] finedHead->componentSize < sizeof(CLASS); finedHead.componentTypeId: %u, componentId: %u, className: %s",
-                finedHead->componentTypeId, componentId, typeid(CLASS).name()
+        if (finedHead->componentSize < sizeof(COMPONENT))
+            throw error::BaseComponentError(
+                "[get] finedHead->componentSize < sizeof(COMPONENT); finedHead.componentTypeId: %u, componentId: %u, className: %s",
+                finedHead->componentTypeId, componentId, typeid(COMPONENT).name()
                 );
 
-        return reinterpret_cast<CLASS*>(reinterpret_cast<byte*>(finedHead) + s_sizeOfStackHead);
+        return reinterpret_cast<COMPONENT*>(reinterpret_cast<byte*>(finedHead) + s_sizeOfStackHead);
     }
 
     // utils
-    inline bool ComponentsFactory::resize(bufferSize_t a_size) noexcept
+    inline bool DynamicComponentsFactory::resize(bufferSize_t a_size) noexcept
     {
         if (a_size <= m_bufferCapacity)
             return false;
@@ -159,7 +157,7 @@ namespace ecs::component
         return true;
     }
 
-    inline ComponentsFactory::StackHead* ComponentsFactory::getLastHead() const noexcept
+    inline DynamicComponentsFactory::StackHead* DynamicComponentsFactory::getLastHead() const noexcept
     {
         if (m_bufferCapacity == 0)
             return nullptr;
@@ -176,9 +174,9 @@ namespace ecs::component
         return stackHead;
     }
 
-    inline ComponentsFactory::StackHead* ComponentsFactory::findStackHeadById(const componentId_t a_id) const noexcept
+    inline DynamicComponentsFactory::StackHead* DynamicComponentsFactory::findStackHeadById(const componentId_t componentId) const noexcept
     {
-        if (m_bufferCapacity == 0 || a_id == 0)
+        if (m_bufferCapacity == 0 || componentId == 0)
             return nullptr;
 
         byte* byteHead = m_buffer;
@@ -186,7 +184,7 @@ namespace ecs::component
 
         while ((byteHead + s_sizeOfStackHead) < (m_buffer + m_bufferCapacity))
         {
-            if (stackHead->componentTypeId == a_id)
+            if (stackHead->componentTypeId == componentId)
                 return stackHead;
 
             if (stackHead->componentSize == 0)
@@ -199,12 +197,11 @@ namespace ecs::component
         return nullptr;
     }
 
-    template <class CLASS>
-    constexpr /* static */ componentId_t ComponentsFactory::getComponentsTypeId()
+    template <BaseOfComponents COMPONENT>
+    constexpr /* static */ componentId_t DynamicComponentsFactory::getComponentsTypeId()
     {
-        static_assert(std::is_base_of_v<BaseComponent, CLASS>);
-        static_assert(CLASS::componentId != INVALID_COMPONENT_ID);
-        return CLASS::componentId;
+        static_assert(COMPONENT::componentId != INVALID_COMPONENT_ID);
+        return COMPONENT::componentId;
     }
 
 }

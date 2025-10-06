@@ -39,7 +39,8 @@ class Position2D_no_inheritance : public BaseComponent
 {
 public:
     static constexpr componentId_t componentId = ComponentsType::POSITION_2D;
-    float x, y;
+    float x {10}, y {12};
+    Position2D_no_inheritance() = default;
     Position2D_no_inheritance(const float x, const float y) : x(x), y(y) {}
 };
 
@@ -48,7 +49,8 @@ class Position3D_no_inheritance : public BaseComponent
 {
 public:
     static constexpr componentId_t componentId = ComponentsType::POSITION_3D;
-    float x, y, z;
+    float x{}, y{}, z{};
+    Position3D_no_inheritance() = default;
     Position3D_no_inheritance(const float x, const float y, const float z) :
         x(x), y(y), z(z)
     {}

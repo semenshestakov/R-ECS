@@ -1,13 +1,14 @@
 #include <gtest/gtest.h>
-#include "ecs/component/ComponentsFactory.hpp"
 #include "components_class.hpp"
+#include "ecs/component/DynamicComponentsFactory.hpp"
 
 using namespace ecs;
+using namespace ecs::component::error;
 
 
-TEST(ComponentsTest, AddGet)
+TEST(DynamicComponentsTest, AddGet)
 {
-    ComponentsFactory factory;
+    DynamicComponentsFactory factory;
     EXPECT_NO_THROW(
         {
             factory.add<Position2D_no_inheritance>(1, 2);
@@ -32,7 +33,7 @@ TEST(ComponentsTest, AddGet)
         {
         factory.add<Position2D_inheritance>(1, 2);
 
-        },ComponentError);
+        }, BaseComponentError);
 }
 
 // TestDestructor
@@ -42,7 +43,7 @@ public:
     static constexpr componentId_t componentId = ComponentsType::DESTRUCTOR;
     bool& testBool1;
     _TestDestructor1(bool& a_testBool) : testBool1(a_testBool) {}
-    virtual ~_TestDestructor1() noexcept(false) { testBool1 = true; }
+    ~_TestDestructor1() override { testBool1 = true; }
 };
 
 class _TestDestructor2 : public _TestDestructor1
@@ -50,14 +51,14 @@ class _TestDestructor2 : public _TestDestructor1
     public:
         bool& testBool2;
         _TestDestructor2(bool& a_testBool1, bool& a_testBool2) : _TestDestructor1(a_testBool1), testBool2(a_testBool2) {}
-        virtual ~_TestDestructor2() noexcept(false) override { testBool2 = true; }
+        ~_TestDestructor2() override { testBool2 = true; }
 };
 
-TEST(ComponentsTest, Destructor)
+TEST(DynamicComponentsTest, Destructor)
 {
     // delete EXPECT_NO_THROW
     EXPECT_NO_THROW({
-        ComponentsFactory* factory = new ComponentsFactory(100);
+        DynamicComponentsFactory* factory = new DynamicComponentsFactory(100);
 
         EXPECT_NO_THROW(
             delete factory
@@ -68,7 +69,7 @@ TEST(ComponentsTest, Destructor)
     EXPECT_NO_THROW({
         bool testBool = false;
 
-        ComponentsFactory* factory = new ComponentsFactory(100);
+        DynamicComponentsFactory* factory = new DynamicComponentsFactory(100);
         factory->add<_TestDestructor1>(testBool);
         delete factory;
 
@@ -80,7 +81,7 @@ TEST(ComponentsTest, Destructor)
         bool testBool1 = false;
         bool testBool2 = false;
 
-        ComponentsFactory* factory = new ComponentsFactory(100);
+        DynamicComponentsFactory* factory = new DynamicComponentsFactory(100);
         factory->add<_TestDestructor2>(testBool1, testBool2);
         delete factory;
 

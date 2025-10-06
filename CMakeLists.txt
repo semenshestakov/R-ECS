@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.0)
 project(R-ECS
-    VERSION 0.1.0
+    VERSION 0.1.1
     DESCRIPTION "Implementation of the Replication-Entities-Components-Systems in C++ using templates and modern language features."
     LANGUAGES CXX
 )

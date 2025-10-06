@@ -3,9 +3,10 @@
 #include "ecs/component/DynamicComponentsFactory.hpp"
 
 using namespace ecs;
+using namespace ecs::component::error;
 
 
-TEST(ComponentsTest, AddGet)
+TEST(DynamicComponentsTest, AddGet)
 {
     DynamicComponentsFactory factory;
     EXPECT_NO_THROW(
@@ -32,7 +33,7 @@ TEST(ComponentsTest, AddGet)
         {
         factory.add<Position2D_inheritance>(1, 2);
 
-        },ComponentError);
+        }, BaseComponentError);
 }
 
 // TestDestructor
@@ -53,7 +54,7 @@ class _TestDestructor2 : public _TestDestructor1
         ~_TestDestructor2() override { testBool2 = true; }
 };
 
-TEST(ComponentsTest, Destructor)
+TEST(DynamicComponentsTest, Destructor)
 {
     // delete EXPECT_NO_THROW
     EXPECT_NO_THROW({

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "../StaticComponents.hpp"
 #include "../ComponentError.hpp"
 
@@ -5,14 +7,17 @@
 namespace ecs::component
 {
 
-    inline StaticComponents::StaticComponents()
-    {
-
-    }
+    inline StaticComponents::StaticComponents() = default;
 
     inline StaticComponents::StaticComponents(const bufferSize_t classBufferSize, const componentId_t maxComponentId)
     {
-        m_buffer = new byte[maxComponentId * sizeof(ComponentInfo) + classBufferSize];
+        m_buffer = newBuffer(classBufferSize, maxComponentId);
+        m_maxComponentId = maxComponentId;
+    }
+
+    inline StaticComponents::StaticComponents(byte *buffer, const componentId_t maxComponentId)
+    {
+        m_buffer = buffer;
         m_maxComponentId = maxComponentId;
     }
 
@@ -43,7 +48,7 @@ namespace ecs::component
 
     inline void StaticComponents::initialize()
     {
-        for (const auto * componentInfo = beginComponentInfo(); componentInfo < endComponentInfo(); ++componentInfo)
+        for (auto * componentInfo = beginComponentInfo(); componentInfo != endComponentInfo(); ++componentInfo)
         {
             if (!componentInfo->initialized
                 && componentInfo->ptr != nullptr
@@ -51,6 +56,7 @@ namespace ecs::component
                 )
             {
                 componentInfo->registerComponentInfo->constructor(componentInfo->ptr);
+                componentInfo->initialized = true;
             }
         }
     }
@@ -60,10 +66,10 @@ namespace ecs::component
         if (m_buffer == nullptr)
             return nullptr;
 
-        if (componentId > m_maxComponentId && componentId == INVALID_COMPONENT_ID)
+        if (componentId > m_maxComponentId || componentId == INVALID_COMPONENT_ID)
             return nullptr;
 
-        const auto componentInfo = reinterpret_cast<ComponentInfo *>(m_buffer);
+        ComponentInfo* componentInfo = beginComponentInfo() + componentId;
         if (const componentId_t findComponentId = componentInfo->componentId(); findComponentId == componentId)
         {
             if (findComponentId != INVALID_COMPONENT_ID && findComponentId != componentId)
@@ -106,7 +112,7 @@ namespace ecs::component
         if (componentInfo == nullptr)
             return nullptr;
 
-        if (sizeof(COMPONENT) > componentInfo->componentSize())
+        if (sizeof(COMPONENT) > componentInfo->componentSize() || !componentInfo->initialized)
             return nullptr;
 
         return reinterpret_cast<COMPONENT*>(componentInfo->ptr);
@@ -115,7 +121,7 @@ namespace ecs::component
     template<BaseOfComponents COMPONENT>
     StaticComponents::ComponentInfo* StaticComponents::getComponentInfoByComponent() const
     {
-        return getComponentInfoByComponent(COMPONENT::componentId);
+        return getComponentInfoByComponentId(COMPONENT::componentId);
     }
 
     inline byte *StaticComponents::getComponentsDataPtr() const
@@ -133,7 +139,7 @@ namespace ecs::component
 
     inline StaticComponents::ComponentInfo *StaticComponents::endComponentInfo() const
     {
-        return reinterpret_cast<ComponentInfo*>(m_buffer) + m_maxComponentId;
+        return reinterpret_cast<ComponentInfo*>(m_buffer) + m_maxComponentId + 1;
     }
 
     inline void StaticComponents::swap(StaticComponents &other) noexcept
@@ -142,5 +148,9 @@ namespace ecs::component
         std::swap(m_maxComponentId, other.m_maxComponentId);
     }
 
+    /* static */inline byte *StaticComponents::newBuffer(const bufferSize_t classBufferSize, const componentId_t maxComponentId)
+    {
+        return new byte[(maxComponentId + 1) * sizeof(ComponentInfo) + classBufferSize];
+    }
 
-}
+} // namespace ecs::component

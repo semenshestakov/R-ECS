@@ -39,7 +39,7 @@ namespace ecs::component
          *
          * Default creation condition that unconditionally allows component instantiation.
          */
-        static bool condition(const ConditionArgs args) { return true; }
+        static bool condition(const ConditionArgs* args) { return true; }
 
         using conditionFunction_t = bool(*)(const ConditionArgs*);
     };

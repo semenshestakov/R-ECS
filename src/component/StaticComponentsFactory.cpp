@@ -1,9 +1,8 @@
-#include "ecs/component/StaticComponentsFactory.hpp"
-
 #include <algorithm>
 #include <array>
 
-#include "../../include/ecs/component/ComponentError.hpp"
+#include "ecs/component/ComponentError.hpp"
+#include "ecs/component/StaticComponentsFactory.hpp"
 
 
 namespace ecs::component
@@ -13,17 +12,25 @@ namespace ecs::component
 
     StaticComponentsFactory::~StaticComponentsFactory() = default;
 
-    StaticComponents&& StaticComponentsFactory::createComponent(const BaseComponent::ConditionArgs* args) const
+    StaticComponents StaticComponentsFactory::createComponents(const BaseComponent::ConditionArgs* args /* = nullptr */) const
+    {
+        byte* componentBuffer = nullptr;
+        componentId_t maxComponentId = INVALID_COMPONENT_ID;
+        initComponentesData(componentBuffer, maxComponentId, args);
+
+        return {componentBuffer, maxComponentId};
+    }
+
+    void StaticComponentsFactory::initComponentesData(byte*& componentBuffer, componentId_t &maxComponentId, const BaseComponent::ConditionArgs *args) const
     {
         bufferSize_t componentsSizeOf {0};
-        componentId_t maxComponentId {INVALID_COMPONENT_ID};
         std::array<bool, OVERFLOW_MAX_COMPONENT_ID> conditionedComponents {false};
 
         // find componentsSizeOf, maxComponentId, fill conditionedComponents
         for (componentId_t componentId = 1; componentId <= m_maxRegisteredComponentId; ++componentId)
         {
             const StaticComponents::RegisterComponentInfo& registeredComponentInfo = m_registeredComponents[componentId];
-            if (registeredComponentInfo.condition(args))
+            if (registeredComponentInfo.componentId != INVALID_COMPONENT_ID and registeredComponentInfo.condition(args))
             {
                 conditionedComponents[componentId] = true;
                 componentsSizeOf += registeredComponentInfo.componentSize;
@@ -34,12 +41,12 @@ namespace ecs::component
         if (maxComponentId == INVALID_COMPONENT_ID)
             throw error::InvalidSizeComponents("m_maxComponentId == INVALID_COMPONENT_ID");
 
-        // create StaticComponents and bind pointers
-        StaticComponents components = {componentsSizeOf, maxComponentId};
-        auto* bufferComponentInfo = reinterpret_cast<StaticComponents::ComponentInfo*>(components.m_buffer);
-        auto* byteComponentData = reinterpret_cast<byte*>(bufferComponentInfo + maxComponentId);
+        // create StaticComponents and set pointers
+        componentBuffer = StaticComponents::newBuffer(componentsSizeOf, maxComponentId);
+        auto* bufferComponentInfo = reinterpret_cast<StaticComponents::ComponentInfo*>(componentBuffer);
+        auto* byteComponentData = reinterpret_cast<byte*>(bufferComponentInfo + maxComponentId + 1);
 
-        for (componentId_t componentId = 1; componentId <= maxComponentId; ++componentId)
+        for (componentId_t componentId = 0; componentId <= maxComponentId; ++componentId)
         {
             if (!conditionedComponents[componentId])
                 continue;
@@ -47,14 +54,11 @@ namespace ecs::component
             const StaticComponents::RegisterComponentInfo& registeredComponentInfo = m_registeredComponents[componentId];
 
             // fill attr StaticComponents::ComponentInfo
-            bufferComponentInfo->ptr = byteComponentData;
-            bufferComponentInfo->registerComponentInfo = &registeredComponentInfo;
+            bufferComponentInfo[componentId].ptr = byteComponentData;
+            bufferComponentInfo[componentId].registerComponentInfo = &registeredComponentInfo;
 
             byteComponentData += registeredComponentInfo.componentSize;
-            ++bufferComponentInfo;
         }
-
-        return std::move(components);
     }
 
     void StaticComponentsFactory::collectRegisterComponentInfo(StaticComponents::RegisterComponentInfo&& componentInfo)
@@ -66,7 +70,7 @@ namespace ecs::component
                 );
 
         StaticComponents::RegisterComponentInfo finedComponentInfo = m_registeredComponents[componentId];
-        if (finedComponentInfo.componentId == INVALID_COMPONENT_ID)
+        if (finedComponentInfo.componentId != INVALID_COMPONENT_ID)
             throw error::RepeatComponent(
                 "[collectRegisterComponentInfo] finedComponentInfo.componentId == INVALID_COMPONENT_ID: %u", componentId
                 );

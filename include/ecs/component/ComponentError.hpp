@@ -5,6 +5,10 @@
 namespace ecs::component::error
 {
 
+    /**
+     * @brief Base exception class for component-related errors.
+     * Automatically prefixes messages with "ComponentError: ".
+     */
     class BaseComponentError : public ecs::error::BaseError
     {
     public:
@@ -18,8 +22,13 @@ namespace ecs::component::error
         }
     };
 
+    /// @brief Thrown when an invalid component ID is encountered.
     struct InvalidComponentId final : BaseComponentError { using BaseComponentError::BaseComponentError;};
+
+    /// @brief Thrown when attempting to register a duplicate component.
     struct RepeatComponent final : BaseComponentError { using BaseComponentError::BaseComponentError; };
+
+    /// @brief Thrown when component size validation fails.
     struct InvalidSizeComponents final : BaseComponentError { using BaseComponentError::BaseComponentError; };
 
 }

@@ -19,6 +19,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(R-ECS
     STATIC
         src/src.cpp
+        src/component/StaticComponentsFactory.cpp
 )
 
 target_include_directories(R-ECS
@@ -38,7 +39,8 @@ if(TEST_ENABLE)
     FetchContent_MakeAvailable(googletest)
 
     add_executable(test_recs
-        test/components_test.cpp
+            test/component/dynamic_components_tests.cpp
+            test/component/static_components_tests.cpp
     )
 
     target_link_libraries(test_recs

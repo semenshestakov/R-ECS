@@ -1,19 +1,19 @@
 #pragma once
 #include <future>
-#include "../ComponentsFactory.hpp"
 #include "../ComponentError.hpp"
+#include "../DynamicComponentsFactory.hpp"
 
 
 namespace ecs::component
 {
 
-    inline ComponentsFactory::ComponentsFactory() :
-        ComponentsFactory(0)
+    inline DynamicComponentsFactory::DynamicComponentsFactory() :
+        DynamicComponentsFactory(0)
     {
 
     }
 
-    inline ComponentsFactory::ComponentsFactory(const bufferSize_t bufferSize) :
+    inline DynamicComponentsFactory::DynamicComponentsFactory(const bufferSize_t bufferSize) :
         m_bufferCapacity(bufferSize)
     {
         if (m_bufferCapacity != 0)
@@ -21,7 +21,7 @@ namespace ecs::component
     }
 
 
-    inline ComponentsFactory::~ComponentsFactory() noexcept
+    inline DynamicComponentsFactory::~DynamicComponentsFactory() noexcept
     {
         if (m_bufferCapacity == 0)
             return;
@@ -44,19 +44,19 @@ namespace ecs::component
         m_buffer = nullptr;
     }
 
-    inline ComponentsFactory::ComponentsFactory(ComponentsFactory&& a_other) noexcept
+    inline DynamicComponentsFactory::DynamicComponentsFactory(DynamicComponentsFactory&& a_other) noexcept
     {
         this->swap(a_other);
     }
 
-    inline ComponentsFactory& ComponentsFactory::operator=(ComponentsFactory&& a_other) noexcept
+    inline DynamicComponentsFactory& DynamicComponentsFactory::operator=(DynamicComponentsFactory&& a_other) noexcept
     {
         this->swap(a_other);
         return *this;
     }
 
     
-    inline void ComponentsFactory::swap(ComponentsFactory& a_other) noexcept
+    inline void DynamicComponentsFactory::swap(DynamicComponentsFactory& a_other) noexcept
     {
         std::swap(m_bufferCapacity, a_other.m_bufferCapacity);
         std::swap(m_buffer, a_other.m_buffer);
@@ -64,7 +64,7 @@ namespace ecs::component
 
 
     template <class CLASS, typename... Args>
-    void ComponentsFactory::add(Args&& ... args)
+    void DynamicComponentsFactory::add(Args&& ... args)
     {
         static constexpr bufferSize_t sizeOfClass = sizeof(CLASS);
         static constexpr componentId_t componentId = getComponentsTypeId<CLASS>();
@@ -123,7 +123,7 @@ namespace ecs::component
     }
 
     template <class CLASS>
-    CLASS* ComponentsFactory::get()
+    CLASS* DynamicComponentsFactory::get()
     {
         static constexpr componentId_t componentId = getComponentsTypeId<CLASS>();
 
@@ -141,7 +141,7 @@ namespace ecs::component
     }
 
     // utils
-    inline bool ComponentsFactory::resize(bufferSize_t a_size) noexcept
+    inline bool DynamicComponentsFactory::resize(bufferSize_t a_size) noexcept
     {
         if (a_size <= m_bufferCapacity)
             return false;
@@ -159,7 +159,7 @@ namespace ecs::component
         return true;
     }
 
-    inline ComponentsFactory::StackHead* ComponentsFactory::getLastHead() const noexcept
+    inline DynamicComponentsFactory::StackHead* DynamicComponentsFactory::getLastHead() const noexcept
     {
         if (m_bufferCapacity == 0)
             return nullptr;
@@ -176,7 +176,7 @@ namespace ecs::component
         return stackHead;
     }
 
-    inline ComponentsFactory::StackHead* ComponentsFactory::findStackHeadById(const componentId_t a_id) const noexcept
+    inline DynamicComponentsFactory::StackHead* DynamicComponentsFactory::findStackHeadById(const componentId_t a_id) const noexcept
     {
         if (m_bufferCapacity == 0 || a_id == 0)
             return nullptr;
@@ -200,7 +200,7 @@ namespace ecs::component
     }
 
     template <class CLASS>
-    constexpr /* static */ componentId_t ComponentsFactory::getComponentsTypeId()
+    constexpr /* static */ componentId_t DynamicComponentsFactory::getComponentsTypeId()
     {
         static_assert(std::is_base_of_v<BaseComponent, CLASS>);
         static_assert(CLASS::componentId != INVALID_COMPONENT_ID);

@@ -14,7 +14,7 @@ replicated across multiple clients and one server.
 ### Roadmap / Feature
 | Roadmap / Feature               | Version  | Tests |
 |:--------------------------------|:--------:|:-----:|
-| ComponentsFactory               | v0.1.0 ✅ |   ✅   |
+| DynamicComponentsFactory        | v0.1.0 ✅ |   ✅   |
 | BaseComponent                   | v0.1.0 ✅ |   ✅   |
 | ComponentsCollection            | v0.1.5 ❌ |   ❌   |
 | EntitiesFactory                 | v0.2.0 ❌ |   ❌   |

@@ -5,19 +5,19 @@
 namespace ecs::component
 {
 
-    class ComponentsFactory final
+    class DynamicComponentsFactory final
     {
     public:
-        ComponentsFactory();
-        explicit ComponentsFactory(bufferSize_t bufferSize);
-        ~ComponentsFactory() noexcept;
+        DynamicComponentsFactory();
+        explicit DynamicComponentsFactory(bufferSize_t bufferSize);
+        ~DynamicComponentsFactory() noexcept;
 
-        ComponentsFactory(ComponentsFactory&& a_other) noexcept;
-        ComponentsFactory& operator=(ComponentsFactory&& a_other) noexcept;
-        void swap(ComponentsFactory& a_other) noexcept;
+        DynamicComponentsFactory(DynamicComponentsFactory&& a_other) noexcept;
+        DynamicComponentsFactory& operator=(DynamicComponentsFactory&& a_other) noexcept;
+        void swap(DynamicComponentsFactory& a_other) noexcept;
 
-        ComponentsFactory(const ComponentsFactory&) = delete;
-        ComponentsFactory& operator=(const ComponentsFactory&) = delete;
+        DynamicComponentsFactory(const DynamicComponentsFactory&) = delete;
+        DynamicComponentsFactory& operator=(const DynamicComponentsFactory&) = delete;
 
         template<class CLASS, typename... Args> void add(Args&&... args);
         template<class CLASS> CLASS* get();
@@ -45,4 +45,4 @@ namespace ecs::component
 
 }
 
-#include "detail/ComponentsFactory.inl"
+#include "detail/DynamicComponentsFactory.inl"

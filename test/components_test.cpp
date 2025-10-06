@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
-#include "ecs/component/ComponentsFactory.hpp"
 #include "components_class.hpp"
+#include "ecs/component/DynamicComponentsFactory.hpp"
 
 using namespace ecs;
 
 
 TEST(ComponentsTest, AddGet)
 {
-    ComponentsFactory factory;
+    DynamicComponentsFactory factory;
     EXPECT_NO_THROW(
         {
             factory.add<Position2D_no_inheritance>(1, 2);
@@ -57,7 +57,7 @@ TEST(ComponentsTest, Destructor)
 {
     // delete EXPECT_NO_THROW
     EXPECT_NO_THROW({
-        ComponentsFactory* factory = new ComponentsFactory(100);
+        DynamicComponentsFactory* factory = new DynamicComponentsFactory(100);
 
         EXPECT_NO_THROW(
             delete factory
@@ -68,7 +68,7 @@ TEST(ComponentsTest, Destructor)
     EXPECT_NO_THROW({
         bool testBool = false;
 
-        ComponentsFactory* factory = new ComponentsFactory(100);
+        DynamicComponentsFactory* factory = new DynamicComponentsFactory(100);
         factory->add<_TestDestructor1>(testBool);
         delete factory;
 
@@ -80,7 +80,7 @@ TEST(ComponentsTest, Destructor)
         bool testBool1 = false;
         bool testBool2 = false;
 
-        ComponentsFactory* factory = new ComponentsFactory(100);
+        DynamicComponentsFactory* factory = new DynamicComponentsFactory(100);
         factory->add<_TestDestructor2>(testBool1, testBool2);
         delete factory;
 

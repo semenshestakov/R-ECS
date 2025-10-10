@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include "Component.hpp"
 
 
@@ -86,7 +87,7 @@ namespace ecs::component
          *
          * @note Returns nullptr if component is not initialized or size mismatch occurs.
          */
-        template<BaseOfComponents COMPONENT> COMPONENT* get();
+        template<BaseOfComponents COMPONENT> const COMPONENT* get() const;
 
     private:
 
@@ -127,28 +128,28 @@ namespace ecs::component
          * @brief Get component metadata by ID.
          * @return ComponentInfo* or nullptr if not found.
          */
-        [[nodiscard]] ComponentInfo* getComponentInfoByComponentId(componentId_t componentId);
+        [[nodiscard]] ComponentInfo* getComponentInfoByComponentId(componentId_t componentId) const;
 
         /**
          * @brief Get component metadata by type.
          * @return ComponentInfo* or nullptr if not found.
          */
-        template<BaseOfComponents COMPONENT> [[nodiscard]] ComponentInfo* getComponentInfoByComponent();
+        template<BaseOfComponents COMPONENT> [[nodiscard]] ComponentInfo* getComponentInfoByComponent() const;
 
         /**
          * @brief Get iterator to first ComponentInfo.
          */
-        [[nodiscard]] ComponentInfo* beginComponentInfo();
+        [[nodiscard]] ComponentInfo* beginComponentInfo() const;
 
         /**
          * @brief Get iterator past last ComponentInfo.
          */
-        [[nodiscard]] ComponentInfo* endComponentInfo();
+        [[nodiscard]] ComponentInfo* endComponentInfo() const;
 
         /**
          * @brief Get start data.
          */
-        [[nodiscard]] byte* data();
+        [[nodiscard]] byte* data() const;
 
 
         /**
@@ -166,6 +167,8 @@ namespace ecs::component
 
         friend class StaticComponentsFactory;
     };
+
+    using StaticComponentsPtr= std::unique_ptr<StaticComponents>;
 
 } // namespace ecs::component
 

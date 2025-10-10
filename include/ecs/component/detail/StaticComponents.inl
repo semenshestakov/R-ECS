@@ -72,7 +72,7 @@ namespace ecs::component
     }
 
     template<BaseOfComponents COMPONENT>
-    /* public */ COMPONENT* StaticComponents::get()
+    const COMPONENT *StaticComponents::get() const
     {
         if (m_componentsInfo.maxComponentId == INVALID_COMPONENT_ID)
             return nullptr;
@@ -88,12 +88,12 @@ namespace ecs::component
     }
 
     template<BaseOfComponents COMPONENT>
-    /* private */ StaticComponents::ComponentInfo* StaticComponents::getComponentInfoByComponent()
+    /* private */ StaticComponents::ComponentInfo* StaticComponents::getComponentInfoByComponent() const
     {
         return getComponentInfoByComponentId(COMPONENT::componentId);
     }
 
-    /* private */ inline StaticComponents::ComponentInfo* StaticComponents::getComponentInfoByComponentId(const componentId_t componentId)
+    /* private */ inline StaticComponents::ComponentInfo* StaticComponents::getComponentInfoByComponentId(const componentId_t componentId) const
     {
         if (componentId > m_componentsInfo.maxComponentId || componentId == INVALID_COMPONENT_ID)
             return nullptr;
@@ -110,19 +110,19 @@ namespace ecs::component
         return nullptr;
     }
 
-    /* private */ inline StaticComponents::ComponentInfo *StaticComponents::beginComponentInfo()
+    /* private */ inline StaticComponents::ComponentInfo *StaticComponents::beginComponentInfo() const
     {
         return reinterpret_cast<ComponentInfo*>(data() + sizeof(StaticComponents));
     }
 
-    /* private */ inline StaticComponents::ComponentInfo *StaticComponents::endComponentInfo()
+    /* private */ inline StaticComponents::ComponentInfo *StaticComponents::endComponentInfo() const
     {
         return beginComponentInfo() + m_componentsInfo.maxComponentId + 1;
     }
 
-    /* private */ inline byte* StaticComponents::data()
+    /* private */ inline byte* StaticComponents::data() const
     {
-        return reinterpret_cast<byte*>(this);
+        return const_cast<byte*>(reinterpret_cast<const byte*>(this));
     }
 
     /* static */inline byte* StaticComponents::newBuffer(const bufferSize_t classBufferSize, const componentId_t maxComponentId)

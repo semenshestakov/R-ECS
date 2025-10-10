@@ -1,13 +1,11 @@
 #pragma once
-#include <memory>
+
 #include "Component.hpp"
 #include "StaticComponents.hpp"
 
 
 namespace ecs::component
 {
-
-    using StaticComponentsPtr= std::unique_ptr<StaticComponents>;
 
     /**
      * @brief Factory class for creating StaticComponents with registered component types.

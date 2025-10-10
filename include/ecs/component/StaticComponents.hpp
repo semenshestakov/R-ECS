@@ -9,7 +9,7 @@ namespace ecs::component
      * @brief Container for statically allocated ECS components with runtime initialization.
      *
      * Calculates total buffer size as:
-     *   (maxComponentId + 1) * sizeof(ComponentInfo)   // Metadata array
+     *   sizeof(StaticComponents) + (maxComponentId + 1) * sizeof(ComponentInfo)   // Metadata array
      *   + classBufferSize                              // Component data storage
      *
      * StaticComponents manages a fixed set of components allocated in a contiguous memory buffer.
@@ -21,25 +21,27 @@ namespace ecs::component
      */
     class StaticComponents
     {
-    public:
-        StaticComponents();
         /**
-         * @brief Constructs StaticComponents with specified buffer size and component capacity.
-         *
-         * @param classBufferSize Total size in bytes for component data storage.
-         * @param maxComponentId Maximum component ID that will be stored.
+         * @brief Metadata describing the component storage layout and capacity.
          */
-        StaticComponents(bufferSize_t classBufferSize, componentId_t maxComponentId);
+        struct ComponentsInfo
+        {
+            bufferSize_t maxComponentId {};       ///< Highest component ID in the container
+        };
+
+        /// @brief Container metadata including component ID range and storage information.
+        ComponentsInfo m_componentsInfo;
 
         /**
-        * @brief Constructs StaticComponents using an existing buffer.
-        *
-        * @param buffer Pre-allocated memory buffer for component storage.
-        * @param maxComponentId Maximum component ID in the provided buffer.
+        * @brief Constructs StaticComponents with the specified component layout.
+        * @param componentsInfo Component container metadata and capacity.
         *
         * @note Takes ownership of the buffer - will delete it on destruction.
         */
-        StaticComponents(byte* buffer, componentId_t maxComponentId);
+        StaticComponents(const ComponentsInfo& componentsInfo);
+
+    public:
+        StaticComponents();
 
         /**
          * @brief Destroys the container and all initialized components.
@@ -47,8 +49,8 @@ namespace ecs::component
         ~StaticComponents();
 
         // Move semantics
-        StaticComponents(StaticComponents&& other) noexcept;
-        StaticComponents& operator=(StaticComponents&& other) noexcept;
+        StaticComponents(StaticComponents&& other) noexcept = delete;
+        StaticComponents& operator=(StaticComponents&& other) noexcept = delete;
 
         // Delete copy semantics
         StaticComponents(const StaticComponents&) = delete;
@@ -84,7 +86,7 @@ namespace ecs::component
          *
          * @note Returns nullptr if component is not initialized or size mismatch occurs.
          */
-        template<BaseOfComponents COMPONENT> COMPONENT* get() const;
+        template<BaseOfComponents COMPONENT> COMPONENT* get();
 
     private:
 
@@ -121,41 +123,33 @@ namespace ecs::component
             [[nodiscard]] bufferSize_t componentSize() const { return registerComponentInfo ? registerComponentInfo->componentSize : 0; }
         };
 
-        byte* m_buffer = nullptr;               ///< Raw buffer containing ComponentInfo array + component data
-        bufferSize_t m_maxComponentId {};       ///< Highest component ID in the container
-
         /**
          * @brief Get component metadata by ID.
          * @return ComponentInfo* or nullptr if not found.
          */
-        [[nodiscard]] ComponentInfo* getComponentInfoByComponentId(componentId_t componentId) const;
+        [[nodiscard]] ComponentInfo* getComponentInfoByComponentId(componentId_t componentId);
 
         /**
          * @brief Get component metadata by type.
          * @return ComponentInfo* or nullptr if not found.
          */
-        template<BaseOfComponents COMPONENT> [[nodiscard]] ComponentInfo* getComponentInfoByComponent() const;
-
-        /**
-         * @brief Get pointer to component data section.
-         * @return byte* Pointer to start of component data.
-         */
-        [[nodiscard]] byte* getComponentsDataPtr() const;
+        template<BaseOfComponents COMPONENT> [[nodiscard]] ComponentInfo* getComponentInfoByComponent();
 
         /**
          * @brief Get iterator to first ComponentInfo.
          */
-        [[nodiscard]] ComponentInfo* beginComponentInfo() const;
+        [[nodiscard]] ComponentInfo* beginComponentInfo();
 
         /**
          * @brief Get iterator past last ComponentInfo.
          */
-        [[nodiscard]] ComponentInfo* endComponentInfo() const;
+        [[nodiscard]] ComponentInfo* endComponentInfo();
 
         /**
-         * @brief Swap contents with another instance.
+         * @brief Get start data.
          */
-        void swap(StaticComponents& other) noexcept;
+        [[nodiscard]] byte* data();
+
 
         /**
          * @brief Allocates a contiguous buffer for both metadata and component storage.

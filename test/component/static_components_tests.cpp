@@ -15,37 +15,38 @@ TEST(StaticComponensTest, AddGet_no_inheritance)
         });
 
     {
-        StaticComponents components = factory.createComponents();
-        EXPECT_EQ(components.get<Position3D_no_inheritance>(), nullptr);
+        StaticComponentsPtr components = factory.createComponents();
+        EXPECT_EQ(components->get<Position3D_no_inheritance>(), nullptr);
 
-        EXPECT_EQ(components.init<Position3D_no_inheritance>(-1, 2 ,3), true);
-        EXPECT_NE(components.get<Position3D_no_inheritance>(), nullptr);
+        EXPECT_EQ(components->init<Position3D_no_inheritance>(-1, 2 ,3), true);
+        EXPECT_NE(components->get<Position3D_no_inheritance>(), nullptr);
 
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->x, -1);
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->y, 2);
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->z, 3);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->x, -1);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->y, 2);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->z, 3);
 
-        components.get<Position3D_no_inheritance>()->x = 4;
-        components.get<Position3D_no_inheritance>()->z = 5;
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->x, 4);
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->y, 2);
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->z, 5);
+        components->get<Position3D_no_inheritance>()->x = 4;
+        components->get<Position3D_no_inheritance>()->z = 5;
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->x, 4);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->y, 2);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->z, 5);
 
-        EXPECT_EQ(components.get<Position2D_no_inheritance>(), nullptr);
-        components.initialize();
+        EXPECT_EQ(components->get<Position2D_no_inheritance>(), nullptr);
+        components->initialize();
 
-        EXPECT_NE(components.get<Position2D_no_inheritance>(), nullptr);
+        EXPECT_NE(components->get<Position2D_no_inheritance>(), nullptr);
 
-        EXPECT_EQ(components.get<Position2D_no_inheritance>()->x, 10);
-        EXPECT_EQ(components.get<Position2D_no_inheritance>()->y, 12);
+        EXPECT_EQ(components->get<Position2D_no_inheritance>()->x, 10);
+        EXPECT_EQ(components->get<Position2D_no_inheritance>()->y, 12);
 
-        components.get<Position2D_no_inheritance>()->x = -10;
-        EXPECT_EQ(components.get<Position2D_no_inheritance>()->x, -10);
-        EXPECT_EQ(components.get<Position2D_no_inheritance>()->y, 12);
+        components->get<Position2D_no_inheritance>()->x = -10;
+        EXPECT_EQ(components->get<Position2D_no_inheritance>()->x, -10);
+        EXPECT_EQ(components->get<Position2D_no_inheritance>()->y, 12);
 
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->x, 4);
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->y, 2);
-        EXPECT_EQ(components.get<Position3D_no_inheritance>()->z, 5);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->x, 4);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->y, 2);
+        EXPECT_EQ(components->get<Position3D_no_inheritance>()->z, 5);
+
     }
 }
 

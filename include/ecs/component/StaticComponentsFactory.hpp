@@ -1,10 +1,13 @@
 #pragma once
+#include <memory>
 #include "Component.hpp"
 #include "StaticComponents.hpp"
 
 
 namespace ecs::component
 {
+
+    using StaticComponentsPtr= std::unique_ptr<StaticComponents>;
 
     /**
      * @brief Factory class for creating StaticComponents with registered component types.
@@ -48,7 +51,7 @@ namespace ecs::component
          *
          * @note Only components whose condition evaluates to true with given args are included.
          */
-        StaticComponents createComponents(const BaseComponent::ConditionArgs* args = nullptr) const;
+        StaticComponentsPtr createComponents(const BaseComponent::ConditionArgs* args = nullptr) const;
 
     private:
 
@@ -65,13 +68,12 @@ namespace ecs::component
          * @brief Initializes component data buffer and calculates layout.
          *
          * @param[out] componentBuffer Reference to pointer that will hold allocated buffer.
-         * @param[out] maxComponentId Reference to store the maximum component ID used.
          * @param args Optional condition arguments for component filtering.
          * @throws error::InvalidSizeComponents if no valid components satisfy conditions.
          *
          * @note Allocates buffer memory that must be managed by StaticComponents.
          */
-        void initComponentesData(byte*& componentBuffer, componentId_t& maxComponentId,const BaseComponent::ConditionArgs* args = nullptr) const;
+        void initComponentesData(StaticComponents*& componentBuffer, const BaseComponent::ConditionArgs* args = nullptr) const;
 
         /// @brief Maximum registered component ID across all registered components.
         componentId_t m_maxRegisteredComponentId {INVALID_COMPONENT_ID};

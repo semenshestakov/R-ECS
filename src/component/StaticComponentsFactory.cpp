@@ -12,18 +12,18 @@ namespace ecs::component
 
     StaticComponentsFactory::~StaticComponentsFactory() = default;
 
-    StaticComponents StaticComponentsFactory::createComponents(const BaseComponent::ConditionArgs* args /* = nullptr */) const
+    StaticComponentsPtr StaticComponentsFactory::createComponents(const BaseComponent::ConditionArgs* args /* = nullptr */) const
     {
-        byte* componentBuffer = nullptr;
-        componentId_t maxComponentId = INVALID_COMPONENT_ID;
-        initComponentesData(componentBuffer, maxComponentId, args);
+        StaticComponents* componentBuffer = nullptr;
+        initComponentesData(componentBuffer, args);
 
-        return {componentBuffer, maxComponentId};
+        return StaticComponentsPtr(componentBuffer);
     }
 
-    void StaticComponentsFactory::initComponentesData(byte*& componentBuffer, componentId_t &maxComponentId, const BaseComponent::ConditionArgs *args) const
+    void StaticComponentsFactory::initComponentesData(StaticComponents*& componentBuffer, const BaseComponent::ConditionArgs* args) const
     {
-        bufferSize_t componentsSizeOf {0};
+        bufferSize_t componentsSizeOf {};
+        componentId_t maxComponentId {};
         std::array<bool, OVERFLOW_MAX_COMPONENT_ID> conditionedComponents {false};
 
         // find componentsSizeOf, maxComponentId, fill conditionedComponents
@@ -38,12 +38,14 @@ namespace ecs::component
             }
         }
 
-        if (maxComponentId == INVALID_COMPONENT_ID)
-            throw error::InvalidSizeComponents("m_maxComponentId == INVALID_COMPONENT_ID");
-
         // create StaticComponents and set pointers
-        componentBuffer = StaticComponents::newBuffer(componentsSizeOf, maxComponentId);
-        auto* bufferComponentInfo = reinterpret_cast<StaticComponents::ComponentInfo*>(componentBuffer);
+        byte* byteBuffer = StaticComponents::newBuffer(componentsSizeOf, maxComponentId);
+        new (byteBuffer) StaticComponents({maxComponentId});
+        componentBuffer = reinterpret_cast<StaticComponents*>(byteBuffer);
+
+        byteBuffer = byteBuffer + sizeof(StaticComponents);
+
+        auto* bufferComponentInfo = reinterpret_cast<StaticComponents::ComponentInfo*>(byteBuffer);
         auto* byteComponentData = reinterpret_cast<byte*>(bufferComponentInfo + maxComponentId + 1);
 
         for (componentId_t componentId = 0; componentId <= maxComponentId; ++componentId)

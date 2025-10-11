@@ -31,4 +31,7 @@ namespace ecs::component::error
     /// @brief Thrown when component size validation fails.
     struct InvalidSizeComponents final : BaseComponentError { using BaseComponentError::BaseComponentError; };
 
+    /// @brief Thrown when component not found
+    struct InvalidComponent final : BaseComponentError { using BaseComponentError::BaseComponentError; };
+
 }

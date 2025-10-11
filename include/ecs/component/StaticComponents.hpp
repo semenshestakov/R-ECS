@@ -89,6 +89,17 @@ namespace ecs::component
          */
         template<BaseOfComponents COMPONENT> const COMPONENT* get() const;
 
+        /**
+         * @brief Retrieves a pointer to a component of the specified type with enforced existence.
+         *
+         * @tparam COMPONENT Type of component to retrieve.
+         * @return const COMPONENT* Pointer to the component.
+         *
+         * @throws If the component is not found, uninitialized, or has size mismatch.
+         * @note This is a safe alternative to get() when the component's presence is required.
+         */
+        template<BaseOfComponents COMPONENT> const COMPONENT* mustGet() const;
+
     private:
 
         /**

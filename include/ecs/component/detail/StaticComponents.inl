@@ -88,6 +88,16 @@ namespace ecs::component
     }
 
     template<BaseOfComponents COMPONENT>
+    const COMPONENT* StaticComponents::mustGet() const
+    {
+        const COMPONENT* component = get<COMPONENT>();
+        if (component == nullptr)
+            throw error::InvalidComponent("component is not found: %s", typeid(COMPONENT).name());
+
+        return component;
+    }
+
+    template<BaseOfComponents COMPONENT>
     /* private */ StaticComponents::ComponentInfo* StaticComponents::getComponentInfoByComponent() const
     {
         return getComponentInfoByComponentId(COMPONENT::componentId);

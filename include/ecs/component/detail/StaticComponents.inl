@@ -72,7 +72,7 @@ namespace ecs::component
     }
 
     template<BaseOfComponents COMPONENT>
-    const COMPONENT *StaticComponents::get() const
+    COMPONENT *StaticComponents::get() const
     {
         if (m_componentsInfo.maxComponentId == INVALID_COMPONENT_ID)
             return nullptr;
@@ -88,13 +88,13 @@ namespace ecs::component
     }
 
     template<BaseOfComponents COMPONENT>
-    const COMPONENT* StaticComponents::mustGet() const
+    COMPONENT& StaticComponents::mustGet() const
     {
-        const COMPONENT* component = get<COMPONENT>();
+        COMPONENT* component = get<COMPONENT>();
         if (component == nullptr)
             throw error::InvalidComponent("component is not found: %s", typeid(COMPONENT).name());
 
-        return component;
+        return *component;
     }
 
     template<BaseOfComponents COMPONENT>

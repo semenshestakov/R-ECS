@@ -87,7 +87,7 @@ namespace ecs::component
          *
          * @note Returns nullptr if component is not initialized or size mismatch occurs.
          */
-        template<BaseOfComponents COMPONENT> const COMPONENT* get() const;
+        template<BaseOfComponents COMPONENT> COMPONENT* get() const;
 
         /**
          * @brief Retrieves a pointer to a component of the specified type with enforced existence.
@@ -98,7 +98,7 @@ namespace ecs::component
          * @throws If the component is not found, uninitialized, or has size mismatch.
          * @note This is a safe alternative to get() when the component's presence is required.
          */
-        template<BaseOfComponents COMPONENT> const COMPONENT* mustGet() const;
+        template<BaseOfComponents COMPONENT> COMPONENT& mustGet() const;
 
     private:
 

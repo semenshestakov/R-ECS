@@ -15,7 +15,7 @@ replicated across multiple clients and one server.
 | Roadmap / Feature               | Version  | Tests |
 |:--------------------------------|:--------:|:-----:|
 | DynamicComponentsFactory        | v0.1.0 ✅ |   ✅   |
-| StaticComponentsFactory         | v0.2.0 ✅ |   ❌   |
+| ComponentsFactory         | v0.2.0 ✅ |   ❌   |
 | ComponentsCollection            | v0.2.5 ❌ |   ❌   |
 | EntitiesFactory                 | v0.3.0 ❌ |   ❌   |
 | BindSystems                     | v0.4.5 ❌ |   ❌   |

@@ -1,26 +1,27 @@
 #include <algorithm>
 #include <array>
 
-#include "ecs/component/ComponentError.hpp"
-#include "ecs/component/StaticComponentsFactory.hpp"
+#include "ecs/RegistryFactory.hpp"
+#include "ecs/utils/ComponentError.hpp"
 
 
-namespace ecs::component
+namespace ecs
 {
+    using namespace ecs;
 
-    StaticComponentsFactory::StaticComponentsFactory() = default;
+    RegistryFactory::RegistryFactory() = default;
 
-    StaticComponentsFactory::~StaticComponentsFactory() = default;
+    RegistryFactory::~RegistryFactory() = default;
 
-    StaticComponentsPtr StaticComponentsFactory::createComponents(const BaseComponent::ConditionArgs* args /* = nullptr */) const
+    ComponentsPtr RegistryFactory::createComponents() const
     {
-        StaticComponents* componentBuffer = nullptr;
-        initComponentesData(componentBuffer, args);
+        Components* componentBuffer = nullptr;
+        initComponentesData(componentBuffer);
 
-        return StaticComponentsPtr(componentBuffer);
+        return ComponentsPtr(componentBuffer);
     }
 
-    void StaticComponentsFactory::initComponentesData(StaticComponents*& componentBuffer, const BaseComponent::ConditionArgs* args) const
+    void RegistryFactory::initComponentesData(Components*& componentBuffer) const
     {
         bufferSize_t componentsSizeOf {};
         componentId_t maxComponentId {};
@@ -29,8 +30,8 @@ namespace ecs::component
         // find componentsSizeOf, maxComponentId, fill conditionedComponents
         for (componentId_t componentId = 1; componentId <= m_maxRegisteredComponentId; ++componentId)
         {
-            const StaticComponents::RegisterComponentInfo& registeredComponentInfo = m_registeredComponents[componentId];
-            if (registeredComponentInfo.componentId != INVALID_COMPONENT_ID and registeredComponentInfo.condition(args))
+            const RegisterComponentInfo& registeredComponentInfo = m_registeredComponents[componentId];
+            if (registeredComponentInfo.componentId != INVALID_COMPONENT_ID)
             {
                 conditionedComponents[componentId] = true;
                 componentsSizeOf += registeredComponentInfo.componentSize;
@@ -38,14 +39,14 @@ namespace ecs::component
             }
         }
 
-        // create StaticComponents and set pointers
-        byte* byteBuffer = StaticComponents::newBuffer(componentsSizeOf, maxComponentId);
-        new (byteBuffer) StaticComponents({maxComponentId});
-        componentBuffer = reinterpret_cast<StaticComponents*>(byteBuffer);
+        // create Components and set pointers
+        byte* byteBuffer = Components::newBuffer(componentsSizeOf, maxComponentId);
+        new (byteBuffer) Components({maxComponentId});
+        componentBuffer = reinterpret_cast<Components*>(byteBuffer);
 
-        byteBuffer = byteBuffer + sizeof(StaticComponents);
+        byteBuffer = byteBuffer + sizeof(Components);
 
-        auto* bufferComponentInfo = reinterpret_cast<StaticComponents::ComponentInfo*>(byteBuffer);
+        auto* bufferComponentInfo = reinterpret_cast<Components::ComponentInfo*>(byteBuffer);
         auto* byteComponentData = reinterpret_cast<byte*>(bufferComponentInfo + maxComponentId + 1);
 
         for (componentId_t componentId = 0; componentId <= maxComponentId; ++componentId)
@@ -53,9 +54,9 @@ namespace ecs::component
             if (!conditionedComponents[componentId])
                 continue;
 
-            const StaticComponents::RegisterComponentInfo& registeredComponentInfo = m_registeredComponents[componentId];
+            const RegisterComponentInfo& registeredComponentInfo = m_registeredComponents[componentId];
 
-            // fill attr StaticComponents::ComponentInfo
+            // fill attr Components::ComponentInfo
             bufferComponentInfo[componentId].ptr = byteComponentData;
             bufferComponentInfo[componentId].registerComponentInfo = &registeredComponentInfo;
 
@@ -63,7 +64,7 @@ namespace ecs::component
         }
     }
 
-    void StaticComponentsFactory::collectRegisterComponentInfo(StaticComponents::RegisterComponentInfo&& componentInfo)
+    void RegistryFactory::collectRegisterComponentInfo(RegisterComponentInfo&& componentInfo)
     {
         const componentId_t componentId = componentInfo.componentId;
         if (componentId == INVALID_COMPONENT_ID)
@@ -71,7 +72,7 @@ namespace ecs::component
                 "[collectRegisterComponentInfo] componentInfo.componentId: %u", componentId
                 );
 
-        StaticComponents::RegisterComponentInfo finedComponentInfo = m_registeredComponents[componentId];
+        RegisterComponentInfo finedComponentInfo = m_registeredComponents[componentId];
         if (finedComponentInfo.componentId != INVALID_COMPONENT_ID)
             throw error::RepeatComponent(
                 "[collectRegisterComponentInfo] finedComponentInfo.componentId == INVALID_COMPONENT_ID: %u", componentId
@@ -81,4 +82,4 @@ namespace ecs::component
         m_maxRegisteredComponentId = std::max(m_maxRegisteredComponentId, componentId);
     }
 
-} // namespace ecs::component
+} // namespace ecs

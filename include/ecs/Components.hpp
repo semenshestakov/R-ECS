@@ -1,26 +1,27 @@
 #pragma once
 #include <memory>
-#include "Component.hpp"
+#include "ComponentRegistrator.hpp"
+#include "utils/ComponentUtils.hpp"
 
 
-namespace ecs::component
+namespace ecs
 {
 
     /**
      * @brief Container for statically allocated ECS components with runtime initialization.
      *
      * Calculates total buffer size as:
-     *   sizeof(StaticComponents) + (maxComponentId + 1) * sizeof(ComponentInfo)   // Metadata array
+     *   sizeof(Components) + (maxComponentId + 1) * sizeof(ComponentInfo)   // Metadata array
      *   + classBufferSize                              // Component data storage
      *
-     * StaticComponents manages a fixed set of components allocated in a contiguous memory buffer.
+     * Components manages a fixed set of components allocated in a contiguous memory buffer.
      * It provides type-safe access to components while supporting conditional initialization
      * and lifetime management.
      *
      * @note The buffer layout enables O(1) component lookup by ID.
      * @note Move constructible/assignable but not copyable due to owned buffer memory.
      */
-    class StaticComponents
+    class Components
     {
         /**
          * @brief Metadata describing the component storage layout and capacity.
@@ -34,33 +35,33 @@ namespace ecs::component
         ComponentsInfo m_componentsInfo;
 
         /**
-        * @brief Constructs StaticComponents with the specified component layout.
+        * @brief Constructs Components with the specified component layout.
         * @param componentsInfo Component container metadata and capacity.
         *
         * @note Takes ownership of the buffer - will delete it on destruction.
         */
-        StaticComponents(const ComponentsInfo& componentsInfo);
+        Components(const ComponentsInfo& componentsInfo);
 
     public:
-        StaticComponents();
+        Components();
 
         /**
          * @brief Destroys the container and all initialized components.
          */
-        ~StaticComponents();
+        ~Components();
 
         // Move semantics
-        StaticComponents(StaticComponents&& other) noexcept = delete;
-        StaticComponents& operator=(StaticComponents&& other) noexcept = delete;
+        Components(Components&& other) noexcept = delete;
+        Components& operator=(Components&& other) noexcept = delete;
 
         // Delete copy semantics
-        StaticComponents(const StaticComponents&) = delete;
-        StaticComponents& operator=(const StaticComponents&) = delete;
+        Components(const Components&) = delete;
+        Components& operator=(const Components&) = delete;
 
         /**
          * @brief Initializes a specific component with constructor arguments.
          *
-         * @tparam COMPONENT Type of component to initialize.
+         * @tparam ComponentCls Type of component to initialize.
          * @tparam Args Argument types for component constructor.
          * @param args Arguments to forward to component constructor.
          * @return true if component was found and initialized successfully.
@@ -70,7 +71,7 @@ namespace ecs::component
          * @note Zero-initializes memory before construction.
          * @note Properly destroys previously initialized component if reinitializing.
          */
-        template<BaseOfComponents COMPONENT, typename ... Args> bool init(const Args&... args);
+        template<BaseOfComponents ComponentCls, typename ... Args> bool init(const Args&... args);
 
         /**
          * @brief Initializes all components using their default constructors.
@@ -82,36 +83,26 @@ namespace ecs::component
         /**
          * @brief Retrieves a pointer to a component of the specified type.
          *
-         * @tparam COMPONENT Type of component to retrieve.
-         * @return COMPONENT* Pointer to the component, or nullptr if not found/uninitialized.
+         * @tparam ComponentCls Type of component to retrieve.
+         * @return ComponentCls* Pointer to the component, or nullptr if not found/uninitialized.
          *
          * @note Returns nullptr if component is not initialized or size mismatch occurs.
          */
-        template<BaseOfComponents COMPONENT> COMPONENT* get() const;
+        template<BaseOfComponents ComponentCls> ComponentCls* get() const;
 
         /**
          * @brief Retrieves a pointer to a component of the specified type with enforced existence.
          *
-         * @tparam COMPONENT Type of component to retrieve.
-         * @return const COMPONENT* Pointer to the component.
+         * @tparam ComponentCls Type of component to retrieve.
+         * @return const ComponentCls* Pointer to the component.
          *
          * @throws If the component is not found, uninitialized, or has size mismatch.
          * @note This is a safe alternative to get() when the component's presence is required.
          */
-        template<BaseOfComponents COMPONENT> COMPONENT& mustGet() const;
+        template<BaseOfComponents ComponentCls> ComponentCls& mustGet() const;
 
     private:
 
-        /**
-         * @brief Metadata for component registration and construction.
-         */
-        struct RegisterComponentInfo
-        {
-            bufferSize_t componentSize {0};                             ///< Size of the component in bytes
-            componentId_t componentId {INVALID_COMPONENT_ID};           ///< Unique identifier for the component
-            BaseComponent::conditionFunction_t condition {nullptr};     ///< Runtime condition check function
-            void(*constructor)(byte*) = nullptr;                        ///< Placement new constructor function
-        };
 
         /**
          * @brief Runtime information for a component instance.
@@ -145,7 +136,7 @@ namespace ecs::component
          * @brief Get component metadata by type.
          * @return ComponentInfo* or nullptr if not found.
          */
-        template<BaseOfComponents COMPONENT> [[nodiscard]] ComponentInfo* getComponentInfoByComponent() const;
+        template<BaseOfComponents ComponentCls> [[nodiscard]] ComponentInfo* getComponentInfoByComponent() const;
 
         /**
          * @brief Get iterator to first ComponentInfo.
@@ -171,16 +162,16 @@ namespace ecs::component
          * @return byte* Newly allocated buffer, or throws std::bad_alloc on failure.
          *
          * @note The buffer layout enables O(1) component lookup by ID.
-         * @note Buffer must be deleted[] by the owner (StaticComponents destructor).
+         * @note Buffer must be deleted[] by the owner (Components destructor).
          * @warning classBufferSize must account for alignment requirements of all components.
          */
         static byte* newBuffer(bufferSize_t classBufferSize, componentId_t maxComponentId);
 
-        friend class StaticComponentsFactory;
+        friend class RegistryFactory;
     };
 
-    using StaticComponentsPtr= std::unique_ptr<StaticComponents>;
+    using ComponentsPtr= std::unique_ptr<Components>;
 
-} // namespace ecs::component
+} // namespace ecs
 
-#include "detail/StaticComponents.inl"
+#include "detail/Components.ipp"

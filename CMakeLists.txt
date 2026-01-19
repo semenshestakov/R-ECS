@@ -7,7 +7,7 @@ project(R-ECS
 
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     SET(TEST_ENABLE ON)
-    add_compile_definitions(TEST_ENABLE)
+    add_compile_definitions(ECS_TESTING)
 else ()
     SET(TEST_ENABLE OFF)
 endif ()
@@ -19,7 +19,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(R-ECS
     STATIC
         src/src.cpp
-        src/component/StaticComponentsFactory.cpp
+        src/component/RegistryFactory.cpp
 )
 
 target_include_directories(R-ECS
@@ -39,8 +39,8 @@ if(TEST_ENABLE)
     FetchContent_MakeAvailable(googletest)
 
     add_executable(test_recs
-            test/component/dynamic_components_tests.cpp
-            test/component/static_components_tests.cpp
+            test/ecs/components_test.cpp
+            test/reg/registrator_factory_tests.cpp
     )
 
     target_link_libraries(test_recs
@@ -50,6 +50,6 @@ if(TEST_ENABLE)
     )
     include(GoogleTest)
     gtest_discover_tests(test_recs)
-elseif ()
+else ()
     message("TEST disable")
 endif()

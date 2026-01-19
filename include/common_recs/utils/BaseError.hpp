@@ -5,7 +5,7 @@
 #include <utility>
 
 
-namespace ecs::error
+namespace recs::error
 {
 
     /**
@@ -57,6 +57,19 @@ namespace ecs::error
         /// @brief Internal buffer for storing the error message.
         char m_message[256] {};
 
+    };
+
+    template<const char NAME[]>
+    class BaseNamedError : public BaseError
+    {
+    public:
+        template<typename... Args>
+        explicit BaseNamedError(const char* message, Args&&... args) :
+            BaseError(message, std::forward<Args>(args)...)
+        {
+            memmove(m_message + strlen(NAME), m_message, strlen(m_message) + 1);
+            memcpy(m_message, NAME, strlen(NAME));
+        }
     };
 
 }

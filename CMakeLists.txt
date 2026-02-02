@@ -40,6 +40,7 @@ if(TEST_ENABLE)
 
     add_executable(test_recs
             test/ecs/components_test.cpp
+            test/ecs/registry_tests.cpp
             test/reg/registrator_factory_tests.cpp
     )
 

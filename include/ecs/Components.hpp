@@ -170,7 +170,7 @@ namespace ecs
         friend class RegistryFactory;
     };
 
-    using ComponentsPtr= std::unique_ptr<Components>;
+    using ComponentsPtr = std::unique_ptr<Components>;
 
 } // namespace ecs
 

@@ -13,6 +13,40 @@ namespace ecs
 
     RegistryFactory::~RegistryFactory() = default;
 
+    RegistryFactory::RegistryFactory(const RegistryFactory& other)
+    {
+        this->copy(other);
+    }
+
+    RegistryFactory& RegistryFactory::operator=(const RegistryFactory& other)
+    {
+        this->copy(other);
+        return *this;
+    }
+
+    void RegistryFactory::copy(const RegistryFactory& other)
+    {
+        std::ranges::copy(other.m_registeredComponents,std::begin(m_registeredComponents));
+        m_maxRegisteredComponentId = other.m_maxRegisteredComponentId;
+    }
+
+    RegistryFactory::RegistryFactory(RegistryFactory&& other) noexcept
+    {
+       this->swap(other);
+    }
+
+    RegistryFactory& RegistryFactory::operator=(RegistryFactory &&other) noexcept
+    {
+        this->swap(other);
+        return *this;
+    }
+
+    void RegistryFactory::swap(RegistryFactory &other) noexcept
+    {
+        std::swap(m_registeredComponents, other.m_registeredComponents);
+        std::swap(m_maxRegisteredComponentId, other.m_maxRegisteredComponentId);
+    }
+
     ComponentsPtr RegistryFactory::createComponents() const
     {
         Components* componentBuffer = nullptr;

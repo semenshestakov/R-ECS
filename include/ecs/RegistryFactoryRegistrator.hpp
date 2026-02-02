@@ -18,7 +18,7 @@ namespace ecs
      * @see reg::Registrator
      * @see RegistryFactory
      */
-    class RegistryRegistrator
+    class RegistryFactoryRegistrator
     {
         /**
          * @brief Internal structure storing registry metadata.
@@ -26,9 +26,9 @@ namespace ecs
          * Contains registration information for each named registry including
          * the registry name and its associated factory instance.
          *
-         * @struct RegistryRegistration
+         * @struct RegistryFactoryRegistration
          */
-        struct RegistryRegistration
+        struct RegistryFactoryRegistration
         {
             const std::string name;                                ///< Name identifying the registry
             std::shared_ptr<RegistryFactory> factory = nullptr;    ///< Factory instance for this registry
@@ -41,10 +41,10 @@ namespace ecs
              * @return RegistryRegistration Initialized registration object
              */
             template <typename T = void>
-            static RegistryRegistration create(const std::string& name);
+            static RegistryFactoryRegistration create(const std::string& name);
 
         };
-        using _Registrator = reg::Registrator<RegistryRegistration, reg::RegistrationStrategy::UNIQUE>;  ///< Internal registrator type
+        using _Registrator = reg::Registrator<RegistryFactoryRegistration, reg::RegistrationStrategy::UNIQUE>;  ///< Internal registrator type
 
     public:
         /**

@@ -28,6 +28,7 @@ TEST(RegistratorTest, DefaultRegister)
     }
     EXPECT_EQ(0, TestDefaultRegister::size());
 }
+
 TEST(RegistratorTest, DefaultRegisterBasic)
 {
     using TestDefaultRegister = Registrator<NameRegistration, RegistrationStrategy::DEFAULT>;

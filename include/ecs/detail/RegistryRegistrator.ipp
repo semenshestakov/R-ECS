@@ -1,25 +1,25 @@
 #pragma once
-#include "../RegistryRegistrator.hpp"
+#include "../RegistryFactoryRegistrator.hpp"
 
 
 namespace ecs
 {
 
     template<typename T>
-    /* static */ RegistryRegistrator::RegistryRegistration  RegistryRegistrator::RegistryRegistration::create(const std::string& name)
+    /* static */ RegistryFactoryRegistrator::RegistryFactoryRegistration  RegistryFactoryRegistrator::RegistryFactoryRegistration::create(const std::string& name)
     {
-        return RegistryRegistration(name, std::make_shared<RegistryFactory>());
+        return RegistryFactoryRegistration(name, std::make_shared<RegistryFactory>());
     }
 
 
-    /* static */inline void RegistryRegistrator::Register(const std::string& name)
+    /* static */ inline void RegistryFactoryRegistrator::Register(const std::string& name)
     {
         _Registrator::Register<void>(name);
     }
 
-    /* static */ inline std::weak_ptr<RegistryFactory> RegistryRegistrator::getFactory(const std::string& name) noexcept
+    /* static */ inline std::weak_ptr<RegistryFactory> RegistryFactoryRegistrator::getFactory(const std::string& name) noexcept
     {
-        if (RegistryRegistration *result = _Registrator::get(name))
+        if (RegistryFactoryRegistration *result = _Registrator::get(name))
             return result->factory;
         return {};
     }

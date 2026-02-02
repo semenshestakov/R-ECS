@@ -15,18 +15,23 @@ namespace ecs
      *
      * @note This class is non-copyable and non-movable.
      */
-    class RegistryFactory
+    class RegistryFactory final
     {
+        friend class AbstractRegistry;
     public:
         RegistryFactory();
         ~RegistryFactory();
 
-        // Delete copy and move operations to enforce singleton-like behavior
-        RegistryFactory(RegistryFactory&&) noexcept = delete;
-        RegistryFactory& operator=(RegistryFactory&&) noexcept = delete;
-        RegistryFactory(const RegistryFactory&) = delete;
-        RegistryFactory& operator=(const RegistryFactory&) = delete;
+    protected:
+        RegistryFactory(const RegistryFactory& other);
+        RegistryFactory& operator=(const RegistryFactory& other);
+        void copy(const RegistryFactory& other);
 
+        RegistryFactory(RegistryFactory&& other) noexcept;
+        RegistryFactory& operator=(RegistryFactory&& other) noexcept;
+        void swap(RegistryFactory& other) noexcept;
+
+    public:
         /**
          * @brief Registers a component type with the factory.
          *
@@ -42,7 +47,6 @@ namespace ecs
         /**
          * @brief Creates a Components instance with initialized component data.
          *
-         * @param args Optional condition arguments passed to component condition checks.
          * @return Components Instance containing initialized components that pass condition checks.
          * @throws error::InvalidSizeComponents if no valid components are found.
          *

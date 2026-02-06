@@ -10,7 +10,7 @@
 using namespace ecs;
 
 
-TEST(Systems, CreateSystems)
+TEST(SystemsTest, CreateSystems)
 {
     Registry registry;
     {
@@ -25,7 +25,7 @@ TEST(Systems, CreateSystems)
 }
 
 
-TEST(Systems, SimpleUpdateSystems)
+TEST(SystemsTest, SimpleUpdateSystems)
 {
     Registry registry;
     {
@@ -46,7 +46,7 @@ TEST(Systems, SimpleUpdateSystems)
 }
 
 
-TEST(Systems, TestIteratorsWithEntities)
+TEST(SystemsTest, TestIteratorsWithEntities)
 {
     Registry registry;
     {

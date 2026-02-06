@@ -6,7 +6,7 @@
 using namespace ecs;
 
 
-TEST(Components, SimpleRegistration)
+TEST(ComponentsTest, SimpleRegistration)
 {
     ComponentsManager componentsManager;
     componentsManager.Register<Position2d>();
@@ -34,7 +34,7 @@ TEST(Components, SimpleRegistration)
 }
 
 
-TEST(Components, Destructor)
+TEST(ComponentsTest, Destructor)
 {
     ComponentsManager componentsManager;
     componentsManager.Register<DestructorTest>();
@@ -55,7 +55,7 @@ TEST(Components, Destructor)
 }
 
 
-TEST(Components, Copy)
+TEST(ComponentsTest, Copy)
 {
     ComponentsManager componentsManager;
     {

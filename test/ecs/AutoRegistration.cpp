@@ -8,12 +8,12 @@
 using namespace ecs;
 
 
-TEST(AutoRegistration, RegistryRegistratorSize)
+TEST(AutoRegistrationTest, RegistryRegistratorSize)
 {
     EXPECT_EQ(RegistryRegistrator::Registrator::size(), 2);
 }
 
-TEST(AutoRegistration, ComponentsIsRegistered)
+TEST(AutoRegistrationTest, ComponentsIsRegistered)
 {
     EXPECT_EQ(PositionX::IsRegistered, true);
     EXPECT_EQ(PositionY::IsRegistered, true);
@@ -21,13 +21,13 @@ TEST(AutoRegistration, ComponentsIsRegistered)
 }
 
 
-TEST(AutoRegistration, TestUnknownRegistryName)
+TEST(AutoRegistrationTest, TestUnknownRegistryName)
 {
     EXPECT_EQ(RegistryRegistrator::GetComponentsManager("test_null"), nullptr);
 }
 
 
-TEST(AutoRegistration, SimpleComponents)
+TEST(AutoRegistrationTest, SimpleComponents)
 {
     ComponentsManager* componentsManager = RegistryRegistrator::GetComponentsManager("test1");
     EXPECT_NE(componentsManager, nullptr);
@@ -43,7 +43,7 @@ TEST(AutoRegistration, SimpleComponents)
 }
 
 
-TEST(AutoRegistration, SystemsIsRegistered)
+TEST(AutoRegistrationTest, SystemsIsRegistered)
 {
     EXPECT_EQ(SystemTestUpdate::IsRegistered, false);
     EXPECT_EQ(SystemTestId::IsRegistered, false);
@@ -52,7 +52,7 @@ TEST(AutoRegistration, SystemsIsRegistered)
 
 
 
-TEST(AutoRegistration, SystemsCount)
+TEST(AutoRegistrationTest, SystemsCount)
 {
     {
         SystemsManager* systemsManager = RegistryRegistrator::GetSystemsManager("test1");
@@ -65,7 +65,7 @@ TEST(AutoRegistration, SystemsCount)
     }
 }
 
-TEST(AutoRegistration, SimpleSystems)
+TEST(AutoRegistrationTest, SimpleSystems)
 {
 
     auto registry = Registry(

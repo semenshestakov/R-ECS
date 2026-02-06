@@ -34,6 +34,7 @@ if(TEST_ENABLE)
     message("= = = = = = = = = TEST enable = = = = = = = = =")
     include(FetchContent)
 
+    option(BUILD_GMOCK "Build GMock" ON)
     FetchContent_Declare(
             googletest
             GIT_REPOSITORY https://github.com/google/googletest.git
@@ -47,6 +48,7 @@ if(TEST_ENABLE)
             test/ecs/Registry.cpp
             test/ecs/Systems.cpp
             test/reg/registrator_factory_tests.cpp
+            test/event/Event.cpp
     )
     target_include_directories(R-ECS
         PUBLIC
@@ -56,6 +58,7 @@ if(TEST_ENABLE)
     target_link_libraries(test_recs
         PRIVATE
             GTest::gtest_main
+            GTest::gmock_main
             R-ECS
     )
     include(GoogleTest)

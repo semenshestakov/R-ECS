@@ -27,8 +27,11 @@ namespace ecs
         RegistryFactory& operator=(const RegistryFactory& other);
         void copy(const RegistryFactory& other);
 
+    public:
         RegistryFactory(RegistryFactory&& other) noexcept;
         RegistryFactory& operator=(RegistryFactory&& other) noexcept;
+
+    protected:
         void swap(RegistryFactory& other) noexcept;
 
     public:
@@ -45,6 +48,15 @@ namespace ecs
         template<BaseOfComponents ComponentCls> void Register();
 
         /**
+        * @brief Collects and stores component registration information.
+        *
+        * @param componentInfo Registration info to store.
+        * @throws error::InvalidComponentId if component ID is invalid.
+        * @throws error::RepeatComponent if component ID is already registered.
+        */
+        void Register(const RegisterComponentInfo& componentInfo);
+
+        /**
          * @brief Creates a Components instance with initialized component data.
          *
          * @return Components Instance containing initialized components that pass condition checks.
@@ -52,18 +64,9 @@ namespace ecs
          *
          * @note Only components whose condition evaluates to true with given args are included.
          */
-        [[nodiscard]] ComponentsPtr createComponents() const;
+        [[nodiscard]] ComponentsPtr CreateComponents() const;
 
     private:
-
-        /**
-         * @brief Collects and stores component registration information.
-         *
-         * @param componentInfo Registration info to store.
-         * @throws error::InvalidComponentId if component ID is invalid.
-         * @throws error::RepeatComponent if component ID is already registered.
-         */
-        void collectRegisterComponentInfo(RegisterComponentInfo&& componentInfo);
 
         /**
          * @brief Initializes component data buffer and calculates layout.
@@ -86,7 +89,8 @@ namespace ecs
     template<BaseOfComponents ComponentCls>
     void RegistryFactory::Register()
     {
-        collectRegisterComponentInfo({
+        Register({
+            .name = typeid(ComponentCls).name(),
             .componentSize=sizeof(ComponentCls),
             .componentId=ComponentCls::componentId,
             .constructor=[](byte* ptr) { new (ptr) ComponentCls(); },

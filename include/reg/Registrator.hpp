@@ -214,6 +214,7 @@ namespace reg
          * @return Pointer to the FactoryCls object, or nullptr if not found
          */
         [[nodiscard]] static FactoryCls* get(const std::string& name);
+        [[nodiscard]] static bool contains(const std::string& name);
 
     };
 

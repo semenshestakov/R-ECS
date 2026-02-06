@@ -64,7 +64,7 @@ namespace reg
 
     template<typename FactoryCls, RegistrationStrategy Strategy>
     template<typename T>
-    /* static */ Registrator<FactoryCls, Strategy> Registrator<FactoryCls, Strategy>::Create(const std::string &name)
+    /* static */ Registrator<FactoryCls, Strategy> Registrator<FactoryCls, Strategy>::Create(const std::string& name)
     {
         std::size_t key;
         if constexpr (Strategy == RegistrationStrategy::DEFAULT)
@@ -101,7 +101,7 @@ namespace reg
 
     template<typename FactoryCls, RegistrationStrategy Strategy>
     template<typename T>
-    void Registrator<FactoryCls, Strategy>::Register(const std::string &name)
+    void Registrator<FactoryCls, Strategy>::Register(const std::string& name)
     {
         auto registrator = Create<T>(name);
         registrator.m_index = INVALID_INDEX;
@@ -147,6 +147,13 @@ namespace reg
         {
             return &s_collection[key].second.value();
         }
+        return nullptr;
+    }
+
+    template<typename FactoryCls, RegistrationStrategy Strategy>
+    bool Registrator<FactoryCls, Strategy>::contains(const std::string& name)
+    {
+        return get(name) != nullptr;
     }
 
 } // namespace reg

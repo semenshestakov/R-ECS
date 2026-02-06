@@ -21,7 +21,7 @@ namespace ecs
      * @note The buffer layout enables O(1) component lookup by ID.
      * @note Move constructible/assignable but not copyable due to owned buffer memory.
      */
-    class Components
+    class Components final
     {
         /**
          * @brief Metadata describing the component storage layout and capacity.

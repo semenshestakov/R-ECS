@@ -9,7 +9,7 @@ namespace ecs
     /**
      * @brief Metadata for component registration and construction.
      */
-    struct RegisterComponentInfo
+    struct RegisterComponentInfo final
     {
         std::string name;
         bufferSize_t componentSize {0};                             ///< Size of the component in bytes

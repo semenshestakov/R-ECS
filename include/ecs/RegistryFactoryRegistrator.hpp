@@ -18,8 +18,11 @@ namespace ecs
      * @see reg::Registrator
      * @see RegistryFactory
      */
-    class RegistryFactoryRegistrator
+    class RegistryFactoryRegistrator final
     {
+#ifdef DEEP_TESTS_TEST_ENABLE
+    public:
+#endif
         /**
          * @brief Internal structure storing registry metadata.
          *
@@ -28,10 +31,10 @@ namespace ecs
          *
          * @struct RegistryFactoryRegistration
          */
-        struct RegistryFactoryRegistration
+        struct RegistryFactoryRegistration final
         {
             const std::string name;                                ///< Name identifying the registry
-            std::shared_ptr<RegistryFactory> factory = nullptr;    ///< Factory instance for this registry
+            RegistryFactory factory;                               ///< Factory instance for this registry
 
             /**
              * @brief Creates a registry registration entry.
@@ -44,7 +47,7 @@ namespace ecs
             static RegistryFactoryRegistration create(const std::string& name);
 
         };
-        using _Registrator = reg::Registrator<RegistryFactoryRegistration, reg::RegistrationStrategy::UNIQUE>;  ///< Internal registrator type
+        using Registrator = reg::Registrator<RegistryFactoryRegistration, reg::RegistrationStrategy::UNIQUE>;  ///< Internal registrator type
 
     public:
         /**
@@ -65,14 +68,26 @@ namespace ecs
         * If no registry exists with this name, returns an empty weak_ptr.
         *
         * @param name Name of the registry to retrieve
-        * @return std::weak_ptr<RegistryFactory> Weak pointer to the factory,
-        *         or empty weak_ptr if not found
         *
-        * @note Returns weak_ptr to avoid ownership cycles - caller should lock()
-        *       to obtain a usable shared_ptr
         * @note noexcept - guaranteed not to throw exceptions
         */
-        static std::weak_ptr<RegistryFactory> getFactory(const std::string& name) noexcept;
+        static RegistryFactory* GetFactory(const std::string& name) noexcept;
+
+        /**
+         * @brief Registers a component type with the factory system.
+         *
+         * Associates a component type with one or more factory names, enabling
+         * runtime creation and management through registered factories.
+         *
+         * @tparam N Number of factory names (auto-deduced)
+         * @param names Factory names for this component (multiple names allowed)
+         * @param componentInfo Component metadata for runtime operations
+         * @return true if all registrations succeeded, false otherwise
+         *
+         * @note Component ID must be unique across all components
+         */
+        template<std::size_t N>
+        static bool RegisterComponent(const std::array<std::string_view, N>& names, const RegisterComponentInfo& componentInfo);
 
     };
 

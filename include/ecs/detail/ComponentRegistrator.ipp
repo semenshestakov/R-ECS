@@ -6,10 +6,10 @@ namespace ecs
 {
 
     template<typename ComponentCls>
-    RegisterComponentInfo RegisterComponentInfo::create(const std::string &name)
+    RegisterComponentInfo RegisterComponentInfo::create(const std::string& name)
     {
         return {
-            .name=name,
+            .name=std::string(name),
             .componentSize=sizeof(ComponentCls),
             .componentId=ComponentCls::componentId,
             .constructor=[](byte* ptr) { new (ptr) ComponentCls(); }
@@ -17,7 +17,7 @@ namespace ecs
     }
 
     template<typename ComponentCls>
-    componentId_t ComponentRegistrator::Register(const std::string &name)
+    componentId_t ComponentRegistrator::Register(const std::string& name)
     {
         Super registrator = Super::Create<ComponentCls>(name);
 

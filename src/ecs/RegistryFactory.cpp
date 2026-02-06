@@ -47,7 +47,7 @@ namespace ecs
         std::swap(m_maxRegisteredComponentId, other.m_maxRegisteredComponentId);
     }
 
-    ComponentsPtr RegistryFactory::createComponents() const
+    ComponentsPtr RegistryFactory::CreateComponents() const
     {
         Components* componentBuffer = nullptr;
         initComponentesData(componentBuffer);
@@ -98,18 +98,18 @@ namespace ecs
         }
     }
 
-    void RegistryFactory::collectRegisterComponentInfo(RegisterComponentInfo&& componentInfo)
+    void RegistryFactory::Register(const RegisterComponentInfo& componentInfo)
     {
         const componentId_t componentId = componentInfo.componentId;
         if (componentId == INVALID_COMPONENT_ID)
             throw error::InvalidComponentId(
-                "[collectRegisterComponentInfo] componentInfo.componentId: %u", componentId
+                "[Register] componentInfo.componentId: %u", componentId
                 );
 
         RegisterComponentInfo finedComponentInfo = m_registeredComponents[componentId];
         if (finedComponentInfo.componentId != INVALID_COMPONENT_ID)
             throw error::RepeatComponent(
-                "[collectRegisterComponentInfo] finedComponentInfo.componentId == INVALID_COMPONENT_ID: %u", componentId
+                "[Register] finedComponentInfo.componentId == INVALID_COMPONENT_ID: %u", componentId
                 );
 
         m_registeredComponents[componentId] = componentInfo;

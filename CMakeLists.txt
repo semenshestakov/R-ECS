@@ -8,9 +8,9 @@ project(R-ECS
 if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     SET(TEST_ENABLE ON)
     add_compile_definitions(ECS_TESTING)
-    SET(DEEP_TESTS_TEST_ENABLE ON)
-    if (DEEP_TESTS_TEST_ENABLE)
-        add_compile_definitions(DEEP_TESTS_TEST_ENABLE)
+    SET(DEEP_TEST_ENABLE ON)
+    if (DEEP_TEST_ENABLE)
+        add_compile_definitions(DEEP_TEST_ENABLE)
     endif ()
 else ()
     SET(TEST_ENABLE OFF)
@@ -23,7 +23,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(R-ECS
     STATIC
         src/src.cpp
-        src/ecs/RegistryFactory.cpp
+        src/ecs/Registry.cpp
+        src/ecs/SystemManager.cpp
+        src/ecs/EntitiesIterator.cpp
+        src/ecs/ComponentsManager.cpp
 )
 
 target_include_directories(R-ECS
@@ -45,6 +48,7 @@ if(TEST_ENABLE)
     add_executable(test_recs
             test/ecs/components_test.cpp
             test/ecs/registry_tests.cpp
+            test/ecs/systems_tests.cpp
             test/reg/registrator_factory_tests.cpp
     )
 

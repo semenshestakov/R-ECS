@@ -39,7 +39,7 @@ namespace recs::error
         explicit BaseError(const char* message, Args&&... args)
         {
             if constexpr (sizeof...(args) > 0)
-                sprintf(m_message, message, std::forward<Args>(args)...);
+                snprintf(m_message, sizeof(m_message), message, std::forward<Args>(args)...);
             else
                 strcpy(m_message, message);
         }

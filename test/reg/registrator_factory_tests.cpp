@@ -1,5 +1,6 @@
 #include "reg/Registrator.hpp"
 #include <gtest/gtest.h>
+#include <algorithm>
 
 
 using namespace reg;
@@ -345,7 +346,7 @@ struct TestNameRegistration
     const std::string name;
 
     template <typename T>
-    static TestNameRegistration create(const std::string& name) { return {name}; }
+    static TestNameRegistration Create(const std::string& name) { return {name}; }
 };
 
 using g_TestDefaultRegister = Registrator<TestNameRegistration, RegistrationStrategy::DEFAULT>;

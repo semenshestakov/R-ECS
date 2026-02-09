@@ -70,7 +70,7 @@ namespace reg
         if constexpr (Strategy == RegistrationStrategy::DEFAULT)
         {
             key = s_collection.size();
-            s_collection.emplace_back(FactoryCls::template create<T>(name));
+            s_collection.emplace_back(FactoryCls::template Create<T>(name));
             ++s_size;
         }
         else if constexpr (Strategy == RegistrationStrategy::UNIQUE)
@@ -92,7 +92,7 @@ namespace reg
             {
                 key = s_collection.size();
                 ++s_size;
-                s_collection.emplace_back(std::pair{1u, FactoryCls::template create<T>(name)});
+                s_collection.emplace_back(std::pair{1u, FactoryCls::template Create<T>(name)});
             }
         }
 

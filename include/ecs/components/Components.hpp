@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include "ComponentRegistrator.hpp"
-#include "utils/ComponentUtils.hpp"
+#include "../utils/ComponentUtils.hpp"
 
 
 namespace ecs
@@ -71,7 +71,7 @@ namespace ecs
          * @note Zero-initializes memory before construction.
          * @note Properly destroys previously initialized component if reinitializing.
          */
-        template<BaseOfComponents ComponentCls, typename ... Args> bool init(const Args&... args);
+        template<DerivedComponent ComponentCls, typename ... Args> bool init(const Args&... args);
 
         /**
          * @brief Initializes all components using their default constructors.
@@ -88,7 +88,7 @@ namespace ecs
          *
          * @note Returns nullptr if component is not initialized or size mismatch occurs.
          */
-        template<BaseOfComponents ComponentCls> ComponentCls* get() const;
+        template<DerivedComponent ComponentCls> ComponentCls* get() const;
 
         /**
          * @brief Retrieves a pointer to a component of the specified type with enforced existence.
@@ -99,7 +99,7 @@ namespace ecs
          * @throws If the component is not found, uninitialized, or has size mismatch.
          * @note This is a safe alternative to get() when the component's presence is required.
          */
-        template<BaseOfComponents ComponentCls> ComponentCls& mustGet() const;
+        template<DerivedComponent ComponentCls> ComponentCls& mustGet() const;
 
     private:
 
@@ -136,7 +136,7 @@ namespace ecs
          * @brief Get component metadata by type.
          * @return ComponentInfo* or nullptr if not found.
          */
-        template<BaseOfComponents ComponentCls> [[nodiscard]] ComponentInfo* getComponentInfoByComponent() const;
+        template<DerivedComponent ComponentCls> [[nodiscard]] ComponentInfo* getComponentInfoByComponent() const;
 
         /**
          * @brief Get iterator to first ComponentInfo.
@@ -167,7 +167,7 @@ namespace ecs
          */
         static byte* newBuffer(bufferSize_t classBufferSize, componentId_t maxComponentId);
 
-        friend class RegistryFactory;
+        friend class ComponentsManager;
     };
 
     using ComponentsPtr = std::unique_ptr<Components>;

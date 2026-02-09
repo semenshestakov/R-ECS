@@ -1,6 +1,9 @@
 #pragma once
 #include <unordered_map>
-#include "Registry.hpp"
+
+#include "../components/Components.hpp"
+#include "EntitiesManager.hpp"
+#include "Entity.hpp"
 
 
 namespace ecs
@@ -10,12 +13,36 @@ namespace ecs
      * Storage proxy using std::unordered_map for entity-component mapping.
      * Provides O(1) average lookup with entity ID auto-generation.
      */
-    class UnorderedMapProxy final
+    class UMapEntitiesManager final : public IEntitiesManager
     {
         std::unordered_map<entityId_t, ComponentsPtr> m_data;
         entityId_t m_counter = 0;
 
     public:
+        [[nodiscard]] ranges::EntitiesIterator begin() const override
+        {
+            auto it = m_data.begin();
+            if (it == m_data.end())
+                return {};
+
+            auto state = std::make_shared<std::unordered_map<entityId_t, ComponentsPtr>::const_iterator>(it);
+            auto end = m_data.end();
+
+            entityId_t value = it->first;
+            return ranges::EntitiesIterator(
+                value,
+                [state, end](ranges::EntitiesIterator& entitiesIterator)
+                {
+                    if (*state != end)
+                        ++(*state);
+
+                    IEntitiesManager::setValue(
+                        entitiesIterator,
+                        *state != end ? (*state)->first : entityNull
+                        );
+                });
+        }
+
         /**
          * Find components for entity.
          * @param entityId Entity identifier
@@ -47,8 +74,13 @@ namespace ecs
         {
             return ++m_counter;
         }
-    };
 
-    using RegistryUMap = RegistryT<UnorderedMapProxy>;
+       auto iter()
+        {
+            return m_data | std::views::keys;
+        }
+
+    };
+    static_assert(EntitiesManagerConcept<UMapEntitiesManager>, "UMapEntitiesManager is not requires EntitiesManagerConcept");
 
 }

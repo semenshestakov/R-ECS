@@ -25,7 +25,7 @@ namespace reg
          * @return NameRegistration instance
          */
         template <typename T>
-        static NameRegistration create(const std::string& name) { return {name}; }
+        static NameRegistration Create(const std::string& name) { return {name}; }
     };
 
     /**

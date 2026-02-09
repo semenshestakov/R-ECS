@@ -1,26 +1,30 @@
+#include "ecs/entities/UMapEntitiesManager.hpp"
 #include "components_class.hpp"
 #include "ecs/Registry.hpp"
-#include "ecs/RegistryUMap.hpp"
+#include "ecs/utils/RegistryError.hpp"
 #include "gtest/gtest.h"
 
+
 using namespace ecs;
+
+using RegistryUMap = Registry;
 
 
 TEST(RegistryUMapTest, CreateWithGeneratedId)
 {
-    RegistryFactory factory;
+    ComponentsManager factory;
     factory.Register<Position2d>();
     factory.Register<Position3d>();
 
-    RegistryUMap registry(factory);
+    auto registry = Registry(EntitiesManager::Create<UMapEntitiesManager>(), factory);
 
     {
-        auto& components = registry.create();
+        auto& components = registry.Create();
         EXPECT_NE(registry.get(1), nullptr);
     }
 
     {
-        auto& components = registry.create();
+        auto& components = registry.Create();
         EXPECT_NE(registry.get(2), nullptr);
     }
 
@@ -37,60 +41,40 @@ TEST(RegistryUMapTest, CreateWithGeneratedId)
 
 TEST(RegistryUMapTest, CreateWithId)
 {
-    RegistryFactory factory;
+    ComponentsManager factory;
     factory.Register<Position2d>();
     factory.Register<Position3d>();
 
-    RegistryUMap registry(factory);
-
+    auto registry = Registry(EntitiesManager::Create<UMapEntitiesManager>(), factory);
     {
-        auto& components = registry.create(100);
+        auto& components = registry.Create(100);
         EXPECT_NE(registry.get(100), nullptr);
     }
 
     {
-        auto& components = registry.create(200);
+        auto& components = registry.Create(200);
         EXPECT_NE(registry.get(200), nullptr);
     }
 
     EXPECT_THROW(
         {
-            auto& components = registry.create(100);
+            auto& components = registry.Create(100);
         },
         error::InvalidEntityId);
 }
 
 
 
-struct PositionX : IComponent<PositionX>
-{
-    ECS_FACTORY("test1", "test2")
-    float x {1};
-};
-
-struct PositionY : IComponent<PositionY>
-{
-    ECS_FACTORY("test1")
-    float y {2};
-};
-
-struct PositionZ : IComponent<PositionZ>
-{
-    float z {3};
-};
-
-
 TEST(Components, AutoRegistration)
 {
-#ifdef DEEP_TESTS_TEST_ENABLE
-    EXPECT_EQ(RegistryFactoryRegistrator::Registrator::size(), 2);
+#ifdef DEEP_TEST_ENABLE
+    EXPECT_EQ(RegistryRegistrator::Registrator::size(), 2);
     EXPECT_EQ(PositionX::IsRegistered, true);
     EXPECT_EQ(PositionY::IsRegistered, true);
     EXPECT_EQ(PositionZ::IsRegistered, false);
 #endif
 
-
-    RegistryFactory* factory = RegistryFactoryRegistrator::GetFactory("test1");
+    ComponentsManager* factory = RegistryRegistrator::GetComponentsManager("test1");
     EXPECT_NE(factory, nullptr);
     {
         ComponentsPtr components = factory->CreateComponents();
@@ -102,6 +86,6 @@ TEST(Components, AutoRegistration)
         EXPECT_EQ(components->get<PositionZ>(), nullptr);
     }
 
-    EXPECT_EQ(RegistryFactoryRegistrator::GetFactory("test_null"), nullptr);
+    EXPECT_EQ(RegistryRegistrator::GetComponentsManager("test_null"), nullptr);
 }
 

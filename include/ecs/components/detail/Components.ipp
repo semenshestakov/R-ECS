@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Components.hpp"
-#include "../utils/ComponentError.hpp"
+#include "ecs/utils/ComponentError.hpp"
 
 
 namespace ecs
@@ -44,7 +44,7 @@ namespace ecs
         }
     }
 
-    template<BaseOfComponents ComponentCls, typename... Args>
+    template<DerivedComponent ComponentCls, typename... Args>
     /* public */ bool Components::init(const Args &... args)
     {
         if (m_componentsInfo.maxComponentId == INVALID_COMPONENT_ID)
@@ -71,7 +71,7 @@ namespace ecs
         return true;
     }
 
-    template<BaseOfComponents ComponentCls>
+    template<DerivedComponent ComponentCls>
     ComponentCls *Components::get() const
     {
         if (m_componentsInfo.maxComponentId == INVALID_COMPONENT_ID)
@@ -87,7 +87,7 @@ namespace ecs
         return reinterpret_cast<ComponentCls*>(componentInfo->ptr);
     }
 
-    template<BaseOfComponents ComponentCls>
+    template<DerivedComponent ComponentCls>
     ComponentCls& Components::mustGet() const
     {
         ComponentCls* component = get<ComponentCls>();
@@ -97,7 +97,7 @@ namespace ecs
         return *component;
     }
 
-    template<BaseOfComponents ComponentCls>
+    template<DerivedComponent ComponentCls>
     /* private */ Components::ComponentInfo* Components::getComponentInfoByComponent() const
     {
         return getComponentInfoByComponentId(ComponentCls::componentId);

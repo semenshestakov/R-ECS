@@ -1,6 +1,6 @@
 #pragma once
-#include "ComponentRegistrator.hpp"
-#include "RegistryFactoryRegistrator.hpp"
+#include "components/ComponentRegistrator.hpp"
+#include "registry/RegistryRegistrator.hpp"
 
 
 namespace ecs
@@ -15,7 +15,17 @@ namespace ecs
     template <typename ComponentCls>
     struct IComponent
     {
-        friend class RegistryFactory;
+        friend class ComponentsManager;
+
+        /**
+         * @brief Constructs an IComponent and forces registration of the derived component type
+         *
+         * The (void) cast of IsRegistered ensures the static registration flag is ODR-used,
+         * preventing compiler optimization that would otherwise skip the component registration
+         * with the ECS registry system. This guarantees the component type is properly
+         * registered during static initialization.
+         */
+        IComponent() {(void)ComponentCls::IsRegistered;}
 
         /**
          * @brief Unique component type identifier
@@ -35,15 +45,15 @@ namespace ecs
          *
          * @note Override in derived class to enable factory-based creation:
          * @code
-         * static constexpr std::array<std::string_view, 2> RegistryFactoryNames = {
-         *     "position", "transform"
+         * static constexpr std::array<std::string_view, 2> ComponentsManagerNames = {
+         *     "entity", "scene"
          * };
          * @endcode
          */
-        static constexpr std::array<std::string_view, 0> RegistryFactoryNames = {};
+        static constexpr std::array<std::string_view, 0> ComponentsManagerNames = {};
 
 // Hide registration flag in production, expose in tests
-#ifndef DEEP_TESTS_TEST_ENABLE
+#ifndef DEEP_TEST_ENABLE
     private:
 #endif
         /**
@@ -59,10 +69,10 @@ namespace ecs
          * @note Initialized after componentId
          * @note Registration occurs exactly once per component type
          * @note Thread-safe initialization
-         * @note May throw if registration fails (depends on RegistryFactoryRegistrator)
+         * @note May throw if registration fails (depends on ComponentsManagerRegistrator)
          */
-        static inline const bool IsRegistered = RegistryFactoryRegistrator::RegisterComponent(
-            ComponentCls::RegistryFactoryNames,
+        [[maybe_unused]] static inline const bool IsRegistered = RegistryRegistrator::RegisterComponent(
+            ComponentCls::ComponentsManagerNames,
             {
                 typeid(ComponentCls).name(),
                 sizeof(ComponentCls),
@@ -70,7 +80,8 @@ namespace ecs
                 [](byte* ptr) { new (ptr) ComponentCls(); },
                 [](byte* ptr) { reinterpret_cast<ComponentCls*>(ptr)->~ComponentCls(); }
             });
-#ifndef DEEP_TESTS_TEST_ENABLE
+
+#ifndef DEEP_TEST_ENABLE
     public:
 #endif
 
@@ -87,20 +98,20 @@ namespace ecs
  *
  * @note The macro:
  *       1. Declares friendship with IComponent for access to private names
- *       2. Defines RegistryFactoryNames as a private static constexpr array
+ *       2. Defines ComponentsManagerNames as a private static constexpr array
  *       3. Restores original access specifier (public) after definition
  *
  * @warning Must be used inside a component class derived from IComponent<T>
  * @warning Names must be string literals (compile-time constants)
  *
  * @see IComponent
- * @see RegistryFactoryRegistrator::RegisterComponent
+ * @see ComponentsManagerRegistrator::RegisterComponent
  */
-#define ECS_FACTORY(...)                                                                                        \
+#define ECS_REGISTRY(...)                                                                                        \
     friend struct IComponent;                                                                                   \
     private:                                                                                                    \
     static constexpr std::array<std::string_view, sizeof((const char*[]){__VA_ARGS__}) / sizeof(const char*)>   \
-    RegistryFactoryNames = {__VA_ARGS__};                                                                        \
+    ComponentsManagerNames = {__VA_ARGS__};                                                                     \
     public:
 
 }

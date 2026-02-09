@@ -1,4 +1,5 @@
 #pragma once
+#include <concepts>
 #include <type_traits>
 
 
@@ -26,6 +27,6 @@ namespace ecs
      * Ensures type safety by restricting template arguments to classes
      * that inherit from BaseComponent, preventing invalid component types.
      */
-    template<typename T> concept BaseOfComponents = requires { std::derived_from<T, IComponent<T>>; };
+    template<typename T> concept DerivedComponent = requires { std::derived_from<T, IComponent<T>>; };
 
 }

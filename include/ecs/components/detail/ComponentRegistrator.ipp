@@ -6,7 +6,7 @@ namespace ecs
 {
 
     template<typename ComponentCls>
-    RegisterComponentInfo RegisterComponentInfo::create(const std::string& name)
+    RegisterComponentInfo RegisterComponentInfo::Create(const std::string& name)
     {
         return {
             .name=std::string(name),

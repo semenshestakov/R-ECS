@@ -16,7 +16,7 @@ replicated across multiple clients and one server.
 |:--------------------------------|:--------:|:-----:|
 | DynamicComponentsFactory        | v0.1.0 ✅ |   ✅   |
 | ComponentsFactory         | v0.2.0 ✅ |   ❌   |
-| ComponentsCollection            | v0.2.5 ❌ |   ❌   |
+| ComponentsEntitiesManager            | v0.2.5 ❌ |   ❌   |
 | EntitiesFactory                 | v0.3.0 ❌ |   ❌   |
 | BindSystems                     | v0.4.5 ❌ |   ❌   |
 | custom-UDP                      | v0.5.0 ❌ |   ❌   |

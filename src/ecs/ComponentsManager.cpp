@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <array>
 
-#include "ecs/RegistryFactory.hpp"
+#include "ecs/components/ComponentsManager.hpp"
 #include "ecs/utils/ComponentError.hpp"
 
 
@@ -9,45 +9,45 @@ namespace ecs
 {
     using namespace ecs;
 
-    RegistryFactory::RegistryFactory() = default;
+    ComponentsManager::ComponentsManager() = default;
 
-    RegistryFactory::~RegistryFactory() = default;
+    ComponentsManager::~ComponentsManager() = default;
 
-    RegistryFactory::RegistryFactory(const RegistryFactory& other)
+    ComponentsManager::ComponentsManager(const ComponentsManager& other)
     {
         this->copy(other);
     }
 
-    RegistryFactory& RegistryFactory::operator=(const RegistryFactory& other)
+    ComponentsManager& ComponentsManager::operator=(const ComponentsManager& other)
     {
         this->copy(other);
         return *this;
     }
 
-    void RegistryFactory::copy(const RegistryFactory& other)
+    void ComponentsManager::copy(const ComponentsManager& other)
     {
         std::ranges::copy(other.m_registeredComponents,std::begin(m_registeredComponents));
         m_maxRegisteredComponentId = other.m_maxRegisteredComponentId;
     }
 
-    RegistryFactory::RegistryFactory(RegistryFactory&& other) noexcept
+    ComponentsManager::ComponentsManager(ComponentsManager&& other) noexcept
     {
        this->swap(other);
     }
 
-    RegistryFactory& RegistryFactory::operator=(RegistryFactory &&other) noexcept
+    ComponentsManager& ComponentsManager::operator=(ComponentsManager &&other) noexcept
     {
         this->swap(other);
         return *this;
     }
 
-    void RegistryFactory::swap(RegistryFactory &other) noexcept
+    void ComponentsManager::swap(ComponentsManager &other) noexcept
     {
         std::swap(m_registeredComponents, other.m_registeredComponents);
         std::swap(m_maxRegisteredComponentId, other.m_maxRegisteredComponentId);
     }
 
-    ComponentsPtr RegistryFactory::CreateComponents() const
+    ComponentsPtr ComponentsManager::CreateComponents() const
     {
         Components* componentBuffer = nullptr;
         initComponentesData(componentBuffer);
@@ -55,7 +55,7 @@ namespace ecs
         return ComponentsPtr(componentBuffer);
     }
 
-    void RegistryFactory::initComponentesData(Components*& componentBuffer) const
+    void ComponentsManager::initComponentesData(Components*& componentBuffer) const
     {
         bufferSize_t componentsSizeOf {};
         componentId_t maxComponentId {};
@@ -98,7 +98,7 @@ namespace ecs
         }
     }
 
-    void RegistryFactory::Register(const RegisterComponentInfo& componentInfo)
+    void ComponentsManager::Register(const RegisterComponentInfo& componentInfo)
     {
         const componentId_t componentId = componentInfo.componentId;
         if (componentId == INVALID_COMPONENT_ID)

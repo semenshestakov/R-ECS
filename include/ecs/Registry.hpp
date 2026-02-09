@@ -1,76 +1,45 @@
 #pragma once
-#include <utility>
 
-#include "Components.hpp"
-#include "Entity.hpp"
-#include "RegistryFactory.hpp"
-#include "utils/RegistryError.hpp"
+#include "components/Components.hpp"
+#include "components/ComponentsManager.hpp"
+#include "entities/EntitiesManager.hpp"
+#include "entities/ranges/EntitiesViews.hpp"
+#include "systems/SystemManager.hpp"
 
 
 namespace ecs
 {
 
-    /**
-     * Base abstract registry with factory ownership.
-     * Move-only, non-copyable. All derived registries must provide a factory.
-     */
-    class AbstractRegistry
-    {
-    protected:
-        /// Protected constructor - requires factory for initialization
-        explicit AbstractRegistry(const RegistryFactory& factory) : m_factory(factory) {}
-
-    public:
-        AbstractRegistry() = delete;                                            ///< No default construction
-        ~AbstractRegistry() = default;                                          ///< Default destructor
-        AbstractRegistry(AbstractRegistry&&) noexcept = default;                ///< Move constructible
-        AbstractRegistry& operator=(AbstractRegistry&&) noexcept = default;     ///< Move assignable
-        AbstractRegistry(const AbstractRegistry&) = delete;                     ///< Non-copyable
-        AbstractRegistry& operator=(const AbstractRegistry&) = delete;          ///< Non-copyable
-
-    protected:
-        ///< Factory instance for component operations
-        RegistryFactory m_factory;
-    };
-
-
-    /**
-     * Generic registry implementation templated on collection type.
-     *
-     * Provides entity-component mapping with creation, lookup, and management.
-     * Collection type defines storage strategy (map, dense array, etc.).
-     *
-     * @tparam Collection Storage type with interface:
-     *         - find(entityId_t) -> Components*
-     *         - emplace(entityId_t, ComponentsPtr)
-     *         - generateId() -> entityId_t (optional)
-     */
-    template<typename Collection>
-    class RegistryT final : public AbstractRegistry
+    class Registry final
     {
     public:
-        /// Construct registry with factory for component creation
-        explicit RegistryT(const RegistryFactory& factory) : AbstractRegistry(factory) {}
+        /// Constructor - requires factory for initialization
+        explicit Registry(EntitiesManager&& entitiesManager, const ComponentsManager& componentsManager);
+        explicit Registry(EntitiesManager&& entitiesManager, const ComponentsManager& componentsManager, const SystemManager& systemManager);
 
+        Registry() = default;                                           ///< Default construction
+        ~Registry() = default;                                          ///< Default destructor
+        Registry(Registry&&) noexcept = default;                        ///< Move constructible
+        Registry& operator=(Registry&&) noexcept = default;             ///< Move assignable
+        Registry(const Registry&) = delete;                             ///< Non-copyable
+        Registry& operator=(const Registry&) = delete;                  ///< Non-copyable
+
+#ifndef DEEP_TEST_ENABLE
+    private:
+#endif
+        EntitiesManager m_entitiesManager;          ///< Underlying entity storage
+        ComponentsManager m_componentsManager;      ///< Factory instance for component operations
+        SystemManager m_systemManager;              ///< Underlying entity storage
+
+    public:
         /// Find components for entity. Returns nullptr if not found.
-        [[nodiscard]] Components* get(const entityId_t entityId) const
-        {
-            if (auto it = m_data.find(entityId))
-                return it;
-            return nullptr;
-        }
+        [[nodiscard]] Components* get(entityId_t entityId) const;
 
         /// Check if entity exists in registry
-        [[nodiscard]] bool contains(const entityId_t entityId) const
-        {
-            return get(entityId) != nullptr;
-        }
+        [[nodiscard]] bool contains(entityId_t entityId) const;
 
         /// Get components for entity. Asserts/throws if entity not found.
-        [[nodiscard]] Components& mustGet(const entityId_t entityId) const
-        {
-            return *get(entityId);
-        }
+        [[nodiscard]] Components& mustGet(entityId_t entityId) const;
 
         /**
          * Create components for given entity ID.
@@ -79,37 +48,30 @@ namespace ecs
          * @return Reference to created components
          * @throws error::InvalidEntityId if entity already exists
          */
-        Components& create(entityId_t entityId)
-        {
-            if (contains(entityId))
-                throw error::InvalidEntityId("[create] '%llu' id is collected", entityId);
-
-            ComponentsPtr components = m_factory.CreateComponents();
-            components->initialize();
-            m_data.emplace(entityId, std::move(components));
-            return *get(entityId);
-        }
+        [[maybe_unused]] Components& Create(entityId_t entityId);
 
         /**
         * Create components with auto-generated entity ID.
         *
         * @return Reference to created components
-        * @requires Collection must have generateId() method
+        * @requires EntitiesManager must have generateId() method
         */
-        Components& create()
-        {
-            static_assert(
-                requires(Collection proxy) { { proxy.generateId() } -> std::same_as<entityId_t>; },
-                "UnorderedMapProxy must have generateId() method returning entityId_t"
-                );
+        [[maybe_unused]] Components& Create();
 
-            const entityId_t entityId = m_data.generateId();
-            return create(entityId);
-        }
+        void Update(std::optional<updateTag_t> updateTag = std::nullopt);
 
-    private:
-        ///< Underlying component storage
-        Collection m_data;
+        template<typename... ComponentCls>
+        ranges::view::ComponentsViews view();
     };
 
-}
+    template<typename... ComponentCls>
+    ranges::view::ComponentsViews Registry::view()
+    {
+        if constexpr (sizeof...(ComponentCls) == 0)
+        {
+            return {m_entitiesManager.begin(), m_entitiesManager};
+        }
+        return {m_entitiesManager.end(), m_entitiesManager};
+    }
+
+} // namespace ecs

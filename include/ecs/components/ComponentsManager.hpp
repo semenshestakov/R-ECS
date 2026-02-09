@@ -1,6 +1,6 @@
 #pragma once
+#include "../utils/ComponentUtils.hpp"
 #include "Components.hpp"
-#include "utils/ComponentUtils.hpp"
 
 
 namespace ecs
@@ -15,37 +15,35 @@ namespace ecs
      *
      * @note This class is non-copyable and non-movable.
      */
-    class RegistryFactory final
+    class ComponentsManager final
     {
-        friend class AbstractRegistry;
+        friend class Registry;
     public:
-        RegistryFactory();
-        ~RegistryFactory();
+        ComponentsManager();
+        ~ComponentsManager();
+
+        ComponentsManager(const ComponentsManager& other);
+        ComponentsManager& operator=(const ComponentsManager& other);
+        void copy(const ComponentsManager& other);
+
+        ComponentsManager(ComponentsManager&& other) noexcept;
+        ComponentsManager& operator=(ComponentsManager&& other) noexcept;
 
     protected:
-        RegistryFactory(const RegistryFactory& other);
-        RegistryFactory& operator=(const RegistryFactory& other);
-        void copy(const RegistryFactory& other);
-
-    public:
-        RegistryFactory(RegistryFactory&& other) noexcept;
-        RegistryFactory& operator=(RegistryFactory&& other) noexcept;
-
-    protected:
-        void swap(RegistryFactory& other) noexcept;
+        void swap(ComponentsManager& other) noexcept;
 
     public:
         /**
          * @brief Registers a component type with the factory.
          *
-         * @tparam ComponentCls The component type to register, must satisfy BaseOfComponents concept.
+         * @tparam ComponentCls The component type to register, must satisfy DerivedComponent concept.
          *
          * @throws error::InvalidComponentId if component ID is invalid.
          * @throws error::RepeatComponent if component ID is already registered.
          *
          * @note Component must have static members: componentId, condition, and default constructor.
          */
-        template<BaseOfComponents ComponentCls> void Register();
+        template<DerivedComponent ComponentCls> void Register();
 
         /**
         * @brief Collects and stores component registration information.
@@ -66,6 +64,7 @@ namespace ecs
          */
         [[nodiscard]] ComponentsPtr CreateComponents() const;
 
+
     private:
 
         /**
@@ -77,7 +76,9 @@ namespace ecs
          * @note Allocates buffer memory that must be managed by Components.
          */
         void initComponentesData(Components*& componentBuffer) const;
-
+#ifdef DEEP_TEST_ENABLE
+    public:
+#endif
         /// @brief Maximum registered component ID across all registered components.
         componentId_t m_maxRegisteredComponentId {INVALID_COMPONENT_ID};
 
@@ -86,8 +87,8 @@ namespace ecs
 
     };
 
-    template<BaseOfComponents ComponentCls>
-    void RegistryFactory::Register()
+    template<DerivedComponent ComponentCls>
+    void ComponentsManager::Register()
     {
         Register({
             .name = typeid(ComponentCls).name(),

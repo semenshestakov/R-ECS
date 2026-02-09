@@ -1,6 +1,6 @@
 #pragma once
+#include "../utils/ComponentUtils.hpp"
 #include "reg/Registrator.hpp"
-#include "utils/ComponentUtils.hpp"
 
 
 namespace ecs
@@ -18,7 +18,7 @@ namespace ecs
         void(*destructor)(byte*) = nullptr;                         ///< Destructor function
 
         template <typename ComponentCls>
-        static RegisterComponentInfo create(const std::string& name);
+        static RegisterComponentInfo Create(const std::string& name);
     };
 
     /**

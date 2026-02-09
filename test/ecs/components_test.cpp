@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
+#include "ecs/IComponent.hpp"
 #include "components_class.hpp"
-#include "ecs/RegistryFactory.hpp"
-#include "ecs/RegistryFactoryRegistrator.hpp"
 
 
 using namespace ecs;
@@ -13,9 +12,9 @@ TEST(Components, RegisterComponentId)
 }
 
 
-TEST(FactoryComponents, SimpleRegistration)
+TEST(Components, SimpleRegistration)
 {
-    RegistryFactory factory;
+    ComponentsManager factory;
     factory.Register<Position2d>();
     factory.Register<Position3d>();
 
@@ -41,9 +40,9 @@ TEST(FactoryComponents, SimpleRegistration)
 }
 
 
-TEST(ComponentsDestructor, SimpleRegistration)
+TEST(Components, Destructor)
 {
-    RegistryFactory factory;
+    ComponentsManager factory;
     factory.Register<DestructorTest>();
 
     {
@@ -59,4 +58,23 @@ TEST(ComponentsDestructor, SimpleRegistration)
 
         EXPECT_EQ(DestructorTest::testValue, true);
     }
+}
+
+TEST(Components, Copy)
+{
+#ifdef DEEP_TEST_ENABLE
+    ComponentsManager factory;
+    {
+        ComponentsManager newFactory;
+        newFactory.Register<Position2d>();
+        newFactory.Register<Position3d>();
+        factory.copy(newFactory);
+    }
+
+    {
+        ComponentsPtr components = factory.CreateComponents();
+        components->initialize();
+        EXPECT_EQ(components->mustGet<Position3d>().x, Position3d().x);
+    }
+#endif
 }

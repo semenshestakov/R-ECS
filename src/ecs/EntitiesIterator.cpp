@@ -11,29 +11,29 @@ namespace ecs::ranges
         m_value(value), m_inc(std::move(funcInc))
     {}
 
-    bool EntitiesIterator::operator==(const EntitiesIterator &other) const
-    {
-        return m_value == entityNull;
-    }
-
-    bool EntitiesIterator::operator!=(const EntitiesIterator &other) const
-    {
-        return m_value != entityNull;
-    }
-
-    bool EntitiesIterator::operator==(const entityOpt_t &entityOpt) const
+    bool EntitiesIterator::operator==(const entityOpt_t entityOpt) const
     {
         return m_value == entityOpt;
     }
 
-    bool EntitiesIterator::operator!=(const entityOpt_t &entityOpt) const
+    bool EntitiesIterator::operator!=(const entityOpt_t entityOpt) const
     {
-        return m_value == entityOpt;
+        return !operator==(entityOpt);
+    }
+
+    bool EntitiesIterator::operator==(const EntitiesIterator& other) const
+    {
+        return operator==(other.m_value);
+    }
+
+    bool EntitiesIterator::operator!=(const EntitiesIterator& other) const
+    {
+        return !operator==(other);
     }
 
     EntitiesIterator& EntitiesIterator::operator++()
     {
-        if (m_inc != nullptr)
+        if (m_inc != nullptr && *this != entityNull)
             m_inc(*this);
         return *this;
     }

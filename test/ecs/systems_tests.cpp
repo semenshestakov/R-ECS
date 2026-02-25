@@ -20,13 +20,33 @@ struct SystemTestUpdate final : ISystem<SystemTestUpdate>
     }
 };
 
+
 struct SystemTestId final : ISystem<SystemTestId>
 {
+    inline static unsigned int Counter = {0};
     void Update(Registry& registry, const UpdateState& state) override
     {
         for (auto& components : registry.view())
         {
             components.mustGet<TestId>().id++;
+        }
+        static const unsigned int s_Counter1 = ++Counter;
+
+        for (auto [testId] : registry.view<TestId>())
+        {
+            testId.id++;
+        }
+        static const unsigned int s_Counter2 = ++Counter;
+
+        for (auto [testId, position] : registry.view<TestId, PositionY>())
+        {
+            testId.id++;
+        }
+        static const unsigned int s_Counter3 = ++Counter;
+
+        for (auto [testId, position] : registry.view<TestId, PositionZ>()) // filtered all
+        {
+            testId.id++;
         }
     }
 };
@@ -51,6 +71,7 @@ TEST(Systems, CreateSystems)
             EXPECT_EQ(SystemTestUpdate::Counter, i);
         }
     }
+    EXPECT_EQ(SystemTestId::Counter, 3);
 
 
     {
@@ -60,13 +81,13 @@ TEST(Systems, CreateSystems)
             Components& components = registry.Create(i);
             EXPECT_EQ(components.mustGet<TestId>().id, TestId().id);
             registry.Update();
-            EXPECT_EQ(components.mustGet<TestId>().id, TestId().id + 1);
+            EXPECT_EQ(components.mustGet<TestId>().id, TestId().id + SystemTestId::Counter);
         }
 
         for (std::size_t i = 0; i < MAX_ENTITIES; i++)
         {
             Components& components = registry.mustGet(i);
-            EXPECT_EQ(components.mustGet<TestId>().id, TestId().id + MAX_ENTITIES - i);
+            EXPECT_EQ(components.mustGet<TestId>().id, TestId().id + (MAX_ENTITIES - i) * SystemTestId::Counter);
         }
     }
 

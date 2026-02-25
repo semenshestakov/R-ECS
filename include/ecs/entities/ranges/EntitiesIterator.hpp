@@ -17,11 +17,11 @@ namespace ecs::ranges
         explicit EntitiesIterator(entityOpt_t value);
         explicit EntitiesIterator(entityOpt_t value, std::function<void(EntitiesIterator&)>&& funcInc);
 
+        [[nodiscard]] bool operator==(entityOpt_t entityOpt) const;
+        [[nodiscard]] bool operator!=(entityOpt_t entityOpt) const;
+
         [[nodiscard]] bool operator==(const EntitiesIterator& other) const;
         [[nodiscard]] bool operator!=(const EntitiesIterator& other) const;
-
-        [[nodiscard]] bool operator==(const entityOpt_t& entityOpt) const;
-        [[nodiscard]] bool operator!=(const entityOpt_t& entityOpt) const;
 
         EntitiesIterator& operator++();
         EntitiesIterator operator++(int);

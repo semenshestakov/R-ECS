@@ -18,8 +18,9 @@ namespace ecs::ranges::view
         [[nodiscard]] bool operator==(const EntitiesIterator& it) const { return m_iterator == it;}
         [[nodiscard]] bool operator!=(const EntitiesIterator& it) const { return m_iterator != it;}
 
-        Derived& operator++() { ++m_iterator; return static_cast<Derived&>(*this); }
-        Derived operator++(int) { auto tmp = *this; ++m_iterator; return tmp; }
+        void increment() { ++m_iterator; }
+        Derived& operator++() { static_cast<Derived&>(*this).increment(); return static_cast<Derived&>(*this); }
+        Derived operator++(int) { auto tmp = *this; static_cast<Derived&>(*this).increment(); return tmp; }
 
         [[nodiscard]] Derived begin() noexcept { return static_cast<Derived&>(*this); }
         [[nodiscard]] EntitiesIterator end() const noexcept { return {}; }
@@ -28,6 +29,7 @@ namespace ecs::ranges::view
         EntitiesIterator m_iterator;
         EntitiesManager& m_manager;
     };
+
 
     struct EntityViews : DerivedViews<EntityViews>
     {
@@ -40,14 +42,55 @@ namespace ecs::ranges::view
     };
 
 
-    struct ComponentsViews : DerivedViews<ComponentsViews>
+    template<typename... ComponentCls>
+    struct ComponentsViews : DerivedViews<ComponentsViews<ComponentCls...>>
     {
-        using DerivedViews::DerivedViews;
+    private:
+        using Super = DerivedViews<ComponentsViews<ComponentCls...>>;
+        static constexpr bool IsZeroComponents = sizeof...(ComponentCls) == 0;
 
-        Components& operator*() const
+    public:
+        ComponentsViews(EntitiesIterator&& iterator, EntitiesManager& manager) :
+             Super(std::move(iterator), manager)
         {
-            return *m_manager.find(*m_iterator);
+            if constexpr (!IsZeroComponents)
+            {
+                if (this->m_iterator == entityNull)
+                    return;
+
+                if (Components& components = *this->m_manager.find(*this->m_iterator); !components.contains<ComponentCls...>())
+                    increment();
+            }
         }
+
+        std::conditional_t<IsZeroComponents, Components&, std::tuple<ComponentCls&...>> operator*()
+        {
+            Components& components = *this->m_manager.find(*this->m_iterator);
+            if constexpr (IsZeroComponents)
+                return components;
+            else
+                return components.view<ComponentCls...>();
+        }
+
+        void increment()
+        {
+            if constexpr (IsZeroComponents)
+            {
+                Super::increment();
+            }
+            else
+            {
+                for (;this->m_iterator != entityNull; Super::increment())
+                {
+                    if (Components &components = *this->m_manager.find(*this->m_iterator); components.contains<ComponentCls...>())
+                    {
+                        Super::increment();
+                        return;
+                    }
+                }
+            }
+        }
+
     };
 
 }

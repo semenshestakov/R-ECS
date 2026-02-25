@@ -97,13 +97,28 @@ namespace ecs
         return *component;
     }
 
+    template<DerivedComponent... ComponentCls>
+    bool Components::contains() const
+    {
+        return ((this->get<ComponentCls>() != nullptr) && ...);
+    }
+
+    template<DerivedComponent... ComponentCls>
+    std::tuple<ComponentCls&...> Components::view() const
+    {
+        if (!this->contains<ComponentCls...>())
+            throw error::InvalidComponent("view is not found");
+
+        return std::tuple<ComponentCls&...>(*get<ComponentCls>()...);
+    }
+
     template<DerivedComponent ComponentCls>
-    /* private */ Components::ComponentInfo* Components::getComponentInfoByComponent() const
+    Components::ComponentInfo* Components::getComponentInfoByComponent() const
     {
         return getComponentInfoByComponentId(ComponentCls::componentId);
     }
 
-    /* private */ inline Components::ComponentInfo* Components::getComponentInfoByComponentId(const componentId_t componentId) const
+    inline Components::ComponentInfo* Components::getComponentInfoByComponentId(const componentId_t componentId) const
     {
         if (componentId > m_componentsInfo.maxComponentId || componentId == INVALID_COMPONENT_ID)
             return nullptr;
@@ -120,22 +135,22 @@ namespace ecs
         return nullptr;
     }
 
-    /* private */ inline Components::ComponentInfo *Components::beginComponentInfo() const
+    inline Components::ComponentInfo *Components::beginComponentInfo() const
     {
         return reinterpret_cast<ComponentInfo*>(data() + sizeof(Components));
     }
 
-    /* private */ inline Components::ComponentInfo *Components::endComponentInfo() const
+    inline Components::ComponentInfo *Components::endComponentInfo() const
     {
         return beginComponentInfo() + m_componentsInfo.maxComponentId + 1;
     }
 
-    /* private */ inline byte* Components::data() const
+    inline byte* Components::data() const
     {
         return const_cast<byte*>(reinterpret_cast<const byte*>(this));
     }
 
-    /* static */inline byte* Components::newBuffer(const bufferSize_t classBufferSize, const componentId_t maxComponentId)
+    inline byte* Components::newBuffer(const bufferSize_t classBufferSize, const componentId_t maxComponentId)
     {
         return new byte[sizeof(Components) + (maxComponentId + 1) * sizeof(ComponentInfo) + classBufferSize]{};
     }

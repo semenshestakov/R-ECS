@@ -1,7 +1,6 @@
 #pragma once
 #include <map>
 #include <vector>
-
 #include "SystemUtils.hpp"
 
 
@@ -25,7 +24,6 @@ namespace ecs
         void swap(SystemManager& other) noexcept;
 
     private:
-
         using systemPtr_t = std::unique_ptr<IBaseSystem>;
         using hash_t = std::size_t;
 
@@ -39,7 +37,6 @@ namespace ecs
         void Update(Registry& registry, std::optional<updateTag_t> updateTag = std::nullopt);
 
         friend class Registry;
-
     };
 
 

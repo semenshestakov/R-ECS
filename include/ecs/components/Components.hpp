@@ -101,8 +101,34 @@ namespace ecs
          */
         template<DerivedComponent ComponentCls> ComponentCls& mustGet() const;
 
-    private:
+        /**
+         * @brief Checks if all specified component types are present in this component container.
+         *
+         * @tparam ComponentCls... Variadic list of component types to check.
+         * @return true If all specified component types exist and are valid.
+         * @return false If any of the specified component types is missing or invalid.
+         *
+         * @note Uses fold expression to efficiently check all components in a single pass.
+         * @note This is a compile-time checked operation - all ComponentCls must be valid component types.
+         */
+        template<DerivedComponent... ComponentCls> [[nodiscard]] bool contains() const;
 
+        /**
+         * @brief Creates a tuple of references to all requested components.
+         *
+         * @tparam ComponentCls... Variadic list of component types to retrieve.
+         * @return std::tuple<ComponentCls&...> Tuple containing references to each requested component.
+         *
+         * @throws error::InvalidComponent if any of the requested components is not found.
+         *
+         * @note This method guarantees that all requested components exist and returns them as a tuple.
+         * @note Perfect for structured bindings: auto [comp1, comp2] = components.view<Comp1, Comp2>();
+         * @note The order of components in the tuple matches the template parameter order.
+         * @see contains() for checking existence without throwing.
+         */
+        template<DerivedComponent... ComponentCls> [[nodiscard]] std::tuple<ComponentCls&...> view() const;
+
+    private:
 
         /**
          * @brief Runtime information for a component instance.

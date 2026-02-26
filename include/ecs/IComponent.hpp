@@ -45,12 +45,12 @@ namespace ecs
          *
          * @note Override in derived class to enable factory-based creation:
          * @code
-         * static constexpr std::array<std::string_view, 2> ComponentsManagerNames = {
+         * static constexpr std::array<std::string_view, 2> ECS_REGISTRY_NAMES = {
          *     "entity", "scene"
          * };
          * @endcode
          */
-        static constexpr std::array<std::string_view, 0> ComponentsManagerNames = {};
+        static constexpr std::array<std::string_view, 0> ECS_REGISTRY_NAMES = {};
 
 // Hide registration flag in production, expose in tests
 #ifndef DEEP_TEST_ENABLE
@@ -72,7 +72,7 @@ namespace ecs
          * @note May throw if registration fails (depends on ComponentsManagerRegistrator)
          */
         [[maybe_unused]] static inline const bool IsRegistered = RegistryRegistrator::RegisterComponent(
-            ComponentCls::ComponentsManagerNames,
+            ComponentCls::ECS_REGISTRY_NAMES,
             {
                 typeid(ComponentCls).name(),
                 sizeof(ComponentCls),
@@ -81,37 +81,7 @@ namespace ecs
                 [](byte* ptr) { reinterpret_cast<ComponentCls*>(ptr)->~ComponentCls(); }
             });
 
-#ifndef DEEP_TEST_ENABLE
-    public:
-#endif
 
     };
-
-/**
- * @brief Macro to define factory registration names for an ECS component
- *
- * This macro should be used within a component class definition to specify
- * one or more factory names under which the component will be registered.
- * The names enable factory-based creation and lookup of the component type.
- *
- * @param ... One or more string literals representing factory names
- *
- * @note The macro:
- *       1. Declares friendship with IComponent for access to private names
- *       2. Defines ComponentsManagerNames as a private static constexpr array
- *       3. Restores original access specifier (public) after definition
- *
- * @warning Must be used inside a component class derived from IComponent<T>
- * @warning Names must be string literals (compile-time constants)
- *
- * @see IComponent
- * @see ComponentsManagerRegistrator::RegisterComponent
- */
-#define ECS_REGISTRY(...)                                                                                        \
-    friend struct IComponent;                                                                                   \
-    private:                                                                                                    \
-    static constexpr std::array<std::string_view, sizeof((const char*[]){__VA_ARGS__}) / sizeof(const char*)>   \
-    ComponentsManagerNames = {__VA_ARGS__};                                                                     \
-    public:
 
 }

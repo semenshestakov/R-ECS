@@ -10,6 +10,53 @@
 namespace ecs
 {
 
+    /**
+     * @brief Central coordinator and primary interface for the ECS (Entity-Component-System) architecture.
+     *
+     * The Registry class serves as the main entry point for all ECS operations, managing the complete
+     * lifecycle of entities, components, and systems. It acts as a facade that coordinates between
+     * three specialized managers:
+     * - EntitiesManager: Handles entity storage, iteration, and lifetime
+     * - ComponentsManager: Manages component factories and type registration
+     * - SystemManager: Controls system registration and update execution
+     *
+     * Key responsibilities:
+     * - Entity creation and existence checking
+     * - Component access and manipulation through entity handles
+     * - System updates with configurable update phases
+     * - Range-based views for efficient querying of entities with specific components
+     *
+     * The Registry is designed with clear ownership semantics:
+     * - Move constructible and assignable for efficient transfer
+     * - Non-copyable to prevent duplication of unique resources
+     * - Default constructible for flexibility in initialization
+     *
+     * Thread Safety: Not thread-safe. External synchronization required for multi-threaded access.
+     *
+     * Example usage:
+     * @code
+     * // Create and initialize registry
+     * auto entitiesManager = EntitiesManager::Create<MyEntityManager>();
+     * ComponentsManager componentsManager; ... // Register Transform, Velocity components
+     * Registry registry(std::move(entitiesManager), componentsManager);
+     *
+     * // Create entities
+     * auto& entity1 = registry.Create();
+     * auto& entity2 = registry.Create(42); // Specific ID
+     *
+     * // Query entities with specific components
+     * for (auto [transform, velocity] : registry.view<Transform, Velocity>()) {
+     *     transform.position.x += velocity.dx;
+     * }
+     *
+     * // Update systems
+     * registry.Update(updateTag_t::Physics);
+     * @endcode
+     *
+     * @see EntitiesManager for entity storage details
+     * @see ComponentsManager for component factory management
+     * @see SystemManager for system execution control
+     */
     class Registry final
     {
     public:
@@ -51,11 +98,11 @@ namespace ecs
         [[maybe_unused]] Components& Create(entityId_t entityId);
 
         /**
-        * Create components with auto-generated entity ID.
-        *
-        * @return Reference to created components
-        * @requires EntitiesManager must have generateId() method
-        */
+         * Create components with auto-generated entity ID.
+         *
+         * @return Reference to created components
+         * @requires EntitiesManager must have generateId() method
+         */
         [[maybe_unused]] Components& Create();
 
         /**

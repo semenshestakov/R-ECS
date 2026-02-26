@@ -38,7 +38,7 @@ namespace ecs
 
                     IEntitiesManager::setValue(
                         entitiesIterator,
-                        *state != end ? (*state)->first : entityNull
+                        *state != end ? (*state)->first : ranges::entitynull
                         );
                 });
         }

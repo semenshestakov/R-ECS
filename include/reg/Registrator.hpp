@@ -136,7 +136,6 @@ namespace reg
     private:
         /**
          * @brief Private constructor used by Create() method.
-         *
          * @param index Index in s_collection for this registration
          */
         Registrator(std::size_t index);
@@ -200,20 +199,21 @@ namespace reg
                     | std::views::transform([](auto&& ptr) { return ptr.second.value(); });
             }
         }
+
         /**
          * @brief Get the number of active registrations.
-         *
          * @return Current count of active (non-null) registrations
          */
         [[nodiscard]] static std::size_t size();
 
         /**
          * @brief Look up a registration by name.
-         *
          * @param name Name to search for
          * @return Pointer to the FactoryCls object, or nullptr if not found
          */
         [[nodiscard]] static FactoryCls* get(const std::string& name);
+
+        /// @brief Checks for registration by name
         [[nodiscard]] static bool contains(const std::string& name);
 
     };

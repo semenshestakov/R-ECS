@@ -7,14 +7,14 @@
 namespace ecs
 {
 
-    /* private */ inline Components::Components(const ComponentsInfo &componentsInfo)
+    inline Components::Components(const ComponentsInfo &componentsInfo)
         : m_componentsInfo(componentsInfo)
     {
 
     }
-    /* public */ inline Components::Components() = default;
+    inline Components::Components() = default;
 
-    /* public */ inline Components::~Components()
+    inline Components::~Components()
     {
         if (m_componentsInfo.maxComponentId == INVALID_COMPONENT_ID)
             return;
@@ -26,7 +26,7 @@ namespace ecs
         }
     }
 
-    /* public */ inline void Components::initialize()
+    inline void Components::initialize()
     {
         if (m_componentsInfo.maxComponentId == INVALID_COMPONENT_ID)
             return;
@@ -45,7 +45,7 @@ namespace ecs
     }
 
     template<DerivedComponent ComponentCls, typename... Args>
-    /* public */ bool Components::init(const Args &... args)
+    bool Components::init(const Args &... args)
     {
         if (m_componentsInfo.maxComponentId == INVALID_COMPONENT_ID)
             return false;

@@ -3,20 +3,20 @@
 
 namespace ecs::ranges
 {
-    EntitiesIterator::EntitiesIterator() : EntitiesIterator(entityNull) {}
+    EntitiesIterator::EntitiesIterator() : EntitiesIterator(entitynull) {}
 
-    EntitiesIterator::EntitiesIterator(const entityOpt_t value) : EntitiesIterator(value, nullptr) {}
+    EntitiesIterator::EntitiesIterator(const entityopt_t value) : EntitiesIterator(value, nullptr) {}
 
-    EntitiesIterator::EntitiesIterator(const entityOpt_t value, std::function<void(EntitiesIterator &)>&& funcInc) :
+    EntitiesIterator::EntitiesIterator(const entityopt_t value, std::function<void(EntitiesIterator &)>&& funcInc) :
         m_value(value), m_inc(std::move(funcInc))
     {}
 
-    bool EntitiesIterator::operator==(const entityOpt_t entityOpt) const
+    bool EntitiesIterator::operator==(const entityopt_t entityOpt) const
     {
         return m_value == entityOpt;
     }
 
-    bool EntitiesIterator::operator!=(const entityOpt_t entityOpt) const
+    bool EntitiesIterator::operator!=(const entityopt_t entityOpt) const
     {
         return !operator==(entityOpt);
     }
@@ -33,7 +33,7 @@ namespace ecs::ranges
 
     EntitiesIterator& EntitiesIterator::operator++()
     {
-        if (m_inc != nullptr && *this != entityNull)
+        if (m_inc != nullptr && *this != entitynull)
             m_inc(*this);
         return *this;
     }

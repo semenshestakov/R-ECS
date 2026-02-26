@@ -1,5 +1,6 @@
 #pragma once
 #include "ecs/IComponent.hpp"
+#include "ecs/registry/AutoRegistry.hpp"
 
 
 struct Position2d final : ecs::IComponent<Position2d>

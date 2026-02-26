@@ -35,11 +35,11 @@ namespace ecs
         ComponentsInfo m_componentsInfo;
 
         /**
-        * @brief Constructs Components with the specified component layout.
-        * @param componentsInfo Component container metadata and capacity.
-        *
-        * @note Takes ownership of the buffer - will delete it on destruction.
-        */
+         * @brief Constructs Components with the specified component layout.
+         * @param componentsInfo Component container metadata and capacity.
+         *
+         * @note Takes ownership of the buffer - will delete it on destruction.
+         */
         Components(const ComponentsInfo& componentsInfo);
 
     public:

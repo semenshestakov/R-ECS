@@ -46,12 +46,12 @@ namespace ecs
         template<DerivedComponent ComponentCls> void Register();
 
         /**
-        * @brief Collects and stores component registration information.
-        *
-        * @param componentInfo Registration info to store.
-        * @throws error::InvalidComponentId if component ID is invalid.
-        * @throws error::RepeatComponent if component ID is already registered.
-        */
+         * @brief Collects and stores component registration information.
+         *
+         * @param componentInfo Registration info to store.
+         * @throws error::InvalidComponentId if component ID is invalid.
+         * @throws error::RepeatComponent if component ID is already registered.
+         */
         void Register(const RegisterComponentInfo& componentInfo);
 
         /**
@@ -63,7 +63,6 @@ namespace ecs
          * @note Only components whose condition evaluates to true with given args are included.
          */
         [[nodiscard]] ComponentsPtr CreateComponents() const;
-
 
     private:
 

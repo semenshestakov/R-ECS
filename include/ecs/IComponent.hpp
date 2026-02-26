@@ -25,7 +25,7 @@ namespace ecs
          * with the ECS registry system. This guarantees the component type is properly
          * registered during static initialization.
          */
-        IComponent() {(void)ComponentCls::IsRegistered;}
+        IComponent() { (void)ComponentCls::IsRegistered; }
 
         /**
          * @brief Unique component type identifier

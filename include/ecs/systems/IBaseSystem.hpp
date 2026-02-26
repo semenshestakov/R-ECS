@@ -1,56 +1,10 @@
 #pragma once
+#include "ecs/utils/SystemsError.hpp"
+#include "ecs/utils/SystemUtils.hpp"
 
 
 namespace ecs
 {
-    class Registry;
-
-    /**
-     * @brief Type alias for update tags used to categorize system update phases.
-     *
-     * Update tags allow systems to be grouped into distinct update phases,
-     * enabling controlled execution order and separation of concerns. Common
-     * tags might represent phases like "PreUpdate", "Update", "PostUpdate",
-     * or "Render". The unsigned short type provides 65535 possible tag values.
-     */
-    using updateTag_t = unsigned short;
-
-    /**
-     * @brief Maximum possible value for an update tag, used as a sentinel or default.
-     *
-     * This constant represents the highest value an updateTag_t can hold (~0
-     * evaluates to 65535 for unsigned short). It can be used as a special marker
-     * for default tags or to indicate uninitialized/end-of-range conditions.
-     */
-    constexpr updateTag_t MAX_UPDATE_TAG = ~0;
-
-    /**
-     * @brief Structure containing initialization parameters for system startup.
-     *
-     * Provides a flexible container for passing configuration data to systems
-     * during their initialization phase. The structure uses a void pointer for
-     * arguments to support any configuration type, making it extensible without
-     * modifying the base interface.
-     */
-    struct InitState
-    {
-        const char* nameFactory;            ///< Identifier for the factory or creator of this system
-        void* args;                         ///< Pointer to system-specific initialization arguments
-    };
-
-    /**
-     * @brief Structure containing context information for system updates.
-     *
-     * Passed to systems during each update cycle, providing contextual information
-     * about the current update phase. Currently contains the update tag, which
-     * allows systems to know which phase they're being executed in and potentially
-     * adjust their behavior accordingly.
-     */
-    struct UpdateState
-    {
-        updateTag_t updateTag;          ///< The tag identifying the current update phase
-    };
-
 
     /**
      * @brief Abstract base interface that all systems must implement.
@@ -85,12 +39,15 @@ namespace ecs
         * @brief Creates a new instance of the same system type.
          *
          * Virtual constructor pattern that enables cloning of systems without
-         * knowing their concrete type. This is essential for the SystemManager
+         * knowing their concrete type. This is essential for the SystemsManager
          * to create copies of registered system types.
          *
          * @return IBaseSystem* Pointer to a newly allocated copy of the system
          */
         [[nodiscard]] virtual IBaseSystem* New() const = 0;
+
+
+        [[nodiscard]] virtual const char* name() const { static constexpr char s_name[] = "IBaseSystem"; return s_name;};
 
         /**
          * @brief Initializes the system with provided configuration.
@@ -100,9 +57,10 @@ namespace ecs
          * process initialization parameters from the InitState structure.
          * The default implementation does nothing.
          *
+         * @throw DoubleInitialization if System is inited
          * @param state Structure containing initialization parameters
          */
-        virtual void Init(const InitState& state) {}
+        virtual void Init(const InitState& state){ if (m_isInit) {throw error::DoubleInitialization("Init::%s", this->name());} m_isInit = true;}
 
         /**
          * @brief Performs the system's main logic for a single update cycle.
@@ -126,6 +84,11 @@ namespace ecs
          * don't override this will be grouped together with this default tag.
          */
         static constexpr updateTag_t UPDATE_TAG = MAX_UPDATE_TAG / 2;
-    };
 
+        [[nodiscard]] bool isInit() const { return m_isInit; }
+
+    private:
+        bool m_isInit = false;
+
+    };
 }

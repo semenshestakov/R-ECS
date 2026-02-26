@@ -12,7 +12,7 @@ namespace ecs
     }
 
     Registry::Registry(
-        EntitiesManager&& entitiesManager, const ComponentsManager& componentsManager, const SystemManager& systemManager
+        EntitiesManager&& entitiesManager, const ComponentsManager& componentsManager, const SystemsManager& systemManager
         )  :
         m_entitiesManager(std::move(entitiesManager)),
         m_componentsManager(componentsManager),
@@ -37,7 +37,12 @@ namespace ecs
         return *get(entityId);
     }
 
-    Components& Registry::Create(entityId_t entityId)
+    bool Registry::Init(void* args /* = nullptr */)
+    {
+        return m_systemManager.Init({"", args});
+    }
+
+    Components& Registry::Create(const entityId_t entityId)
     {
         if (contains(entityId))
             throw error::InvalidEntityId("[create] '%llu' id is collected", entityId);

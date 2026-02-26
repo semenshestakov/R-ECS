@@ -7,11 +7,11 @@
 namespace ecs
 {
 
-    inline Components::Components(const ComponentsInfo &componentsInfo)
-        : m_componentsInfo(componentsInfo)
+    inline Components::Components(const ComponentsInfo &componentsInfo) :
+        m_componentsInfo(componentsInfo)
     {
-
     }
+
     inline Components::Components() = default;
 
     inline Components::~Components()

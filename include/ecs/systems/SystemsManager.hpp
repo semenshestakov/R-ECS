@@ -1,62 +1,63 @@
 #pragma once
 #include <map>
 #include <vector>
-#include "SystemUtils.hpp"
+#include "IBaseSystem.hpp"
+#include "ecs/utils/SystemUtils.hpp"
 
 
 namespace ecs
 {
 
-    class SystemManager final
+    class SystemsManager final
     {
     public:
-        SystemManager();                    ///< @brief Constructs an empty SystemManager with no registered systems
-        ~SystemManager();                   ///< @brief Destructor that cleans up all managed systems
+        SystemsManager();                    ///< @brief Constructs an empty SystemsManager with no registered systems
+        ~SystemsManager();                   ///< @brief Destructor that cleans up all managed systems
 
     private:
         /**
          * @brief Private copy constructor to prevent copying.
          *
-         * SystemManager manages unique ownership of systems and cannot be copied.
+         * SystemsManager manages unique ownership of systems and cannot be copied.
          * This constructor is deleted in practice through being private and
          * without implementation.
          *
-         * @param other The source SystemManager to copy from
+         * @param other The source SystemsManager to copy from
          */
-        SystemManager(const SystemManager& other);
+        SystemsManager(const SystemsManager& other);
 
         /**
          * @brief Private copy assignment operator to prevent copying.
          *
-         * Ensures SystemManager cannot be copied through assignment, maintaining
+         * Ensures SystemsManager cannot be copied through assignment, maintaining
          * unique ownership semantics of system instances.
          *
-         * @param other The source SystemManager to copy from
-         * @return SystemManager& Reference to this manager
+         * @param other The source SystemsManager to copy from
+         * @return SystemsManager& Reference to this manager
          */
-        SystemManager& operator=(const SystemManager& other);
+        SystemsManager& operator=(const SystemsManager& other);
 
         /**
          * @brief Internal helper method for copy operations.
          *
-         * Performs a deep copy of all systems from another SystemManager.
+         * Performs a deep copy of all systems from another SystemsManager.
          * This is used by the move operations to properly transfer ownership
          * and state.
          *
-         * @param other The source SystemManager to copy from
+         * @param other The source SystemsManager to copy from
          */
-        void copy(const SystemManager& other);
+        void copy(const SystemsManager& other);
 
     public:
         /**
          * @brief Move constructor that transfers ownership of all systems.
          *
-         * Creates a new SystemManager by taking ownership of all systems
+         * Creates a new SystemsManager by taking ownership of all systems
          * from another manager, leaving the source manager in an empty state.
          *
-         * @param other The source SystemManager to move from
+         * @param other The source SystemsManager to move from
          */
-        SystemManager(SystemManager&& other) noexcept;
+        SystemsManager(SystemsManager&& other) noexcept;
 
         /**
          * @brief Move assignment operator that transfers ownership of all systems.
@@ -64,22 +65,24 @@ namespace ecs
          * Replaces the current manager's contents with systems moved from another
          * manager, properly cleaning up any existing systems first.
          *
-         * @param other The source SystemManager to move from
-         * @return SystemManager& Reference to this manager
+         * @param other The source SystemsManager to move from
+         * @return SystemsManager& Reference to this manager
          */
-        SystemManager& operator=(SystemManager&& other) noexcept;
+        SystemsManager& operator=(SystemsManager&& other) noexcept;
 
         /**
-         * @brief Swaps the contents of two SystemManager instances.
+         * @brief Swaps the contents of two SystemsManager instances.
          *
          * Efficiently exchanges all systems and internal state between two managers
          * without any copying. Provides strong exception guarantee.
          *
-         * @param other The SystemManager to swap with
+         * @param other The SystemsManager to swap with
          */
-        void swap(SystemManager& other) noexcept;
+        void swap(SystemsManager& other) noexcept;
 
+#ifndef DEEP_TEST_ENABLE
     private:
+#endif
         using systemPtr_t = std::unique_ptr<IBaseSystem>;           ///< Type alias for system ownership
         using hash_t = std::size_t;                                 ///< Type alias for type hash codes
 
@@ -100,6 +103,8 @@ namespace ecs
         template<typename SystemT>
         bool Register();
 
+        [[maybe_unused]] bool Init(const InitState &state);
+
         /**
          * @brief Updates all systems or systems with a specific update tag.
          *
@@ -113,12 +118,14 @@ namespace ecs
          */
         void Update(Registry& registry, std::optional<updateTag_t> updateTag = std::nullopt);
 
+        [[nodiscard]] std::size_t size() const;
+
         friend class Registry;
     };
 
 
     template<typename SystemT>
-    bool SystemManager::Register()
+    bool SystemsManager::Register()
     {
         const hash_t hash = typeid(SystemT).hash_code();
         if (m_systemsMap.contains(hash))

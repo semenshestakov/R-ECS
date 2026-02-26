@@ -4,7 +4,7 @@
 #include "components/ComponentsManager.hpp"
 #include "entities/EntitiesManager.hpp"
 #include "entities/ranges/EntitiesViews.hpp"
-#include "systems/SystemManager.hpp"
+#include "systems/SystemsManager.hpp"
 
 
 namespace ecs
@@ -18,7 +18,7 @@ namespace ecs
      * three specialized managers:
      * - EntitiesManager: Handles entity storage, iteration, and lifetime
      * - ComponentsManager: Manages component factories and type registration
-     * - SystemManager: Controls system registration and update execution
+     * - SystemsManager: Controls system registration and update execution
      *
      * Key responsibilities:
      * - Entity creation and existence checking
@@ -54,15 +54,15 @@ namespace ecs
      * @endcode
      *
      * @see EntitiesManager for entity storage details
-     * @see ComponentsManager for component factory management
-     * @see SystemManager for system execution control
+     * @see ComponentsManager for component componentsManager management
+     * @see SystemsManager for system execution control
      */
     class Registry final
     {
     public:
-        /// Constructor - requires factory for initialization
+        /// Constructor - requires componentsManager for initialization
         explicit Registry(EntitiesManager&& entitiesManager, const ComponentsManager& componentsManager);
-        explicit Registry(EntitiesManager&& entitiesManager, const ComponentsManager& componentsManager, const SystemManager& systemManager);
+        explicit Registry(EntitiesManager&& entitiesManager, const ComponentsManager& componentsManager, const SystemsManager& systemManager);
 
         Registry() = default;                                           ///< Default construction
         ~Registry() = default;                                          ///< Default destructor
@@ -76,7 +76,7 @@ namespace ecs
 #endif
         EntitiesManager m_entitiesManager;          ///< Underlying entity storage
         ComponentsManager m_componentsManager;      ///< Factory instance for component operations
-        SystemManager m_systemManager;              ///< Underlying entity storage
+        SystemsManager m_systemManager;              ///< Underlying entity storage
 
     public:
         /// Find components for entity. Returns nullptr if not found.
@@ -88,6 +88,7 @@ namespace ecs
         /// Get components for entity. Asserts/throws if entity not found.
         [[nodiscard]] Components& mustGet(entityId_t entityId) const;
 
+        [[maybe_unused]] bool Init(void* args = nullptr);
         /**
          * Create components for given entity ID.
          *
@@ -112,7 +113,7 @@ namespace ecs
          *                  If nullopt (default), all systems are updated.
          *                  If provided, only systems matching the tag are updated.
          *
-         * @note This method delegates to SystemManager::Update().
+         * @note This method delegates to SystemsManager::Update().
          * @note Systems are updated in the order they were registered.
          * @note The registry itself is passed to systems for component access.
          *
@@ -122,7 +123,7 @@ namespace ecs
          * registry.Update(updateTag_t::Physics); // Update only physics systems
          * @endcode
          *
-         * @see SystemManager::Update() for detailed update semantics
+         * @see SystemsManager::Update() for detailed update semantics
          */
         void Update(std::optional<updateTag_t> updateTag = std::nullopt);
 

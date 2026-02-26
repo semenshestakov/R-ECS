@@ -23,6 +23,7 @@
  */
 #define ECS_REGISTRY(...)                                                                                       \
     friend struct IComponent;                                                                                   \
+    friend struct ISystem;                                                                                   \
     private:                                                                                                    \
     static constexpr std::array<std::string_view, sizeof((const char*[]){__VA_ARGS__}) / sizeof(const char*)>   \
     ECS_REGISTRY_NAMES = {__VA_ARGS__};                                                                         \

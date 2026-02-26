@@ -1,25 +1,19 @@
 #include <gtest/gtest.h>
+#include "ComponentsClass.hpp"
 #include "ecs/IComponent.hpp"
-#include "components_class.hpp"
 
 
 using namespace ecs;
 
-TEST(Components, RegisterComponentId)
-{
-    EXPECT_EQ(Position2d::componentId, 1);
-    EXPECT_EQ(Position3d::componentId, 2);
-}
-
 
 TEST(Components, SimpleRegistration)
 {
-    ComponentsManager factory;
-    factory.Register<Position2d>();
-    factory.Register<Position3d>();
+    ComponentsManager componentsManager;
+    componentsManager.Register<Position2d>();
+    componentsManager.Register<Position3d>();
 
     {
-        ComponentsPtr components = factory.CreateComponents();
+        ComponentsPtr components = componentsManager.CreateComponents();
         components->initialize();
         EXPECT_EQ(components->mustGet<Position3d>().x, Position3d().x);
 
@@ -28,7 +22,7 @@ TEST(Components, SimpleRegistration)
     }
 
     {
-        ComponentsPtr components = factory.CreateComponents();
+        ComponentsPtr components = componentsManager.CreateComponents();
         components->init<Position2d>(Position2d(10.0, 20.0));
         components->initialize();
 
@@ -42,39 +36,37 @@ TEST(Components, SimpleRegistration)
 
 TEST(Components, Destructor)
 {
-    ComponentsManager factory;
-    factory.Register<DestructorTest>();
+    ComponentsManager componentsManager;
+    componentsManager.Register<DestructorTest>();
 
     {
-        ComponentsPtr components = factory.CreateComponents();
+        ComponentsPtr components = componentsManager.CreateComponents();
         components->initialize();
 
         EXPECT_EQ(DestructorTest::testValue, false);
     }
 
     {
-        ComponentsPtr components = factory.CreateComponents();
+        ComponentsPtr components = componentsManager.CreateComponents();
         components->initialize();
 
         EXPECT_EQ(DestructorTest::testValue, true);
     }
 }
 
+
 TEST(Components, Copy)
 {
-#ifdef DEEP_TEST_ENABLE
-    ComponentsManager factory;
+    ComponentsManager componentsManager;
     {
         ComponentsManager newFactory;
         newFactory.Register<Position2d>();
         newFactory.Register<Position3d>();
-        factory.copy(newFactory);
+        componentsManager.copy(newFactory);
     }
 
-    {
-        ComponentsPtr components = factory.CreateComponents();
-        components->initialize();
-        EXPECT_EQ(components->mustGet<Position3d>().x, Position3d().x);
-    }
-#endif
+    ComponentsPtr components = componentsManager.CreateComponents();
+    components->initialize();
+    EXPECT_EQ(components->mustGet<Position3d>().x, Position3d().x);
+
 }

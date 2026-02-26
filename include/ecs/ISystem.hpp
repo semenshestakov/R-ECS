@@ -1,8 +1,6 @@
 #pragma once
-#include "Registry.hpp"
-#include "entities/EntitiesManager.hpp"
 #include "registry/RegistryRegistrator.hpp"
-#include "systems/SystemUtils.hpp"
+#include "systems/IBaseSystem.hpp"
 
 
 namespace ecs
@@ -11,22 +9,23 @@ namespace ecs
     template <typename SystemCls>
     struct ISystem : IBaseSystem
     {
-        friend class SystemManager;
+        using Super = ISystem<SystemCls>;
+        friend class SystemsManager;
 
-        [[nodiscard]] IBaseSystem* New() const override
+        ISystem() : IBaseSystem() { }
+        [[nodiscard]] IBaseSystem* New() const override { return new SystemCls(static_cast<const SystemCls&>(*this)); }
+        [[nodiscard]] const char* name() const override { return typeid(SystemCls).name(); }
+        void Init(const InitState& state) override
         {
-            return new SystemCls(static_cast<const SystemCls&>(*this));
+            IBaseSystem::Init(state);
+            (void)(SystemCls::IsRegistered);
         }
 
+#ifndef DEEP_TEST_ENABLE
     private:
-        using DerivedSystem = SystemCls;
-
-        static constexpr std::array<std::string_view, 0> SystemManagerNames = {};
-
-        static inline const bool IsRegistered = RegistryRegistrator::RegisterSystem(SystemCls::SystemManagerNames);
-
-
+#endif
+        static constexpr std::array<std::string_view, 0> ECS_REGISTRY_NAMES = {};
+        [[maybe_unused]] static inline const bool IsRegistered = RegistryRegistrator::RegisterSystem<SystemCls>(SystemCls::ECS_REGISTRY_NAMES);
     };
-
 
 }

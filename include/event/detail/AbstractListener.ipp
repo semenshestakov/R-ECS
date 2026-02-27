@@ -4,6 +4,23 @@
 namespace event
 {
 
+    template<ValidCallbackIdType T>
+    AbstractListener<T>::AbstractListener() : AbstractListener(nullptr)
+    {
+    }
+
+    template<ValidCallbackIdType T>
+    AbstractListener<T>::AbstractListener(AbstractEvent* event) : AbstractListener(event, nullptr)
+    {
+    }
+
+    template<ValidCallbackIdType T>
+    AbstractListener<T>::AbstractListener(AbstractEvent* event, const deleter_t& deleter) :
+        m_event(event),
+        m_deleter(deleter)
+    {
+    }
+
     template <ValidCallbackIdType T>
     AbstractListener<T>::~AbstractListener()
     {
@@ -12,14 +29,12 @@ namespace event
             const callbackId_t callbackId = m_callbackId;
             removeCallbackId(m_callbackId);
 
-            if (m_deleter != nullptr)
-            {
+            if (m_deleter)
                 m_deleter(callbackId);
-            }
         }
         else
         {
-            T callbackIds = m_callbackId;
+            const T callbackIds = m_callbackId;
             for (const callbackId_t callbackId : callbackIds)
             {
                 if (m_event != nullptr)
@@ -48,11 +63,12 @@ namespace event
         }
         else
         {
-            for (callbackId_t callbackId : other.m_callbackId)
+            for (const callbackId_t callbackId : other.m_callbackId)
             {
                 addCallbackId(callbackId);
             }
             other.m_callbackId.clear();
+            other.m_event = nullptr;
         }
     }
 

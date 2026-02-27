@@ -46,20 +46,20 @@ namespace event
         /**
          * @brief Default constructor creating an empty listener.
          */
-        Listener() : Listener(nullptr) {}
+        Listener();
 
         /**
          * @brief Constructs a listener associated with an event but without callbacks.
          * @param event Pointer to the event. Callbacks can be added later with addCallback().
          */
-        explicit Listener(Event_t* event) : Listener(event, nullptr) {}
+        explicit Listener(Event_t* event);
 
         /**
          * @brief Constructs a listener with a single initial callback.
          * @param event Pointer to the event
          * @param callback The callback function to register immediately
          */
-        Listener(Event_t* event, const Callback_t callback) : Listener(event, callback, nullptr) {}
+        Listener(Event_t* event, const Callback_t& callback);
 
         /**
          * @brief Constructs a listener with callback and custom deleter.
@@ -67,14 +67,14 @@ namespace event
          * @param callback The callback function to register
          * @param deleter Custom deleter for extended cleanup
          */
-        Listener(Event_t* event, Callback_t callback, const deleter_t &deleter);
+        Listener(Event_t* event, const Callback_t& callback, const deleter_t& deleter);
 
         /**
          * @brief Constructs a listener with multiple initial callbacks.
          * @param event Pointer to the event
          * @param callbacks Vector of callbacks to register immediately
          */
-        Listener(Event_t* event, const std::vector<Callback_t>&& callbacks): Listener(event, std::move(callbacks), nullptr) {}
+        Listener(Event_t* event, const std::vector<Callback_t>&& callbacks);
 
         /**
          * @brief Constructs a listener with multiple callbacks and custom deleter.
@@ -82,7 +82,7 @@ namespace event
          * @param callbacks Vector of callbacks to register
          * @param deleter Custom deleter for extended cleanup
          */
-        Listener(Event_t* event, const std::vector<Callback_t>&& callbacks, deleter_t deleter);
+        Listener(Event_t* event, const std::vector<Callback_t>&& callbacks, const deleter_t& deleter);
 
         // Non-copyable
         Listener(const Listener&) = delete;
@@ -93,14 +93,14 @@ namespace event
          * Efficiently transfers callback ownership from another listener.
          * @param other The listener to move from. Will be left in valid but empty state.
          */
-        Listener(Listener && other) noexcept { this->swap(std::move(other)); }
+        Listener(Listener&& other) noexcept;
 
         /**
          * @brief Move assignment operator.
          * @param other The listener to move from
          * @return Reference to this listener
          */
-        Listener &operator=(Listener && other) noexcept { this->swap(std::move(other)); return *this;}
+        Listener& operator=(Listener&& other) noexcept;
 
         /**
          * @brief Swaps contents with another listener.
@@ -117,6 +117,53 @@ namespace event
         void addCallback(Callback_t callback);
     };
 
+    /**
+     * @brief Alias template for a Listener that manages a single callback.
+     *
+     * This alias provides a convenient shorthand for creating listeners that handle
+     * exactly one callback per event type. It uses `callbackId_t` as the storage type,
+     * which is optimized for single callback management.
+     *
+     * @tparam Args... The event argument types that the callback will receive
+     *
+     * @details
+     * `SingleListener` is ideal for scenarios where you need to listen to an event
+     * with just one callback. It's more lightweight than collection-based listeners
+     * and provides simpler semantics when you know you'll only need one callback
+     * per listener instance.
+     *
+     * Key characteristics:
+     * - Manages exactly one callback ID internally
+     * - Automatically unregisters the callback on destruction (RAII)
+     * - Non-copyable, but movable
+     * - Supports custom deleters for extended cleanup
+     *
+     * @see Listener
+     * @see callbackId_t
+     *
+     * @par Example usage:
+     * @code
+     * // Create an event that takes an int parameter
+     * Event<int> intEvent;
+     *
+     * // Create a single callback listener
+     * SingleListener<int> listener(&intEvent, [](int value) {
+     *     std::cout << "Received: " << value << std::endl;
+     * });
+     *
+     * // The callback will be automatically unregistered when listener
+     * // goes out of scope
+     * @endcode
+     *
+     * @par Comparison with MultiListener:
+     * @code
+     * // Single callback - use SingleListener
+     * SingleListener<int, std::string> single(&event, callback);
+     *
+     * @endcode
+     */
+    template<typename... Args>
+    using SingleListener = Listener<callbackId_t, Args...>;
 }
 
 

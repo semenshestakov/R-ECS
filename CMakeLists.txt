@@ -49,6 +49,7 @@ if(TEST_ENABLE)
             test/ecs/Systems.cpp
             test/reg/registrator_factory_tests.cpp
             test/event/Event.cpp
+            test/event/Listener.cpp
     )
     target_include_directories(R-ECS
         PUBLIC

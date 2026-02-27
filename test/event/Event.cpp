@@ -8,7 +8,7 @@ using ::testing::_;
 using ::testing::Invoke;
 
 /// Mock classes for testing
-class MockCallback
+class EventMockCallback
 {
 public:
     MOCK_METHOD(void, call, ());
@@ -49,7 +49,7 @@ TEST_F(EventTest, IsNonMovable)
 TEST_F(EventTest, AddCallbackReturnsValidId)
 {
     Event<> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     auto callback = [&mock]() { mock.call(); };
 
@@ -64,7 +64,7 @@ TEST_F(EventTest, AddCallbackReturnsValidId)
 TEST_F(EventTest, AddMultipleCallbacksReturnsIncreasingIds)
 {
     Event<> event;
-    MockCallback mock;
+    EventMockCallback mock;
     auto callback = [&mock]() { mock.call(); };
 
     const callbackId_t id1 = event.add(callback);
@@ -79,7 +79,7 @@ TEST_F(EventTest, AddMultipleCallbacksReturnsIncreasingIds)
 TEST_F(EventTest, TriggerWithNoArguments)
 {
     Event<> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, call()).Times(1);
 
@@ -90,7 +90,7 @@ TEST_F(EventTest, TriggerWithNoArguments)
 TEST_F(EventTest, TriggerWithNoArgumentsMultipleCallbacks)
 {
     Event<> event;
-    MockCallback mock1, mock2, mock3;
+    EventMockCallback mock1, mock2, mock3;
 
     EXPECT_CALL(mock1, call()).Times(1);
     EXPECT_CALL(mock2, call()).Times(1);
@@ -107,7 +107,7 @@ TEST_F(EventTest, TriggerWithNoArgumentsMultipleCallbacks)
 TEST_F(EventTest, TriggerWithIntArgument)
 {
     Event<int> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
 
@@ -119,7 +119,7 @@ TEST_F(EventTest, TriggerWithIntArgument)
 TEST_F(EventTest, TriggerWithStringArgument)
 {
     Event<std::string> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     const std::string testString = "Hello World";
     EXPECT_CALL(mock, callWithString(testString)).Times(1);
@@ -132,7 +132,7 @@ TEST_F(EventTest, TriggerWithStringArgument)
 TEST_F(EventTest, TriggerWithTwoIntArguments)
 {
     Event<int, int> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, callWithTwoInts(10, 20)).Times(1);
 
@@ -144,7 +144,7 @@ TEST_F(EventTest, TriggerWithTwoIntArguments)
 TEST_F(EventTest, TriggerWithMixedArguments)
 {
     Event<int, std::string, double> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, callWithMixed(5, "test", 3.14)).Times(1);
 
@@ -158,7 +158,7 @@ TEST_F(EventTest, TriggerWithMixedArguments)
 TEST_F(EventTest, RemoveExistingCallback)
 {
     Event<> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, call()).Times(0);
 
@@ -171,7 +171,7 @@ TEST_F(EventTest, RemoveExistingCallback)
 TEST_F(EventTest, RemoveNonExistentCallback)
 {
     Event<> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, call()).Times(1);
 
@@ -186,7 +186,7 @@ TEST_F(EventTest, RemoveNonExistentCallback)
 TEST_F(EventTest, RemoveOneCallbackFromMultiple)
 {
     Event<> event;
-    MockCallback mock1, mock2, mock3;
+    EventMockCallback mock1, mock2, mock3;
 
     EXPECT_CALL(mock1, call()).Times(0);
     EXPECT_CALL(mock2, call()).Times(1);
@@ -212,7 +212,7 @@ TEST_F(EventTest, TriggerEmptyEvent)
 TEST_F(EventTest, AddAndRemoveMultipleTimes)
 {
     Event<int> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, callWithInt(_)).Times(2);
 
@@ -281,7 +281,7 @@ TEST_F(EventTest, CallbackCanBeFunctionPointer)
 TEST_F(EventTest, RemoveCallbackDuringTrigger)
 {
     Event<> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, call()).Times(1);
 
@@ -299,7 +299,7 @@ TEST_F(EventTest, RemoveCallbackDuringTrigger)
 TEST_F(EventTest, TriggerWithConstArguments)
 {
     Event<const int&> event;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
 
@@ -314,7 +314,7 @@ TEST_F(EventTest, MultipleEventsWithDifferentTypes)
 {
     Event<int> intEvent;
     Event<std::string> stringEvent;
-    MockCallback mock;
+    EventMockCallback mock;
 
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
     EXPECT_CALL(mock, callWithString("test")).Times(1);

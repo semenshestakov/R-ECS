@@ -16,7 +16,7 @@ namespace event
     template<typename... Args>
     void Event<Args...>::remove(const callbackId_t& callbackId)
     {
-        if (callbackId == 0)
+        if (callbackId == INVALID_EVENT_ID)
             return;
             
         auto it = m_callbacksMap.find(callbackId);

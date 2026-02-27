@@ -40,20 +40,20 @@ namespace event
         /**
          * @brief Default constructor creating a listener not associated with any event.
          */
-        AbstractListener() : AbstractListener(nullptr) {}
+        AbstractListener();
 
         /**
          * @brief Constructs a listener associated with a specific event.
          * @param event Pointer to the event to listen to. Can be nullptr for delayed association.
          */
-        explicit AbstractListener(AbstractEvent* event) : AbstractListener(event, nullptr) {}
+        explicit AbstractListener(AbstractEvent* event);
 
         /**
          * @brief Constructs a listener with custom deleter for extended cleanup.
          * @param event Pointer to the associated event
          * @param deleter Custom deleter function called during destruction for additional cleanup
          */
-        AbstractListener(AbstractEvent* event, deleter_t deleter) : m_event(event), m_deleter(std::move(deleter)) {}
+        AbstractListener(AbstractEvent* event, const deleter_t& deleter);
 
         /**
          * @brief Virtual destructor ensures proper cleanup of derived classes.
@@ -84,6 +84,7 @@ namespace event
          * @note Returns 0 if `m_event` is nullptr.
          */
         eventId_t eventId() const;
+
 
     protected:
         T m_callbackId {};                                  ///< Storage for callback identifier(s). Can be single ID or collection.

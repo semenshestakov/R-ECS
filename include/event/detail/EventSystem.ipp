@@ -13,23 +13,21 @@ namespace event
 
     template<typename K>
     template<typename... Args>
-    bool EventSystem<K>::Create(const K& hashable)
+    bool EventSystem<K>::Create(const K& key)
     {
-        if(m_eventsMap.contains(hashable))
-        {
-            auto* event = dynamic_cast<Event<Args...>*>(m_eventsMap[hashable].get());
-            return event != nullptr;
-        }
-        m_eventsMap[hashable] = std::make_unique<Event<Args...>>();
+        if(m_eventsMap.contains(key))
+            return false;
+
+        m_eventsMap[key] = std::make_unique<Event<Args...>>();
         return true;
     }
 
     template<typename K>
-    void EventSystem<K>::Delete(const K& hashable)
+    void EventSystem<K>::Delete(const K& key)
     {
-        if(m_eventsMap.contains(hashable))
+        if(m_eventsMap.contains(key))
         {
-            m_eventsMap.erase(hashable);
+            m_eventsMap.erase(key);
         }
     }
 
@@ -41,26 +39,26 @@ namespace event
 
     template<typename K>
     template<typename... Args>
-    void EventSystem<K>::on(const K& hashable, Args&&... args)
+    void EventSystem<K>::on(const K& key, Args&&... args)
     {
-        if(auto* event = get<Args...>(hashable))
+        if(auto* event = get<Args...>(key))
             (*event)(std::forward<Args>(args)...);
     }
 
     template<typename K>
     template<class... Args>
-    Event<Args...>* EventSystem<K>::get(const K& hashable)
+    Event<Args...>* EventSystem<K>::get(const K& key)
     {
-        if(!m_eventsMap.contains(hashable))
+        if(!m_eventsMap.contains(key))
             return nullptr;
 
-        return dynamic_cast<Event<Args...>*>(m_eventsMap[hashable].get());
+        return dynamic_cast<Event<Args...>*>(m_eventsMap[key].get());
     }
 
     template<typename K>
-    bool EventSystem<K>::contains(const K& hashable) const
+    bool EventSystem<K>::contains(const K& key) const
     {
-        return m_eventsMap.contains(hashable);
+        return m_eventsMap.contains(key);
     }
 
     template<typename K>

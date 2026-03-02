@@ -15,7 +15,7 @@ namespace event
      * subscription is identified by a key. Automatically handles cleanup of all managed
      * listeners upon destruction.
      *
-     * @tparam K The key type, must be hashable for use with std::unordered_map
+     * @tparam K The key type, must be key for use with std::unordered_map
      * @tparam T The callback identifier storage type for the managed listeners
      *
      * @note Non-copyable and non-movable to maintain ownership semantics

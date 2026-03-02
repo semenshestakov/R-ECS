@@ -44,7 +44,7 @@ TEST_F(EventSystemTest, CreateEvent)
 TEST_F(EventSystemTest, CreateDuplicateEvent)
 {
     EXPECT_TRUE(system.Create<int>("TestEvent"));
-    EXPECT_TRUE(system.Create<int>("TestEvent"));  // Should return false
+    EXPECT_FALSE(system.Create<int>("TestEvent"));  // Should return false
     EXPECT_FALSE(system.Create<std::string>("TestEvent"));  // Different signature, same name
     EXPECT_EQ(system.size(), 1);
 }

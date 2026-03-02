@@ -22,6 +22,7 @@ namespace event
          * @param callbackId ID of callback to remove
          */
         virtual void remove(const callbackId_t& callbackId) = 0;
+        virtual callbackId_t addAny(const std::any& callback) = 0;
 
     private:
         /// Static counter for unique IDs

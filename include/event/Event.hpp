@@ -37,6 +37,7 @@ namespace event
          * @return Unique callback ID for later removal
          */
         callbackId_t add(const Callback& callback);
+        callbackId_t addAny(const std::any& callback) override;
 
         /**
          * Remove callback by ID.

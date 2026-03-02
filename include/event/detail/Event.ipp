@@ -14,6 +14,12 @@ namespace event
     }
 
     template<typename... Args>
+    callbackId_t Event<Args...>::addAny(const std::any& callback)
+    {
+        return add(std::any_cast<Callback>(callback));
+    }
+
+    template<typename... Args>
     void Event<Args...>::remove(const callbackId_t& callbackId)
     {
         if (callbackId == INVALID_EVENT_ID)

@@ -73,14 +73,14 @@ TEST_F(EventSystemTest, OnEventWithCorrectSignature)
     EventSystemMockCallback mock;
     
     system.Create<int>("IntEvent");
-    
-    // Create listener
+
     auto* event = system.get<int>("IntEvent");
     ASSERT_NE(event, nullptr);
     
-    SingleListener<int> listener(event, [&mock](int value) {
-        mock.callWithInt(value);
-    });
+    SingleListener<int> listener(
+        event,
+        [&mock](int value) {mock.callWithInt(value);}
+        );
     
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
     system.on("IntEvent", 42);
@@ -96,9 +96,10 @@ TEST_F(EventSystemTest, OnEventWithWrongSignature)
     auto* event = system.get<int>("IntEvent");
     ASSERT_NE(event, nullptr);
     
-    SingleListener<int> listener(event, [&mock](int value) {
-        mock.callWithInt(value);
-    });
+    SingleListener<int> listener(
+        event,
+        [&mock](int value) {mock.callWithInt(value);}
+        );
     
     // Trigger with wrong signature - should be ignored
     EXPECT_CALL(mock, callWithInt(_)).Times(0);
@@ -232,7 +233,8 @@ TEST_F(EventSystemTest, ComplexEventTypes)
     auto* event = system.get<int, std::string, double>("ComplexEvent");
     
     SingleListener<int, std::string, double> listener(event,
-        [&mock](int i, const std::string& s, double d) {
+        [&mock](int i, const std::string& s, double d)
+        {
             mock.callWithInt(i);
             mock.callWithString(s);
         });
@@ -262,7 +264,8 @@ TEST_F(EventSystemTest, PerfectForwarding)
     
     bool callbackCalled = false;
     SingleListener<MoveOnlyType> listener(event,
-        [&callbackCalled](MoveOnlyType&& mot) {
+        [&callbackCalled](MoveOnlyType&& mot)
+        {
             EXPECT_EQ(mot.value, 100);
             callbackCalled = true;
         });

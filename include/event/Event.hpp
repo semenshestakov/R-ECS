@@ -40,6 +40,11 @@ namespace event
         callbackId_t addAny(const std::any& callback) override;
 
         /**
+         * @brief Factory method to create concrete event instance.
+         */
+        [[nodiscard]] AbstractEvent* New() const override;
+
+        /**
          * Remove callback by ID.
          * @param callbackId ID returned by add()
          */
@@ -52,8 +57,8 @@ namespace event
         void operator()(Args... args);
     
     protected:
-        std::map<callbackId_t, Callback> m_callbacksMap;        ///< Callback storage (sorted by ID)
-        callbackId_t m_lastCallbackId = 1;                      ///< Next callback ID
+        std::map<callbackId_t, Callback> m_callbacksMap;                              ///< Callback storage (sorted by ID)
+        callbackId_t m_lastCallbackId = INVALID_CALLBACK_ID + 1;                      ///< Next callback ID
         
     };
 

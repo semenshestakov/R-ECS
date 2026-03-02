@@ -83,12 +83,7 @@ namespace event
          *
          * @note Returns 0 if `m_event` is nullptr.
          */
-        eventId_t eventId() const;
-
-
-    protected:
-        T m_callbackId {};                                  ///< Storage for callback identifier(s). Can be single ID or collection.
-        AbstractEvent* m_event = nullptr;                   ///< Pointer to the associated event. Owned externally, not by this class.
+        [[nodiscard]] eventId_t eventId() const;
 
         /**
          * @brief Removes a callback from the associated event.
@@ -101,6 +96,14 @@ namespace event
          * @param callbackId The callback identifier to add to internal storage.
          */
         void addCallbackId(callbackId_t callbackId);
+
+        void addCallbackAny(const std::any& callback) const;
+
+        void unsubscribeAll();
+
+    protected:
+        T m_callbackId {};                                  ///< Storage for callback identifier(s). Can be single ID or collection.
+        AbstractEvent* m_event = nullptr;                   ///< Pointer to the associated event. Owned externally, not by this class.
 
     private:
         deleter_t m_deleter = nullptr;                      ///< Optional custom deleter for extended cleanup operations.

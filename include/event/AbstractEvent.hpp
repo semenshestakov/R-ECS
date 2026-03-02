@@ -22,7 +22,30 @@ namespace event
          * @param callbackId ID of callback to remove
          */
         virtual void remove(const callbackId_t& callbackId) = 0;
+
+        /**
+         * @brief Add type-erased callback with automatic invocation.
+         *
+         * Stores callback using std::any for complete type erasure.
+         * Derived classes must implement invoke() dispatching to stored any-cast.
+         * Supports lambdas, functors, member functions, free functions.
+         *
+         * @param callback Any callable object (lambda, std::function, etc.)
+         * @return Unique ID for removal or invalid ID on failure
+         * @note Callback lifetime managed by this interface
+         */
         virtual callbackId_t addAny(const std::any& callback) = 0;
+
+        /**
+         * @brief Factory method to create concrete event instance.
+         *
+         * Derived classes return their specific Event<Ts...> implementation.
+         * Ensures proper polymorphic ownership via AbstractEvent* interface.
+         *
+         * @return New concrete event instance (ownership transferred to caller)
+         * @nodiscard Ensures factory result is not ignored
+         */
+        [[nodiscard]] virtual AbstractEvent* New() const = 0;
 
     private:
         /// Static counter for unique IDs

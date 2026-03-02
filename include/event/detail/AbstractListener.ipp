@@ -24,29 +24,7 @@ namespace event
     template <ValidCallbackIdType T>
     AbstractListener<T>::~AbstractListener()
     {
-        if constexpr (std::is_same_v<T, callbackId_t>)
-        {
-            const callbackId_t callbackId = m_callbackId;
-            removeCallbackId(m_callbackId);
-
-            if (m_deleter)
-                m_deleter(callbackId);
-        }
-        else
-        {
-            const T callbackIds = m_callbackId;
-            for (const callbackId_t callbackId : callbackIds)
-            {
-                if (m_event != nullptr)
-                {
-                    m_event->remove(callbackId);
-                }
-                if (m_deleter != nullptr)
-                {
-                    m_deleter(callbackId);
-                }
-            }
-        }
+        unsubscribeAll();
     }
 
     template <ValidCallbackIdType T>
@@ -105,6 +83,9 @@ namespace event
     template <ValidCallbackIdType T>
     void AbstractListener<T>::addCallbackId(const callbackId_t callbackId)
     {
+        if (callbackId == INVALID_CALLBACK_ID)
+            return;
+
         if constexpr (std::is_same_v<T, callbackId_t>)
         {
             if (m_event != nullptr)
@@ -122,4 +103,41 @@ namespace event
         }
     }
 
-}
+    template<ValidCallbackIdType T>
+    void AbstractListener<T>::addCallbackAny(const std::any& callback) const
+    {
+        if (m_event == nullptr)
+            return;
+
+        m_event->addAny(callback);
+    }
+
+    template<ValidCallbackIdType T>
+    void AbstractListener<T>::unsubscribeAll()
+    {
+        if constexpr (std::is_same_v<T, callbackId_t>)
+        {
+            if (m_event != nullptr)
+                m_event->remove(m_callbackId);
+
+            if (m_deleter)
+                m_deleter(m_callbackId);
+
+            m_callbackId = INVALID_CALLBACK_ID;
+        }
+        else
+        {
+            const T callbackIds = m_callbackId;
+            for (const callbackId_t callbackId : callbackIds)
+            {
+                if (m_event)
+                    m_event->remove(callbackId);
+
+                if (m_deleter)
+                    m_deleter(callbackId);
+            }
+            m_callbackId.clear();
+        }
+    }
+
+} // namespace event

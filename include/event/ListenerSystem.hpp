@@ -45,6 +45,7 @@ namespace event
          */
         using AbstractSmartListener_t = AbstractListener<T>;
         template<typename... Args> using SmartListener_t = Listener<T, Args...>;
+        using mapListeners_t = std::unordered_map<K, std::unique_ptr<AbstractSmartListener_t>>;
 
         /**
          * @brief Default constructor.
@@ -68,6 +69,11 @@ namespace event
         ListenerSystem(ListenerSystem&&) = delete;
         ListenerSystem& operator=(ListenerSystem&&) = delete;
 
+        template<typename... Args>
+        bool reg(const K& key, Event<Args...>* event);
+
+        std::pair<bool, typename mapListeners_t::const_iterator> isRegistered(const K& key, const AbstractEvent* event) const;
+
         /**
          * @brief Subscribes to an event with a unique key identifier.
          *
@@ -82,7 +88,10 @@ namespace event
          *
          * @note The system takes ownership of the created listener
          */
-        template<typename... Args> void subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
+        template<typename... Args>
+        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
+
+        bool subscribeAny(const K& key, AbstractEvent*, const std::any& callback);
 
         /**
          * @brief Unsubscribes and removes a listener by its key.
@@ -94,9 +103,15 @@ namespace event
          */
         void unsubscribe(const K& key);
 
+        void unsubscribeAll();
+
+        void clear();
+
+        [[nodiscard]] std::size_t size() const;
+
     private:
         /// Map of key to listener pointers. Uses unique_ptr for automatic memory management.
-        std::unordered_map<K, std::unique_ptr<AbstractSmartListener_t>> m_mapListeners;
+        mapListeners_t m_mapListeners;
 
         /// Optional custom deleter applied to all listeners created by this system
         deleter_t m_deleter;

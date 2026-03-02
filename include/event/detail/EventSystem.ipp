@@ -25,9 +25,10 @@ namespace event
     template<typename K>
     void EventSystem<K>::Delete(const K& key)
     {
-        if(m_eventsMap.contains(key))
+        const auto it = m_eventsMap.find(key);
+        if(it != m_eventsMap.end())
         {
-            m_eventsMap.erase(key);
+            m_eventsMap.erase(it);
         }
     }
 
@@ -49,10 +50,11 @@ namespace event
     template<class... Args>
     Event<Args...>* EventSystem<K>::get(const K& key)
     {
-        if(!m_eventsMap.contains(key))
+        const auto it = m_eventsMap.find(key);
+        if(it == m_eventsMap.end())
             return nullptr;
 
-        return dynamic_cast<Event<Args...>*>(m_eventsMap[key].get());
+        return dynamic_cast<Event<Args...>*>(it->second.get());
     }
 
     template<typename K>

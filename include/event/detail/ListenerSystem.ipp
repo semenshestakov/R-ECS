@@ -5,20 +5,20 @@
 namespace event
 {
 
-    template<typename H, typename T>
-    ListenerSystem<H, T>::ListenerSystem() : ListenerSystem(nullptr) {}
+    template<typename K, typename T>
+    ListenerSystem<K, T>::ListenerSystem() : ListenerSystem(nullptr) {}
 
-    template<typename H, typename T>
-    ListenerSystem<H, T>::ListenerSystem(const deleter_t& deleter) : m_deleter(deleter) {}
+    template<typename K, typename T>
+    ListenerSystem<K, T>::ListenerSystem(const deleter_t& deleter) : m_deleter(deleter) {}
 
-    template<typename H, typename T>
-    ListenerSystem<H, T>::~ListenerSystem()
+    template<typename K, typename T>
+    ListenerSystem<K, T>::~ListenerSystem()
     {
         m_mapListeners.clear();
     }
 
-    template<typename H, typename T> template<typename... Args>
-    void ListenerSystem<H, T>::subscribe(const H& key, Event<Args...>* event, eventCallback_t<Args...> callback)
+    template<typename K, typename T> template<typename... Args>
+    void ListenerSystem<K, T>::subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback)
     {
         if (event == nullptr)
             return;
@@ -45,8 +45,8 @@ namespace event
         );
     }
 
-    template<typename H, typename T>
-    void ListenerSystem<H, T>::unsubscribe(const H& key)
+    template<typename K, typename T>
+    void ListenerSystem<K, T>::unsubscribe(const K& key)
     {
         if (m_mapListeners.contains(key))
         {

@@ -15,7 +15,7 @@ namespace event
      * subscription is identified by a key. Automatically handles cleanup of all managed
      * listeners upon destruction.
      *
-     * @tparam H The key type, must be hashable for use with std::unordered_map
+     * @tparam K The key type, must be hashable for use with std::unordered_map
      * @tparam T The callback identifier storage type for the managed listeners
      *
      * @note Non-copyable and non-movable to maintain ownership semantics
@@ -35,7 +35,7 @@ namespace event
      * // Later, unsubscribe by key
      * listenerSystem.unsubscribe("player_moved");
      */
-    template<typename H /* hashable_value */, typename T /* abstract_smart_listener_type */>
+    template<typename K /* key */, typename T /* abstract_smart_listener_type */>
     class ListenerSystem
     {
     public:
@@ -82,7 +82,7 @@ namespace event
          *
          * @note The system takes ownership of the created listener
          */
-        template<typename... Args> void subscribe(const H& key, Event<Args...>* event, eventCallback_t<Args...> callback);
+        template<typename... Args> void subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
 
         /**
          * @brief Unsubscribes and removes a listener by its key.
@@ -92,11 +92,11 @@ namespace event
          * @note If no listener exists for the key, this method does nothing (no-op)
          * @note The listener is properly destroyed and all its callbacks are unregistered
          */
-        void unsubscribe(const H& key);
+        void unsubscribe(const K& key);
 
     private:
         /// Map of key to listener pointers. Uses unique_ptr for automatic memory management.
-        std::unordered_map<H, std::unique_ptr<AbstractSmartListener_t>> m_mapListeners;
+        std::unordered_map<K, std::unique_ptr<AbstractSmartListener_t>> m_mapListeners;
 
         /// Optional custom deleter applied to all listeners created by this system
         deleter_t m_deleter;

@@ -13,9 +13,9 @@ namespace event
     /**
      * @brief Generic event system that uses hashable keys to identify events
      *
-     * @tparam H The hashable type used as event key (e.g., std::string, enum class, int)
+     * @tparam K The hashable type used as event key (e.g., std::string, enum class, int)
      */
-    template<typename H /* hashable_value */>
+    template<typename K /* key */>
     class EventSystem final
     {
     public:
@@ -36,14 +36,14 @@ namespace event
          * @return true if event was created, false if it already exists
          */
         template<typename... Args>
-        [[maybe_unused]] bool Create(const H& hashable);
+        [[maybe_unused]] bool Create(const K& hashable);
 
         /**
          * @brief Delete an event by its key
          *
          * @param hashable Key of the event to delete
          */
-        void Delete(const H& hashable);
+        void Delete(const K& hashable);
 
         /**
          * @brief Remove all events
@@ -60,10 +60,10 @@ namespace event
          * @note If the event doesn't exist or has wrong signature, this function does nothing
          */
         template<class... Args>
-        void on(const H& hashable, Args&&... args);
+        void on(const K& hashable, Args&&... args);
 
         template<class... Args>
-        Event<Args...>* get(const H& hashable);
+        Event<Args...>* get(const K& hashable);
 
         /**
          * @brief Check if an event with the given key exists
@@ -71,7 +71,7 @@ namespace event
          * @param hashable Key to check
          * @return true if event exists, false otherwise
          */
-        [[nodiscard]] bool contains(const H& hashable) const;
+        [[nodiscard]] bool contains(const K& hashable) const;
 
         /**
          * @brief Get the number of registered events
@@ -80,7 +80,7 @@ namespace event
 
     private:
         using absEventPtr_t = std::unique_ptr<AbstractEvent>;
-        using eventMap_t = std::unordered_map<H, absEventPtr_t>;
+        using eventMap_t = std::unordered_map<K, absEventPtr_t>;
 
         eventMap_t m_eventsMap;
     };

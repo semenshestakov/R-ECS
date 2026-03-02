@@ -5,15 +5,15 @@
 namespace event
 {
 
-    template<typename H>
-    EventSystem<H>::EventSystem() = default;
+    template<typename K>
+    EventSystem<K>::EventSystem() = default;
 
-    template<typename H>
-    EventSystem<H>::~EventSystem() = default;
+    template<typename K>
+    EventSystem<K>::~EventSystem() = default;
 
-    template<typename H>
+    template<typename K>
     template<typename... Args>
-    bool EventSystem<H>::Create(const H& hashable)
+    bool EventSystem<K>::Create(const K& hashable)
     {
         if(m_eventsMap.contains(hashable))
         {
@@ -24,8 +24,8 @@ namespace event
         return true;
     }
 
-    template<typename H>
-    void EventSystem<H>::Delete(const H& hashable)
+    template<typename K>
+    void EventSystem<K>::Delete(const K& hashable)
     {
         if(m_eventsMap.contains(hashable))
         {
@@ -33,23 +33,23 @@ namespace event
         }
     }
 
-    template<typename H>
-    void EventSystem<H>::clear()
+    template<typename K>
+    void EventSystem<K>::clear()
     {
         m_eventsMap.clear();
     }
 
-    template<typename H>
+    template<typename K>
     template<typename... Args>
-    void EventSystem<H>::on(const H& hashable, Args&&... args)
+    void EventSystem<K>::on(const K& hashable, Args&&... args)
     {
         if(auto* event = get<Args...>(hashable))
             (*event)(std::forward<Args>(args)...);
     }
 
-    template<typename H>
+    template<typename K>
     template<class... Args>
-    Event<Args...>* EventSystem<H>::get(const H& hashable)
+    Event<Args...>* EventSystem<K>::get(const K& hashable)
     {
         if(!m_eventsMap.contains(hashable))
             return nullptr;
@@ -57,14 +57,14 @@ namespace event
         return dynamic_cast<Event<Args...>*>(m_eventsMap[hashable].get());
     }
 
-    template<typename H>
-    bool EventSystem<H>::contains(const H& hashable) const
+    template<typename K>
+    bool EventSystem<K>::contains(const K& hashable) const
     {
         return m_eventsMap.contains(hashable);
     }
 
-    template<typename H>
-    size_t EventSystem<H>::size() const
+    template<typename K>
+    size_t EventSystem<K>::size() const
     {
         return m_eventsMap.size();
     }

@@ -18,7 +18,8 @@ namespace event
     #define MAKE_METHOD_CALLBACK(pInstance, method) \
         [pInstance](auto&&... args) { (pInstance)->method(std::forward<decltype(args)>(args)...); }
 
-    template<typename T, typename... Args> eventCallback_t<Args...> makeMethodCallback(T* pInstance, void (T::*method)(Args...))
+    template<typename T, typename... Args>
+    eventCallback_t<Args...> makeMethodCallback(T* pInstance, void (T::*method)(Args...))
     {
         return [pInstance, method](Args... args) { (pInstance->*method)(std::forward<Args>(args)...); };
     }

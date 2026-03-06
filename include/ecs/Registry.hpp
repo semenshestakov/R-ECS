@@ -1,9 +1,11 @@
 #pragma once
 
+#include "common_recs/utils/ClassUtils.hpp"
 #include "components/Components.hpp"
 #include "components/ComponentsManager.hpp"
 #include "entities/EntitiesManager.hpp"
 #include "entities/ranges/EntitiesViews.hpp"
+#include "event/EventSystem.hpp"
 #include "systems/SystemsManager.hpp"
 
 
@@ -71,16 +73,18 @@ namespace ecs
         Registry(const Registry&) = delete;                             ///< Non-copyable
         Registry& operator=(const Registry&) = delete;                  ///< Non-copyable
 
-#ifndef DEEP_TEST_ENABLE
-    private:
-#endif
+    DEEP_TEST_PRIVATE_ACCESS:
         EntitiesManager m_entitiesManager;          ///< Underlying entity storage
         ComponentsManager m_componentsManager;      ///< Factory instance for component operations
-        SystemsManager m_systemManager;              ///< Underlying entity storage
+        EventSystem m_eventSystem;                  ///< Local Event System
+        SystemsManager m_systemManager;             ///< Underlying entity storage
 
     public:
         /// Find components for entity. Returns nullptr if not found.
         [[nodiscard]] Components* get(entityId_t entityId) const;
+
+        template<typename System>
+        [[nodiscard]] System* getSystem();
 
         /// Check if entity exists in registry
         [[nodiscard]] bool contains(entityId_t entityId) const;
@@ -150,12 +154,27 @@ namespace ecs
          */
         template<typename... ComponentCls>
         ranges::view::ComponentsViews<ComponentCls...> view();
+
+        template<typename Event>
+        void onEvent(const Event& event);
     };
+
+    template<typename System>
+    System* Registry::getSystem()
+    {
+        return m_systemManager.get<System>();
+    }
 
     template<typename... ComponentCls>
     ranges::view::ComponentsViews<ComponentCls...> Registry::view()
     {
         return {m_entitiesManager.begin(), m_entitiesManager};
+    }
+
+    template<typename Event>
+    void Registry::onEvent(const Event& event)
+    {
+        m_eventSystem.on<Registry&, const Event&>(getEventKey<Event>(), *this, event);
     }
 
 } // namespace ecs

@@ -50,7 +50,7 @@ namespace ecs
         return true;
     }
 
-    template<typename SystemT, std::size_t N>
+    template<typename System, std::size_t N>
     /* static */ bool RegistryRegistrator::RegisterSystem(const std::array<std::string_view, N> &names)
     {
         if constexpr (N == 0)
@@ -63,7 +63,7 @@ namespace ecs
                 Register(name);
 
             auto manager = GetSystemsManager(name);
-            manager->Register<SystemT>();
+            manager->Register<System>();
         }
 
         return true;

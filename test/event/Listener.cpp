@@ -196,7 +196,7 @@ TEST_F(ListenerSingleTest, AddCallbackAfterConstruction)
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
 
     Listener<callbackId_t, int> listener(intEvent.get());
-    listener.addCallback([&mock](int value) { mock.callWithInt(value); });
+    listener.subscribe([&mock](int value) { mock.callWithInt(value); });
 
     (*intEvent)(42);
 }
@@ -210,9 +210,9 @@ TEST_F(ListenerSingleTest, AddMultipleCallbacks)
     EXPECT_CALL(mock3, callWithInt(42)).Times(1);
 
     Listener<callbackId_t, int> listener(intEvent.get());
-    listener.addCallback([&mock1](int value) { mock1.callWithInt(value); });
-    listener.addCallback([&mock2](int value) { mock2.callWithInt(value); });
-    listener.addCallback([&mock3](int value) { mock3.callWithInt(value); });
+    listener.subscribe([&mock1](int value) { mock1.callWithInt(value); });
+    listener.subscribe([&mock2](int value) { mock2.callWithInt(value); });
+    listener.subscribe([&mock3](int value) { mock3.callWithInt(value); });
 
     (*intEvent)(42);
 }
@@ -313,7 +313,7 @@ TEST_F(ListenerSingleTest, ListenerWithNullEvent)
     EXPECT_EQ(listener.eventId(), 0);
 
     // Adding callback to null event should not crash
-    listener.addCallback([](int) {});
+    listener.subscribe([](int) {});
 }
 
 
@@ -394,8 +394,8 @@ TEST_F(ListenerVectorTest, AddCallbackToVectorListener)
 
     Listener<std::vector<callbackId_t>, int> listener(intEvent.get());
 
-    listener.addCallback([&mock1](int value) { mock1.callWithInt(value); });
-    listener.addCallback([&mock2](int value) { mock2.callWithInt(value); });
+    listener.subscribe([&mock1](int value) { mock1.callWithInt(value); });
+    listener.subscribe([&mock2](int value) { mock2.callWithInt(value); });
 
     EXPECT_CALL(mock1, callWithInt(42)).Times(1);
     EXPECT_CALL(mock2, callWithInt(42)).Times(1);

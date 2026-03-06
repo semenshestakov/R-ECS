@@ -100,7 +100,7 @@ namespace ecs
          * @param names Factory names for this system (multiple names allowed)
          * @return true if all registrations succeeded, false otherwise
          */
-        template<typename SystemT, std::size_t N>
+        template<typename System, std::size_t N>
         static bool RegisterSystem(const std::array<std::string_view, N>& names);
 
     };

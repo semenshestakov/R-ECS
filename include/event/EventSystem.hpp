@@ -25,8 +25,8 @@ namespace event
         // Non-copyable, non-movable
         EventSystem(const EventSystem&) = delete;
         EventSystem& operator=(const EventSystem&) = delete;
-        EventSystem(EventSystem&&) = delete;
-        EventSystem& operator=(EventSystem&&) = delete;
+        EventSystem(EventSystem&&) = default;
+        EventSystem& operator=(EventSystem&&) = default;
 
         /**
          * @brief Create a new event with the specified key and signature

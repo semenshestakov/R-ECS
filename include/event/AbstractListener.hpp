@@ -65,6 +65,9 @@ namespace event
         AbstractListener(const AbstractListener&) = delete;
         AbstractListener& operator=(const AbstractListener&) = delete;
 
+        AbstractListener(AbstractListener&&) noexcept = default;
+        AbstractListener& operator=(AbstractListener&&) noexcept = default;
+
         /**
          * @brief Merges callbacks from another listener into this one.
          * Transfers callback ownership from `other` to this listener. After this operation,
@@ -100,6 +103,8 @@ namespace event
         void addCallbackAny(const std::any& callback) const;
 
         void unsubscribeAll();
+
+        void clear();
 
     protected:
         T m_callbackId {};                                  ///< Storage for callback identifier(s). Can be single ID or collection.

@@ -97,10 +97,10 @@ namespace ecs
          * The system is automatically organized under its declared UPDATE_TAG for batch
          * updates. Registration fails silently if a system of the same type already exists.
          *
-         * @tparam SystemT The system type to register (must derive from IBaseSystem)
+         * @tparam System The system type to register (must derive from IBaseSystem)
          * @return true if the system was successfully registered, false if a system of the same type already exists
          */
-        template<typename SystemT>
+        template<typename System>
         bool Register();
 
         [[maybe_unused]] bool Init(const InitState &state);
@@ -120,20 +120,33 @@ namespace ecs
 
         [[nodiscard]] std::size_t size() const;
 
+        template<typename System>
+        [[nodiscard]] System* get();
+
         friend class Registry;
     };
 
 
-    template<typename SystemT>
+    template<typename System>
     bool SystemsManager::Register()
     {
-        const hash_t hash = typeid(SystemT).hash_code();
+        const hash_t hash = typeid(System).hash_code();
         if (m_systemsMap.contains(hash))
             return false;
 
-        m_systemsMap[hash] = std::make_unique<SystemT>();
-        m_updates[SystemT::UPDATE_TAG].push_back(hash);
+        m_systemsMap[hash] = std::make_unique<System>();
+        m_updates[System::UPDATE_TAG].push_back(hash);
         return true;
+    }
+
+    template<typename System>
+    System* SystemsManager::get()
+    {
+        const auto it = m_systemsMap.find(typeid(System).hash_code());
+        if (it == m_systemsMap.end())
+            return nullptr;
+
+        return dynamic_cast<System*>(it->second.get());
     }
 
 }

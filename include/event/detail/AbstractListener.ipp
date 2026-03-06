@@ -140,4 +140,11 @@ namespace event
         }
     }
 
+    template<ValidCallbackIdType T>
+    void AbstractListener<T>::clear()
+    {
+        unsubscribeAll();
+        m_event = nullptr;
+    }
+
 } // namespace event

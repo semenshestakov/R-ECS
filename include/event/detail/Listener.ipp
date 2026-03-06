@@ -25,7 +25,7 @@ namespace event
     Listener<T, Args...>::Listener(Event_t* event, const Callback_t& callback, const deleter_t& deleter) :
         AbstractListener<T>(event, deleter)
     {
-        addCallback(callback);
+        subscribe(callback);
     }
 
     template<typename T, typename... Args>
@@ -44,7 +44,7 @@ namespace event
 
         for(const auto callback: callbacks)
         {
-            addCallback(callback);
+            subscribe(callback);
         }
     }
 
@@ -69,14 +69,30 @@ namespace event
     }
 
     template<typename T, typename... Args>
-    void Listener<T, Args...>::addCallback(Callback_t callback)
+    void Listener<T, Args...>::subscribe(const Callback_t& callback)
     {
-        if(this->m_event == nullptr)
+        if(this->m_event == nullptr || callback == nullptr)
             return;
 
         auto* event = dynamic_cast<Event<Args...>*>(this->m_event);
         if(event != nullptr)
             this->addCallbackId(event->add(callback));
+    }
+
+    template<typename T, typename... Args>
+    void Listener<T, Args...>::subscribe(Event_t* event, const Callback_t& callback)
+    {
+        if(this->m_event != nullptr)
+        {
+            this->clear();
+            return;
+        }
+
+        if(event == nullptr)
+            return;
+
+        this->m_event = event;
+        subscribe(callback);
     }
 
 } // end namespace Event 

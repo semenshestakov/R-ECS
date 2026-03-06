@@ -114,7 +114,10 @@ namespace event
          * @brief Adds an additional callback to this listener.
          * @param callback The callback function to add
          */
-        void addCallback(Callback_t callback);
+        void subscribe(const Callback_t& callback);
+
+        void subscribe(Event_t* event, const Callback_t& callback);
+
     };
 
     /**

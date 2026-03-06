@@ -1,9 +1,27 @@
 #pragma once
 
 
+namespace event
+{
+    template<typename K /* key */>
+    class EventSystem;
+}
+
+
 namespace ecs
 {
     class Registry;
+
+
+    using eventKey_t = std::size_t;
+
+    template<class Event>
+    constexpr std::size_t getEventKey()
+    {
+        return typeid(Event).hash_code();
+    }
+
+    using EventSystem = event::EventSystem<eventKey_t>;
 
     /**
      * @brief Type alias for update tags used to categorize system update phases.
@@ -36,6 +54,7 @@ namespace ecs
     {
         const char* nameFactory;            ///< Identifier for the componentsManager or creator of this system
         void* args;                         ///< Pointer to system-specific initialization arguments
+        EventSystem& eventSystem;           ///< Ref local Event System for ECS
     };
 
     /**

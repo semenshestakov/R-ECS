@@ -73,7 +73,7 @@ namespace ecs
          * @param registry Reference to the main ECS Registry for entity operations
          * @param state Structure containing update context information
          */
-        virtual void Update(Registry& registry, const UpdateState& state) = 0;
+        virtual void Update(Registry& registry, const UpdateState& state) {};
 
         /**
          * @brief Default update tag for systems that don't specify their own.

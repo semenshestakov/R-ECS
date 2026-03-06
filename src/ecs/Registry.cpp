@@ -39,7 +39,7 @@ namespace ecs
 
     bool Registry::Init(void* args /* = nullptr */)
     {
-        return m_systemManager.Init({"", args});
+        return m_systemManager.Init({"", args, m_eventSystem});
     }
 
     Components& Registry::Create(const entityId_t entityId)

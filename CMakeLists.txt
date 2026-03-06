@@ -18,7 +18,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(R-ECS
     STATIC
-        src/src.cpp
         src/ecs/Registry.cpp
         src/ecs/SystemsManager.cpp
         src/ecs/EntitiesIterator.cpp
@@ -47,6 +46,7 @@ if(TEST_ENABLE)
             test/ecs/Components.cpp
             test/ecs/Registry.cpp
             test/ecs/Systems.cpp
+            test/ecs/SystemEventHandler.cpp
             test/reg/registrator_factory_tests.cpp
             test/event/Event.cpp
             test/event/Listener.cpp

@@ -10,7 +10,7 @@ using namespace ecs;
 
 TEST(AutoRegistrationTest, RegistryRegistratorSize)
 {
-    EXPECT_EQ(RegistryRegistrator::Registrator::size(), 2);
+    EXPECT_EQ(RegistryRegistrator::Registrator::size(), 3);
 }
 
 TEST(AutoRegistrationTest, ComponentsIsRegistered)

@@ -6,6 +6,18 @@ namespace ecs
 {
 
     template<typename SystemCls>
+    IBaseSystem* ISystem<SystemCls>::New() const
+    {
+        return new SystemCls();
+    }
+
+    template<typename SystemCls>
+    std::string_view ISystem<SystemCls>::name() const
+    {
+        return typeid(SystemCls).name();
+    }
+
+    template<typename SystemCls>
     void ISystem<SystemCls>::Init(const InitState& state)
     {
         IBaseSystem::Init(state);

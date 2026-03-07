@@ -1,4 +1,5 @@
 #pragma once
+#include <string_view>
 #include "ecs/utils/SystemsError.hpp"
 #include "ecs/utils/SystemUtils.hpp"
 
@@ -47,7 +48,7 @@ namespace ecs
         [[nodiscard]] virtual IBaseSystem* New() const = 0;
 
 
-        [[nodiscard]] virtual const char* name() const { static constexpr char s_name[] = "IBaseSystem"; return s_name;};
+        [[nodiscard]] virtual std::string_view name() const { static constexpr char s_name[] = "IBaseSystem"; return s_name;};
 
         /**
          * @brief Initializes the system with provided configuration.
@@ -67,8 +68,7 @@ namespace ecs
          *
          * Called once per frame or update tick to execute the system's behavior.
          * Systems receive the Registry to query and manipulate entities, along
-         * with context about the current update phase. This pure virtual method
-         * must be implemented by all concrete system types.
+         * with context about the current update phase.
          *
          * @param registry Reference to the main ECS Registry for entity operations
          * @param state Structure containing update context information

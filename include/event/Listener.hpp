@@ -38,7 +38,6 @@ namespace event
     template<typename T, typename... Args>
     class Listener final : public AbstractListener<T>
     {
-
     public:
         using Callback_t = eventCallback_t<Args...> ;                   ///< Type alias for the callback signature
         using Event_t = Event<Args...>;                                ///< Type alias for the specific event type
@@ -116,6 +115,15 @@ namespace event
          */
         void subscribe(const Callback_t& callback);
 
+        /**
+         * @brief Adds a callback using a specified event.
+         * @param event Pointer to the event to subscribe to
+         * @param callback The callback function to add
+         *
+         * @note This updates the listener's associated event to the provided one.
+         *       Any previously associated event remains unchanged but the listener
+         *       will now use this new event for future operations.
+         */
         void subscribe(Event_t* event, const Callback_t& callback);
 
     };

@@ -3,24 +3,55 @@
 
 namespace event
 {
-    template<typename K /* key */>
-    class EventSystem;
+    /**
+     * @brief Forward declaration of the EventSystem template class
+     * @tparam K The key type used to identify events
+     */
+    template<typename K /* key */> class EventSystem;
 }
 
 
 namespace ecs
 {
+    // Forward declarations
     class Registry;
 
 
+    /**
+     * @brief Type used as key for event identification in the ECS
+     *
+     * Events are identified by unique keys derived from their types.
+     * Using std::size_t provides efficient hashing and lookup in containers.
+     */
     using eventKey_t = std::size_t;
 
+    /**
+     * @brief Generates a unique compile-time key for an event type
+     *
+     * @tparam Event The event type to generate a key for
+     * @return constexpr std::size_t A unique hash code for the event type
+     *
+     * @note Uses typeid(Event).hash_code() which is constexpr-friendly
+     *       and provides a unique identifier per type at compile time
+     *
+     * @par Example:
+     * @code
+     * struct PlayerDiedEvent {};
+     * auto key = getEventKey<PlayerDiedEvent>(); // Unique identifier
+     * @endcode
+     */
     template<class Event>
     constexpr std::size_t getEventKey()
     {
         return typeid(Event).hash_code();
     }
 
+    /**
+     * @brief ECS-specific event system type alias
+     *
+     * Specializes the generic EventSystem to use eventKey_t (std::size_t)
+     * as the key type for event identification within the ECS.
+     */
     using EventSystem = event::EventSystem<eventKey_t>;
 
     /**

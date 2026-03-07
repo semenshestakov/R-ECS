@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <vector>
+#include "common_recs/utils/ClassUtils.hpp"
 #include "IBaseSystem.hpp"
 #include "ecs/utils/SystemUtils.hpp"
 
@@ -80,9 +81,7 @@ namespace ecs
          */
         void swap(SystemsManager& other) noexcept;
 
-#ifndef DEEP_TEST_ENABLE
-    private:
-#endif
+    DEEP_TEST_PRIVATE_ACCESS:
         using systemPtr_t = std::unique_ptr<IBaseSystem>;           ///< Type alias for system ownership
         using hash_t = std::size_t;                                 ///< Type alias for type hash codes
 
@@ -100,9 +99,20 @@ namespace ecs
          * @tparam System The system type to register (must derive from IBaseSystem)
          * @return true if the system was successfully registered, false if a system of the same type already exists
          */
-        template<typename System>
-        bool Register();
+        template<typename System> bool Register();
 
+        /**
+         * @brief Initializes all registered systems with the given state
+         *
+         * Calls the Init method on every registered system, passing the provided
+         * initialization state. The order of initialization respects system
+         * registration order.
+         *
+         * @param state The initialization state to pass to systems
+         * @return true if all systems initialized successfully, false otherwise
+         *
+         * @note Systems must implement the Init method as per IBaseSystem interface
+         */
         [[maybe_unused]] bool Init(const InitState &state);
 
         /**
@@ -118,11 +128,32 @@ namespace ecs
          */
         void Update(Registry& registry, std::optional<updateTag_t> updateTag = std::nullopt);
 
+        /**
+         * @brief Returns the number of registered systems
+         * @return std::size_t Total count of systems currently managed
+         */
         [[nodiscard]] std::size_t size() const;
 
-        template<typename System>
-        [[nodiscard]] System* get();
+        /**
+         * @brief Retrieves a registered system by its type
+         *
+         * Provides access to a specific system instance through its type.
+         * Returns nullptr if no system of the requested type is registered.
+         *
+         * @tparam System The type of system to retrieve
+         * @return Pointer to the system instance, or nullptr if not found
+         *
+         * @note The returned pointer remains valid until the system is unregistered
+         *       or the manager is destroyed
+         */
+        template<typename System> [[nodiscard]] System* get();
 
+        /**
+         * @brief Friend declaration granting Registry access to private members
+         *
+         * Allows the Registry class to interact with SystemsManager's internal
+         * state for proper ECS integration and management.
+         */
         friend class Registry;
     };
 

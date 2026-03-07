@@ -6,7 +6,6 @@
 namespace event
 {
 
-
     /**
      * @class ListenerSystem
      * @brief Centralized system for managing multiple smart listeners with key-based access.
@@ -69,9 +68,24 @@ namespace event
         ListenerSystem(ListenerSystem&&) = delete;
         ListenerSystem& operator=(ListenerSystem&&) = delete;
 
+        /**
+         * @brief Registers an event type for a given key.
+         * @tparam Args Event argument types
+         * @param key The key to associate with the event
+         * @param event Pointer to the event instance
+         * @return true if registration succeeded, false if already registered
+         */
         template<typename... Args>
         bool reg(const K& key, Event<Args...>* event);
 
+        /**
+         * @brief Checks if a listener for a specific event is already registered under a key.
+         * @param key The key to check
+         * @param event Pointer to the event to check
+         * @return Pair containing:
+         *         - bool: true if registered, false otherwise
+         *         - const_iterator to the found entry (end() if not found)
+         */
         std::pair<bool, typename mapListeners_t::const_iterator> isRegistered(const K& key, const AbstractEvent* event) const;
 
         /**
@@ -91,6 +105,16 @@ namespace event
         template<typename... Args>
         bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
 
+        /**
+         * @brief Type-erased subscription method for use with CallbackCollector.
+         * @param key The key identifying the subscription
+         * @param event Pointer to the abstract event
+         * @param callback The callback stored in std::any
+         * @return true if subscription succeeded, false otherwise
+         *
+         * @note This method attempts to cast the std::any to the correct callback type
+         *       based on the event's type information.
+         */
         bool subscribeAny(const K& key, AbstractEvent*, const std::any& callback);
 
         /**
@@ -103,10 +127,26 @@ namespace event
          */
         void unsubscribe(const K& key);
 
+        /**
+         * @brief Unsubscribes all listeners for all keys.
+         *
+         * @note This clears all subscriptions but keeps the map structure.
+         *       For complete removal, use clear().
+         */
         void unsubscribeAll();
 
+        /**
+         * @brief Completely clears the listener system.
+         *
+         * Unsubscribes all listeners and removes all entries from the map.
+         * After calling this, the system is empty.
+         */
         void clear();
 
+        /**
+         * @brief Gets the number of registered listeners.
+         * @return Number of key-listener pairs in the system
+         */
         [[nodiscard]] std::size_t size() const;
 
     private:

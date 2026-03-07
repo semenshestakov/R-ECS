@@ -65,6 +65,7 @@ namespace event
         AbstractListener(const AbstractListener&) = delete;
         AbstractListener& operator=(const AbstractListener&) = delete;
 
+        // Movable
         AbstractListener(AbstractListener&&) noexcept = default;
         AbstractListener& operator=(AbstractListener&&) noexcept = default;
 
@@ -100,10 +101,37 @@ namespace event
          */
         void addCallbackId(callbackId_t callbackId);
 
+        /**
+         * @brief Adds a callback stored in std::any to the listener.
+         * @param callback The callback wrapped in std::any to add
+         *
+         * @note This is a type-erased version of addCallback. The actual callback type
+         *       must match the event signature expected by the associated event.
+         */
         void addCallbackAny(const std::any& callback) const;
 
+        /**
+         * @brief Unsubscribes all callbacks managed by this listener from the associated event.
+         *
+         * Removes all callback IDs stored in this listener from the associated event,
+         * but keeps the callback IDs in the listener's storage. After calling this,
+         * the listener still "owns" the callback IDs but they are no longer active.
+         *
+         * @note This does not clear the internal storage of callback IDs
+         * @see clear() to also clear the internal storage
+         */
         void unsubscribeAll();
 
+        /**
+         * @brief Clears all callback IDs from the listener and unsubscribes them.
+         *
+         * Unsubscribes all callbacks from the associated event AND removes them
+         * from the listener's internal storage. After calling this, the listener
+         * becomes empty and has no active subscriptions.
+         *
+         * @note This is a more thorough cleanup than unsubscribeAll()
+         * @see unsubscribeAll() to only unsubscribe but keep IDs
+         */
         void clear();
 
     protected:

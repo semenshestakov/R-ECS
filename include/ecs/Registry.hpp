@@ -83,6 +83,7 @@ namespace ecs
         /// Find components for entity. Returns nullptr if not found.
         [[nodiscard]] Components* get(entityId_t entityId) const;
 
+        /// Find system. Returns nullptr if not found.
         template<typename System>
         [[nodiscard]] System* getSystem();
 
@@ -155,6 +156,30 @@ namespace ecs
         template<typename... ComponentCls>
         ranges::view::ComponentsViews<ComponentCls...> view();
 
+        /**
+         * @brief Immediately triggers an event with the given data
+         *
+         * @tparam Event The type of event to trigger
+         * @param event The event data to pass to all registered handlers
+         *
+         * This method:
+         * 1. Generates a key from the event type using getEventKey<Event>()
+         * 2. Retrieves the corresponding event from the EventSystem
+         * 3. Triggers the event immediately with the provided data
+         *
+         * @note If no event is registered for this type, the call is silently ignored
+         * @note The event is processed synchronously - all handlers are called before this method returns
+         *
+         * @par Example:
+         * @code
+         * Registry registry;
+         *
+         * PlayerDiedEvent event{playerId, deathCause};
+         * registry.onEvent(event);
+         *
+         * registry.onEvent(PlayerDiedEvent{42, "explosion"});
+         * @endcode
+         */
         template<typename Event>
         void onEvent(const Event& event);
     };

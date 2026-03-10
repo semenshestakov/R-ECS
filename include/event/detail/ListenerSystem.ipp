@@ -55,14 +55,16 @@ namespace event
         if (callback == nullptr)
             return false;
 
-        const auto it = m_mapListeners.find(key);
+        auto it = m_mapListeners.find(key);
         if (it == m_mapListeners.end())
         {
             if (!reg<Args...>(key, event))
                 throw std::runtime_error("!reg<Args...>(key, event)");
+
+            it = m_mapListeners.find(key);
         }
 
-        AbstractSmartListener_t* absListener = it.get();
+        AbstractSmartListener_t* absListener = it->second.get();
         if (absListener->eventId() != event->id)
         {
             throw std::runtime_error("eventId != newEventId");
@@ -72,7 +74,7 @@ namespace event
         if (!listener)
             throw std::runtime_error("!smartEvent");
 
-        listener->addCallback(callback);
+        listener->subscribe(callback);
         return true;
     }
 

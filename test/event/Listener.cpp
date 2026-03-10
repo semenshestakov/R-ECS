@@ -5,6 +5,8 @@
 #include "event/Event.hpp"
 #include "event/Listener.hpp"
 
+#include "event/ListenerSystem.hpp"
+
 
 using namespace event;
 using ::testing::_;
@@ -477,4 +479,38 @@ TEST_F(ListenerSingleTest, ListenerWorksWithLambdaCaptures)
 
     (*intEvent)(100);
     EXPECT_TRUE(callbackExecuted);
+}
+
+
+TEST_F(ListenerSingleTest, ListenerSystemSimple)
+{
+    ListenerMockCallback mock;
+    ListenerSystem<std::string, callbackId_t> listenerSystem;
+
+    listenerSystem.subscribe<int>(
+        "int",
+        intEvent.get(),
+        eventCallback_t<int>([&mock](int value) { mock.callWithInt(value); })
+        );
+
+    EXPECT_CALL(mock, callWithInt(42)).Times(1);
+    (*intEvent)(42);
+}
+
+
+TEST_F(ListenerSingleTest, ListenerSystemDelete)
+{
+    ListenerMockCallback mock;
+    {
+        ListenerSystem<std::string, callbackId_t> listenerSystem;
+
+        listenerSystem.subscribe<int>(
+            "int",
+            intEvent.get(),
+            eventCallback_t<int>([&mock](int value) { mock.callWithInt(value); })
+            );
+    }
+
+    EXPECT_CALL(mock, callWithInt(42)).Times(0);
+    (*intEvent)(42);
 }

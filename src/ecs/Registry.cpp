@@ -32,6 +32,11 @@ namespace ecs
         return get(entityId) != nullptr;
     }
 
+    std::size_t Registry::size() const
+    {
+        return m_entitiesManager.size();
+    }
+
     Components & Registry::mustGet(const entityId_t entityId) const
     {
         return *get(entityId);

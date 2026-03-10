@@ -62,4 +62,6 @@ TEST(RegistryUMapTest, CreateWithId)
             auto& components = registry.Create(100);
         },
         error::InvalidEntityId);
+
+    EXPECT_EQ(registry.size(), 2);
 }

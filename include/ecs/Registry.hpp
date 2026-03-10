@@ -90,6 +90,9 @@ namespace ecs
         /// Check if entity exists in registry
         [[nodiscard]] bool contains(entityId_t entityId) const;
 
+        /// Get count entities
+        [[nodiscard]] std::size_t size() const;
+
         /// Get components for entity. Asserts/throws if entity not found.
         [[nodiscard]] Components& mustGet(entityId_t entityId) const;
 

@@ -77,6 +77,7 @@ namespace ecs
     template<typename T> concept EntitiesManagerConcept = requires(T manager, entityId_t entityId, ComponentsPtr componentsPtr)
     {
         { manager.find(entityId) } -> std::same_as<Components*>;
+        { manager.size() } -> std::same_as<std::size_t>;
         { manager.generateId() } -> std::same_as<entityId_t>;
         { manager.emplace(entityId, std::move(componentsPtr)) } -> std::same_as<void>;
         { std::is_base_of_v<T, IEntitiesManager> };
@@ -103,6 +104,14 @@ namespace ecs
          * no components attached.
          */
         std::function<Components*(entityId_t)> find = nullptr;
+
+        /**
+         * @brief Function object for getting the number of components managed.
+         *
+         * Provides size query functionality that forwards to the underlying manager's
+         * size implementation. Returns the total count of entities currently stored.
+         */
+        std::function<std::size_t()> size = nullptr;
 
     private:
         std::function<void(entityId_t, ComponentsPtr&&)> emplace = nullptr;         ///< Internal emplace function
@@ -156,6 +165,7 @@ namespace ecs
         EntitiesManager entitiesManager;
 
         entitiesManager.find = [managerPtr](entityId_t id) -> Components* {return managerPtr->find(id);};
+        entitiesManager.size = [managerPtr]() -> std::size_t { return managerPtr->size(); };
         entitiesManager.emplace = [managerPtr](entityId_t id, ComponentsPtr&& c) {managerPtr->emplace(id, std::move(c));};
         entitiesManager.generateId = [managerPtr]() -> entityId_t {return managerPtr->generateId();};
         entitiesManager.m_instance = std::move(managerUniquePtr);

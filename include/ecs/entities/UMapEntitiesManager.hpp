@@ -80,6 +80,17 @@ namespace ecs
             return m_data | std::views::keys;
         }
 
+        /**
+         * @brief Get the number of entities with managed components.
+         *
+         * Returns the total count of entities currently stored in the manager.
+         * @return Number of entities with components
+         */
+        [[nodiscard]] std::size_t size() const
+        {
+            return m_data.size();
+        }
+
     };
     static_assert(EntitiesManagerConcept<UMapEntitiesManager>, "UMapEntitiesManager is not requires EntitiesManagerConcept");
 

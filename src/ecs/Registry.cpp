@@ -58,10 +58,10 @@ namespace ecs
         return *get(entityId);
     }
 
-    Components &Registry::Create()
+    Entity Registry::Create()
     {
         const entityId_t entityId = m_entitiesManager.generateId();
-        return Create(entityId);
+        return {entityId, Create(entityId)};
     }
 
     void Registry::Update(const std::optional<updateTag_t> updateTag /* = nullopt */)

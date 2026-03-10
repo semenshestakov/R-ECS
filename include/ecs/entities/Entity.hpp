@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <objc/objc.h>
 
 
 namespace ecs
@@ -20,8 +21,17 @@ namespace ecs
      */
     struct Entity
     {
-        entityId_t id;                                                          ///< Unique identifier for the entity across the entire system
-        Components& components;                                                 ///< Reference to the entity's associated component container
+        Entity() = delete;
+        Entity(const entityId_t a_id, Components& components) : id(a_id), m_components(components) {}
+        /// Unique identifier for the entity across the entire system
+        entityId_t id;
+    protected:
+        /// Reference to the entity's associated component container
+        std::reference_wrapper<Components> m_components;
+    public:
+
+        [[nodiscard]] const Components& components() const { return m_components; }
+        [[nodiscard]] Components& components() { return m_components; }
 
         /**
          * @brief Provides arrow operator access to the entity's components.
@@ -33,7 +43,8 @@ namespace ecs
          *
          * @return Components& Reference to the entity's components for member access
          */
-        [[nodiscard]] Components& operator->() const { return components; }
+        [[nodiscard]] Components* operator->() { return &m_components.get(); }
+        [[nodiscard]] const Components* operator->() const { return &m_components.get(); }
 
         /**
          * @brief Provides dereference operator access to the entity's components.
@@ -45,7 +56,8 @@ namespace ecs
          *
          * @return Components& Reference to the entity's components
          */
-        [[nodiscard]] Components& operator* () const { return components; }
+        [[nodiscard]] Components* operator* () { return &m_components.get(); }
+        [[nodiscard]] const Components* operator* () const { return &m_components.get(); }
 
         /**
          * @brief Three-way comparison operator for ordering entities by their IDs.

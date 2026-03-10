@@ -109,10 +109,10 @@ namespace ecs
         /**
          * Create components with auto-generated entity ID.
          *
-         * @return Reference to created components
+         * @return Reference to created Entity{.id, .components}
          * @requires EntitiesManager must have generateId() method
          */
-        [[maybe_unused]] Components& Create();
+        [[maybe_unused]] Entity Create();
 
         /**
          * @brief Updates all systems in the registry.

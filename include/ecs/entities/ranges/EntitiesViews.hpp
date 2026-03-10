@@ -118,7 +118,7 @@ namespace ecs::ranges::view
          *
          * @return Entity An entity object containing the ID and component reference
          */
-        Entity operator*() const { const entityId_t id = *m_iterator; return {.id=id, .components=*m_manager.find(id)}; }
+        Entity operator*() const { const entityId_t id = *m_iterator; return {id, *m_manager.find(id)}; }
     };
 
 

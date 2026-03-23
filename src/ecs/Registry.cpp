@@ -27,6 +27,11 @@ namespace ecs
         return nullptr;
     }
 
+    ctx::Context& Registry::ctx()
+    {
+        return m_context;
+    }
+
     bool Registry::contains(const entityId_t entityId) const
     {
         return get(entityId) != nullptr;

@@ -1,5 +1,4 @@
 #pragma once
-
 #include "common_recs/utils/ClassUtils.hpp"
 #include "components/Components.hpp"
 #include "components/ComponentsManager.hpp"
@@ -7,6 +6,7 @@
 #include "entities/ranges/EntitiesViews.hpp"
 #include "event/EventSystem.hpp"
 #include "systems/SystemsManager.hpp"
+#include "context/Context.hpp"
 
 
 namespace ecs
@@ -78,6 +78,7 @@ namespace ecs
         ComponentsManager m_componentsManager;      ///< Factory instance for component operations
         EventSystem m_eventSystem;                  ///< Local Event System
         SystemsManager m_systemManager;             ///< Underlying entity storage
+        ctx::Context m_context;                          ///< Context (Data storage)
 
     public:
         /// Find components for entity. Returns nullptr if not found.
@@ -86,6 +87,9 @@ namespace ecs
         /// Find system. Returns nullptr if not found.
         template<typename System>
         [[nodiscard]] System* getSystem();
+
+        /// Get global context
+        [[nodiscard]] ctx::Context& ctx();
 
         /// Check if entity exists in registry
         [[nodiscard]] bool contains(entityId_t entityId) const;

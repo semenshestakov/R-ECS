@@ -86,27 +86,20 @@ struct InitCounter : IComponent<InitCounter>
     int id;
     float value;
 
-    InitCounter() : id(++constructorCalls), value(42.0f) {
-        std::cout << "InitCounter constructed: " << id << std::endl;
-    }
+    InitCounter() : id(++constructorCalls), value(42.0f) {}
 
-    InitCounter(float v) : id(++constructorCalls), value(v) {
-        std::cout << "InitCounter constructed with value: " << id << " = " << v << std::endl;
-    }
+    InitCounter(float v) : id(++constructorCalls), value(v) {}
 
     InitCounter(const InitCounter& other) : id(other.id), value(other.value) {
         copyCalls++;
-        std::cout << "InitCounter copied: " << id << std::endl;
     }
 
     InitCounter(InitCounter&& other) : id(other.id), value(other.value) {
         moveCalls++;
-        std::cout << "InitCounter moved: " << id << std::endl;
     }
 
     ~InitCounter() {
         destructorCalls++;
-        std::cout << "InitCounter destroyed: " << id << std::endl;
     }
 
     static void reset() {

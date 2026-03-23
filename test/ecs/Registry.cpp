@@ -19,12 +19,12 @@ TEST(RegistryUMapTest, CreateWithGeneratedId)
     auto registry = Registry(EntitiesManager::Create<UMapEntitiesManager>(), componentsManager);
 
     {
-        auto& components = registry.Create();
+        Entity entity = registry.Create();
         EXPECT_NE(registry.get(1), nullptr);
     }
 
     {
-        auto& components = registry.Create();
+        Entity entity = registry.Create();
         EXPECT_NE(registry.get(2), nullptr);
     }
 

@@ -48,6 +48,7 @@ if(TEST_ENABLE)
             test/ecs/Systems.cpp
             test/ecs/SystemEventHandler.cpp
             test/context/Context.cpp
+            test/dag/DirectedAcyclicGraph.cpp
             test/reg/registrator_factory_tests.cpp
             test/event/Event.cpp
             test/event/Listener.cpp

@@ -1,8 +1,8 @@
+#include "collections/Context.hpp"
 #include <gtest/gtest.h>
-#include "context/Context.hpp"
 
 
-using namespace ctx;
+using namespace collections;
 
 struct TestStruct
 {

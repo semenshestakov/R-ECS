@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include "../DirectedAcyclicGraph.hpp"
 
-namespace dag
+namespace collections
 {
 
     template<typename NodeType>

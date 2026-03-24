@@ -1,10 +1,10 @@
+#include "collections/DirectedAcyclicGraph.hpp"
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include <string>
-#include "dag/DirectedAcyclicGraph.hpp"
 
 
-using namespace dag;
+using namespace collections;
 
 
 class DirectedAcyclicGraphTest : public ::testing::Test

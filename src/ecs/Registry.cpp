@@ -27,7 +27,7 @@ namespace ecs
         return nullptr;
     }
 
-    ctx::Context& Registry::ctx()
+    collections::Context& Registry::ctx()
     {
         return m_context;
     }

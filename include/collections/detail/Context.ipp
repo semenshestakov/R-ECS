@@ -3,7 +3,7 @@
 #include "../Context.hpp"
 
 
-namespace ctx
+namespace collections
 {
 
     template<typename T, typename... Args>

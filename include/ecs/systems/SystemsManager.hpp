@@ -1,8 +1,8 @@
 #pragma once
 #include <map>
-#include <vector>
 #include "common_recs/utils/ClassUtils.hpp"
 #include "IBaseSystem.hpp"
+#include "SystemsSchedule.hpp"
 #include "ecs/utils/SystemUtils.hpp"
 
 
@@ -15,7 +15,7 @@ namespace ecs
         SystemsManager();                    ///< @brief Constructs an empty SystemsManager with no registered systems
         ~SystemsManager();                   ///< @brief Destructor that cleans up all managed systems
 
-    private:
+    DEEP_TEST_PRIVATE_ACCESS:
         /**
          * @brief Private copy constructor to prevent copying.
          *
@@ -83,10 +83,9 @@ namespace ecs
 
     DEEP_TEST_PRIVATE_ACCESS:
         using systemPtr_t = std::unique_ptr<IBaseSystem>;           ///< Type alias for system ownership
-        using hash_t = std::size_t;                                 ///< Type alias for type hash codes
 
-        std::map<updateTag_t, std::vector<hash_t>> m_updates = {};  ///< Systems organized by update tag
-        std::map<hash_t, systemPtr_t> m_systemsMap = {};            ///< Map of type hash to system instance
+        SystemsSchedule m_schedule;                                 ///< Schedule for update systems
+        std::map<systemHash_t, systemPtr_t> m_systemsMap = {};            ///< Map of type hash to system instance
 
     public:
         /**
@@ -124,9 +123,8 @@ namespace ecs
          * order within each tag group.
          *
          * @param registry Reference to the main Registry for system operations
-         * @param updateTag Optional tag to filter which systems to update
          */
-        void Update(Registry& registry, std::optional<updateTag_t> updateTag = std::nullopt);
+        void Update(Registry& registry);
 
         /**
          * @brief Returns the number of registered systems
@@ -140,13 +138,13 @@ namespace ecs
          * Provides access to a specific system instance through its type.
          * Returns nullptr if no system of the requested type is registered.
          *
-         * @tparam System The type of system to retrieve
+         * @tparam SystemCls The type of system to retrieve
          * @return Pointer to the system instance, or nullptr if not found
          *
          * @note The returned pointer remains valid until the system is unregistered
          *       or the manager is destroyed
          */
-        template<typename System> [[nodiscard]] System* get();
+        template<typename SystemCls> [[nodiscard]] SystemCls* get();
 
         /**
          * @brief Friend declaration granting Registry access to private members
@@ -158,27 +156,26 @@ namespace ecs
     };
 
 
-    template<typename System>
+    template<typename SystemCls>
     bool SystemsManager::Register()
     {
-        const hash_t hash = typeid(System).hash_code();
+        const systemHash_t hash = getSystemHash<SystemCls>();
         if (m_systemsMap.contains(hash))
             return false;
 
-        m_systemsMap[hash] = std::make_unique<System>();
-        m_updates[System::UPDATE_TAG].push_back(hash);
+        m_systemsMap[hash] = std::make_unique<SystemCls>();
+        m_schedule.Add(*m_systemsMap[hash].get(), hash);
         return true;
     }
 
-    template<typename System>
-    System* SystemsManager::get()
+    template<typename SystemCls>
+    SystemCls* SystemsManager::get()
     {
-        const auto it = m_systemsMap.find(typeid(System).hash_code());
+        const auto it = m_systemsMap.find(getSystemHash<SystemCls>());
         if (it == m_systemsMap.end())
             return nullptr;
 
-        return dynamic_cast<System*>(it->second.get());
+        return dynamic_cast<SystemCls*>(it->second.get());
     }
 
 }
-

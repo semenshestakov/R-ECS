@@ -69,9 +69,9 @@ namespace ecs
         return {entityId, Create(entityId)};
     }
 
-    void Registry::Update(const std::optional<updateTag_t> updateTag /* = nullopt */)
+    void Registry::Update()
     {
-        m_systemManager.Update(*this, updateTag);
+        m_systemManager.Update(*this);
     }
 
 } // namespace ecs

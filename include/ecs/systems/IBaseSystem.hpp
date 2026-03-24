@@ -76,16 +76,17 @@ namespace ecs
         virtual void Update(Registry& registry, const UpdateState& state) {};
 
         /**
-         * @brief Default update tag for systems that don't specify their own.
-         *
-         * Systems can override this constant to specify which update phase they
-         * belong to. The default value is the midpoint of the possible tag range,
-         * providing a balanced default position in the update order. Systems that
-         * don't override this will be grouped together with this default tag.
+         * @brief Checks if the system has been initialized.
+         * @return true if initialized, false otherwise.
          */
-        static constexpr updateTag_t UPDATE_TAG = MAX_UPDATE_TAG / 2;
-
         [[nodiscard]] bool isInit() const { return m_isInit; }
+
+        /**
+         * @brief Returns the list of systems this system depends on.
+         * @return DependentSystems object containing system hashes.
+         * @note Override this method to declare system dependencies.
+         */
+        [[nodiscard]] virtual DependentSystems GetDependents() const { return {}; }
 
     private:
         bool m_isInit = false;

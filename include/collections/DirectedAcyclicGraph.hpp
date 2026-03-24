@@ -108,6 +108,8 @@ namespace collections
         std::unordered_map<NodeType, Node> m_nodes;  ///< Storage container mapping node identifiers to their node objects
 
     public:
+        using stagesGraph_t = std::vector<std::vector<NodeType>>;
+
         /**
          * @brief Adds a node to the graph without any dependencies.
          *
@@ -199,7 +201,7 @@ namespace collections
          * // Nodes 2 and 3 can run in parallel
          * @endcode
          */
-        std::vector<std::vector<NodeType>> build() const;
+        stagesGraph_t build() const;
 
         /**
          * @brief Returns an iterator to the beginning of the node container.

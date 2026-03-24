@@ -46,4 +46,11 @@ namespace ecs
         return listenerPtr;
     }
 
+    template<typename SystemCls>
+    template<typename... SystemsArgs>
+    constexpr std::array<systemHash_t, sizeof...(SystemsArgs)> ISystem<SystemCls>::GetSystemsHashArray()
+    {
+        return {ecs::getSystemHash<SystemsArgs>()...};
+    }
+
 }

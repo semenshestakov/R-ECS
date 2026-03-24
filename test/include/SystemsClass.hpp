@@ -6,6 +6,8 @@
 #include "ComponentsClass.hpp"
 
 
+// ================================ Simple Systems ================================
+
 struct SystemTestUpdate final : ecs::ISystem<SystemTestUpdate>
 {
     inline static unsigned int Counter = {0};
@@ -47,6 +49,8 @@ struct SystemTestId final : ecs::ISystem<SystemTestId>
     }
 };
 
+// ================================ Auto Reg Systems ================================
+
 struct AutoSystem1 final : ecs::ISystem<AutoSystem1>
 {
     ECS_REGISTRY("test1")
@@ -63,6 +67,7 @@ struct AutoSystem2 final : ecs::ISystem<AutoSystem2>
     void Update(ecs::Registry & registry, const ecs::UpdateState & state) override { IsUpdated = true; }
 };
 
+// ================================ Event Systems ================================
 
 struct Event1
 {
@@ -73,7 +78,6 @@ struct Event2
 {
     int value = 2;
 };
-
 
 
 struct SystemEventHandler1 final : ecs::ISystem<SystemEventHandler1>
@@ -108,4 +112,65 @@ struct SystemEventHandler2 final : ecs::ISystem<SystemEventHandler2>
 
 
     MOCK_METHOD(void, callInt, (int));
+};
+
+
+// ================================ Schedule Systems ================================
+
+inline std::vector<std::string> g_systemCallOrder;
+
+
+struct ResourceSystem final : ecs::ISystem<ResourceSystem>
+{
+    ECS_REGISTRY("test_schedule")
+
+    void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
+    {
+        g_systemCallOrder.emplace_back("ResourceSystem");
+    }
+};
+
+
+struct InputSystem final : ecs::ISystem<InputSystem>
+{
+    ECS_REGISTRY("test_schedule")
+
+    void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
+    {
+        g_systemCallOrder.emplace_back("InputSystem");
+    }
+};
+
+
+struct PhysicsSystem final : ecs::ISystem<PhysicsSystem>
+{
+    ECS_REGISTRY("test_schedule")
+
+    void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
+    {
+        g_systemCallOrder.emplace_back("PhysicsSystem");
+    }
+};
+
+
+struct RenderSystem final : ecs::ISystem<RenderSystem>
+{
+    ECS_REGISTRY("test_schedule")
+    ECS_DEPENDENT_SYSTEMS(ResourceSystem, InputSystem, PhysicsSystem)
+
+    void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
+    {
+        g_systemCallOrder.emplace_back("RenderSystem");
+    }
+};
+
+
+struct AISystem final : ecs::ISystem<AISystem>
+{
+    ECS_REGISTRY("test_schedule")
+
+    void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
+    {
+        g_systemCallOrder.emplace_back("AISystem");
+    }
 };

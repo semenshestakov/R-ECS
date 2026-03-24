@@ -1,6 +1,5 @@
-#include "ecs/systems/SystemsManager.hpp"
-
 #include <ranges>
+#include "ecs/systems/SystemsManager.hpp"
 
 
 namespace ecs
@@ -23,10 +22,10 @@ namespace ecs
 
     void SystemsManager::copy(const SystemsManager& other)
     {
-        m_updates.clear();
+        m_schedule.clear();
         m_systemsMap.clear();
 
-        m_updates = other.m_updates;
+        m_schedule = other.m_schedule;
         for (auto const& [hash, systemPtr] : other.m_systemsMap)
         {
             m_systemsMap[hash] = systemPtr_t(systemPtr->New());
@@ -47,7 +46,7 @@ namespace ecs
     void SystemsManager::swap(SystemsManager& other) noexcept
     {
         std::swap(m_systemsMap, other.m_systemsMap);
-        std::swap(m_updates, other.m_updates);
+        std::swap(m_schedule, other.m_schedule);
     }
 
     bool SystemsManager::Init(const InitState& state)
@@ -57,29 +56,18 @@ namespace ecs
             if (!system->isInit())
                 system->Init(state);
         }
+        m_schedule.Init();
         return true;
     }
 
-    void SystemsManager::Update(Registry& registry, const std::optional<updateTag_t> updateTag /* = nullopt */)
+    void SystemsManager::Update(Registry& registry)
     {
-        UpdateState state {};
-        if (updateTag == std::nullopt)
+        const UpdateState state {};
+        for(const auto& stageSystems : m_schedule)
         {
-            for (const auto& vectorHash : m_updates | std::views::values)
+            for (auto& systemHash : stageSystems)
             {
-                for (const hash_t systemHash : vectorHash)
-                {
-                    if (IBaseSystem& system = *m_systemsMap.find(systemHash)->second; system.isInit())
-                        m_systemsMap.find(systemHash)->second->Update(registry, state);
-                }
-            }
-        }
-        else if (m_updates.contains(updateTag.value()))
-        {
-            for (const hash_t systemHash : m_updates[updateTag.value()])
-            {
-                if (IBaseSystem& system = *m_systemsMap.find(systemHash)->second; system.isInit())
-                    m_systemsMap.find(systemHash)->second->Update(registry, state);
+                m_systemsMap[systemHash]->Update(registry, state);
             }
         }
     }

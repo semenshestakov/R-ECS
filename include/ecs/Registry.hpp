@@ -121,23 +121,18 @@ namespace ecs
         /**
          * @brief Updates all systems in the registry.
          *
-         * @param updateTag Optional tag to control which systems should update.
-         *                  If nullopt (default), all systems are updated.
-         *                  If provided, only systems matching the tag are updated.
-         *
          * @note This method delegates to SystemsManager::Update().
          * @note Systems are updated in the order they were registered.
          * @note The registry itself is passed to systems for component access.
          *
          * Example usage:
          * @code
-         * registry.Update();                    // Update all systems
-         * registry.Update(updateTag_t::Physics); // Update only physics systems
+         * registry.Update();                    // Update all systems by SystemsSchedule
          * @endcode
          *
          * @see SystemsManager::Update() for detailed update semantics
          */
-        void Update(std::optional<updateTag_t> updateTag = std::nullopt);
+        void Update();
 
         /**
          * @brief Creates a view over entities that have all specified component types.

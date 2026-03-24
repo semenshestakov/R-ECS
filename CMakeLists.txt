@@ -22,6 +22,7 @@ add_library(R-ECS
         src/ecs/SystemsManager.cpp
         src/ecs/EntitiesIterator.cpp
         src/ecs/ComponentsManager.cpp
+        src/ecs/SystemsSchedule.cpp
 )
 
 target_include_directories(R-ECS
@@ -47,6 +48,7 @@ if(TEST_ENABLE)
             test/ecs/Registry.cpp
             test/ecs/Systems.cpp
             test/ecs/SystemEventHandler.cpp
+            test/ecs/Schedule.cpp
             test/context/Context.cpp
             test/dag/DirectedAcyclicGraph.cpp
             test/reg/registrator_factory_tests.cpp

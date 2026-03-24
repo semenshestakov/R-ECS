@@ -88,7 +88,7 @@ namespace ecs
          */
         void Init(const InitState& state) override;
 
-    protected:
+    DEEP_TEST_PROTECTED_ACCESS:
         /**
          * @brief Registers an event handler for a specific event type
          *
@@ -105,6 +105,47 @@ namespace ecs
          */
         template <class Event>
         auto RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<EventListener<Event>>;
+
+        /**
+         * @brief Creates a array of system hashes for the specified system types.
+         *
+         * This function generates a `std::array` containing the unique hash values of the provided
+         * system types. It is primarily used for dependency management, allowing systems to
+         * declare their dependencies on other systems in a type-safe.
+         *
+         * @tparam SystemsArgs The system types to generate hashes for. Each type should be
+         *                     a valid system class that has a corresponding `getSystemHash`
+         *                     specialization.
+         *
+         * @return std::array<systemHash_t, sizeof...(SystemsArgs)> A constexpr array containing
+         *         the hash values of all specified system types, in the same order as the
+         *         template arguments.
+         *
+         * @note This function is `constexpr`, meaning the array is fully evaluated at compile
+         *       time, resulting in zero runtime overhead.
+         *
+         * @warning The `getSystemHash<SystemType>()` function must be `constexpr` for each
+         *          system type to enable compile-time evaluation. If any of the hashes cannot
+         *          be computed at compile time, the function will fail to be `constexpr`.
+         *
+         * @example
+         * @code
+         * // Generate hashes for three systems
+         * constexpr auto hashes = GetSystemsHashArray<ResourceSystem, InputSystem, PhysicsSystem>();
+         * static_assert(hashes.size() == 3);
+         *
+         * // Use in dependency declaration
+         * ecs::DependentSystems GetDependents() const override {
+         *     static constexpr auto s_dependents = GetSystemsHashArray<ResourceSystem, InputSystem>();
+         *     return {s_dependents.cbegin(), s_dependents.size()};
+         * }
+         * @endcode
+         *
+         * @see getSystemHash
+         * @see ECS_DEPENDENT_SYSTEMS macro
+         */
+        template <typename... SystemsArgs>
+        static constexpr std::array<systemHash_t, sizeof...(SystemsArgs)> GetSystemsHashArray();
 
     DEEP_TEST_PRIVATE_ACCESS:
         /**
@@ -167,5 +208,27 @@ namespace ecs
     private: \
     std::unique_ptr<Super::EventListener<_EVENT>> m_listener_##_EVENT = Super::RegisterEvent<_EVENT>(&SelfSystemCls::_METHOD_NAME); \
     public:
+
+
+/**
+ * @brief Macro to generate GetDependents() override implementation.
+ *
+ * This macro creates a GetDependents() method that returns a DependentSystems object
+ * containing the hashes of the specified system types. It's designed for use in
+ * system classes that need to declare their dependencies on other systems.
+ *
+ * @param ... The system types that this system depends on.
+ *
+ * @example
+ * @code
+ * class RenderSystem : public ISystem<RenderSystem> {
+ *     ECS_DEPENDENT_SYSTEMS(ResourceSystem, InputSystem, PhysicsSystem)
+ * };
+ * @endcode
+ */
+#define ECS_DEPENDENT_SYSTEMS(...)                                          \
+    ecs::DependentSystems GetDependents() const override {                  \
+    static const auto s_dependents = GetSystemsHashArray<__VA_ARGS__>();    \
+    return {s_dependents.cbegin(), s_dependents.size() }; }
 
 #include "systems/detail/ISystem.ipp"

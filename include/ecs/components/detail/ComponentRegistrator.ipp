@@ -12,7 +12,8 @@ namespace ecs
             .name=std::string(name),
             .componentSize=sizeof(ComponentCls),
             .componentId=ComponentCls::componentId,
-            .constructor=[](byte* ptr) { new (ptr) ComponentCls(); }
+            .constructor=[](byte* ptr) { new (ptr) ComponentCls(); },
+            .destructor=[](byte* ptr) { reinterpret_cast<ComponentCls*>(ptr)->~ComponentCls(); }
         };
     }
 
@@ -27,6 +28,11 @@ namespace ecs
         const auto componentId = static_cast<componentId_t>(index + 1);
         Super::s_collection[index]->componentId = componentId;
         return componentId;
+    }
+
+    /* static */ inline const RegisterComponentInfo& ComponentRegistrator::GetInfo(const componentId_t componentId)
+    {
+        return Super::s_collection[static_cast<std::size_t>(componentId - 1)].value();
     }
 
 } // namespace ecs

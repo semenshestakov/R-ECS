@@ -144,6 +144,8 @@ namespace collections
          */
         template<typename T>
         [[nodiscard]] T& get();
+        template<typename T>
+        [[nodiscard]] const T& get() const;
 
         /**
          * @brief Retrieves an existing instance or constructs a new one.

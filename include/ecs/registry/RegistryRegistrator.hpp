@@ -1,4 +1,6 @@
-#pragma once
+#ifndef REGISTRY_REGISTRATOR_HPP
+#define REGISTRY_REGISTRATOR_HPP
+
 #include "../components/ComponentsManager.hpp"
 #include "ecs/systems/SystemsManager.hpp"
 #include "reg/Registrator.hpp"
@@ -108,3 +110,4 @@ namespace ecs
 }
 
 #include "detail/RegistryRegistrator.ipp"
+#endif

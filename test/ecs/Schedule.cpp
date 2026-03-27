@@ -1,8 +1,5 @@
-#pragma once
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
-#include "ecs/entities/UMapEntitiesManager.hpp"
-#include "ecs/entities/ranges/EntitiesViews.hpp"
 #include "ecs/systems/SystemsManager.hpp"
 #include "gtest/gtest.h"
 #include "SystemsClass.hpp"
@@ -18,11 +15,7 @@ protected:
     {
         g_systemCallOrder.clear();
 
-        registry = Registry(
-            EntitiesManager::Create<UMapEntitiesManager>(),
-            *RegistryRegistrator::GetComponentsManager("test_schedule"),
-            *RegistryRegistrator::GetSystemsManager("test_schedule")
-        );
+        registry = Registry(*RegistryRegistrator::GetSystemsManager("test_schedule"));
         registry.Init();
     }
 

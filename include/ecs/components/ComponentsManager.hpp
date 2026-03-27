@@ -83,7 +83,6 @@ namespace ecs
 
         /// @brief Array storing registration info for each component ID.
         RegisterComponentInfo m_registeredComponents[OVERFLOW_MAX_COMPONENT_ID]{};
-
     };
 
     template<DerivedComponent ComponentCls>

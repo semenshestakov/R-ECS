@@ -1,176 +1,62 @@
-#pragma once
-#include <concepts>
-#include <functional>
+#ifndef ENTITIES_MANAGER_HPP
+#define ENTITIES_MANAGER_HPP
+
+#include <cassert>
+#include <queue>
+
+#include "EntitiesArchetypeStorage.hpp"
 #include "Entity.hpp"
-#include "ecs/components/Components.hpp"
-#include "ranges/EntitiesIterator.hpp"
+#include "EntityWrapper.hpp"
 
 
 namespace ecs
 {
 
-    /**
-     * @brief Abstract interface for entity management systems.
-     *
-     * Defines the core operations required for managing entities in an ECS architecture.
-     * This interface serves as a contract for concrete entity manager implementations,
-     * providing iteration capabilities while hiding implementation details. It maintains
-     * a protected utility method for iterator manipulation that derived classes can utilize.
-     */
-    struct IEntitiesManager
-    {
-        /**
-         * @brief Virtual destructor to ensure proper cleanup of derived classes.
-         *
-         * Enables polymorphic destruction, allowing derived entity managers to
-         * clean up their resources correctly when deleted through base class pointers.
-         */
-        virtual ~IEntitiesManager() = default;
-
-        /**
-         * @brief Returns an iterator to the beginning of the entity collection.
-         *
-         * Provides access to the first entity in the manager's collection. The exact
-         * starting point and iteration order are determined by the concrete implementation.
-         * This enables range-based for loop support for entity traversal.
-         *
-         * @return ranges::EntitiesIterator Iterator pointing to the first entity
-         */
-        [[nodiscard]] virtual ranges::EntitiesIterator begin() const = 0;
-
-        /**
-         * @brief Returns an iterator to the end of the entity collection.
-         *
-         * Provides a sentinel iterator representing the position one past the last
-         * entity. This default implementation returns an empty iterator, which
-         * derived classes can override if needed for custom end conditions.
-         *
-         * @return ranges::EntitiesIterator Iterator representing the end marker
-         */
-        [[nodiscard]] ranges::EntitiesIterator end() const { return {};}
-
-    protected:
-
-        /**
-         * @brief Protected utility method to update an iterator's internal value.
-         *
-         * Allows derived classes to modify iterator state while maintaining encapsulation.
-         * This is particularly useful for custom iterator implementations that need
-         * to control iterator progression or positioning.
-         *
-         * @param iterator Reference to the iterator to modify
-         * @param value The new entity value to set in the iterator
-         */
-        static void setValue(ranges::EntitiesIterator& iterator, const ranges::entityopt_t value) { iterator.m_value = value; }
-    };
-
-    /**
-     * @brief Concept defining the requirements for an entities manager implementation.
-     *
-     * Specifies the minimal interface that any concrete entity manager must satisfy
-     * to be compatible with the EntitiesManager wrapper. This concept ensures that
-     * implementations provide entity lookup, ID generation, and component attachment
-     * capabilities while inheriting from IEntitiesManager.
-     *
-     * @tparam T The type to check against the entities manager concept
-     */
-    template<typename T> concept EntitiesManagerConcept = requires(T manager, entityId_t entityId, ComponentsPtr componentsPtr)
-    {
-        { manager.find(entityId) } -> std::same_as<Components*>;
-        { manager.size() } -> std::same_as<std::size_t>;
-        { manager.generateId() } -> std::same_as<entityId_t>;
-        { manager.emplace(entityId, std::move(componentsPtr)) } -> std::same_as<void>;
-        { std::is_base_of_v<T, IEntitiesManager> };
-    };
-
-
-    /**
-     * @brief Polymorphic wrapper for entity manager implementations.
-     *
-     * Provides a type-erased container for any entity manager that satisfies the
-     * EntitiesManagerConcept. This class enables runtime polymorphism without requiring
-     * users to work with base class pointers directly. It forwards all entity management
-     * operations to the underlying implementation while providing convenient iterator
-     * support and factory-style creation.
-     */
-    class EntitiesManager
+    class EntitiesManager final
     {
     public:
-        /**
-         * @brief Function object for finding components associated with an entity.
-         *
-         * Provides lookup functionality that forwards to the underlying manager's
-         * find implementation. Returns nullptr if the entity doesn't exist or has
-         * no components attached.
-         */
-        std::function<Components*(entityId_t)> find = nullptr;
+        EntitiesManager();
+        ~EntitiesManager();
 
-        /**
-         * @brief Function object for getting the number of components managed.
-         *
-         * Provides size query functionality that forwards to the underlying manager's
-         * size implementation. Returns the total count of entities currently stored.
-         */
-        std::function<std::size_t()> size = nullptr;
+        EntitiesManager(const EntitiesManager& other) = delete;
+        EntitiesManager& operator=(const EntitiesManager& other) = delete;
+
+        EntitiesManager(EntitiesManager&&) noexcept = default;
+        EntitiesManager& operator=(EntitiesManager&&) noexcept = default;
+
+        EntityWrapper Create(PrefabEntity& prefabEntity);
+        EntityWrapper Create(PrefabEntity&& prefabEntity);
+        void Destroy(const Entity& entity);
+        void Destroy(const EntityWrapper& entity);
+        [[nodiscard]] bool IsAlive(const Entity& entity) const;
+        [[nodiscard]] bool IsAlive(const EntityWrapper& entity) const;
+
+        template<DerivedComponent ComponentCls> [[nodiscard]] ComponentCls& GetComponent(const Entity& entity);
+        template<DerivedComponent ComponentCls> [[nodiscard]] const ComponentCls& GetComponent(const Entity& entity) const;
+
+        template<DerivedComponent ComponentCls> [[nodiscard]] ComponentCls* TryGetComponent(const Entity& entity);
+        template<DerivedComponent ComponentCls> [[nodiscard]] const ComponentCls* TryGetComponent(const Entity& entity) const;
+
+        [[nodiscard]] byte* GetComponentData(const Entity& entity, componentId_t componentId);
+        [[nodiscard]] const byte* GetComponentData(const Entity& entity, componentId_t componentId) const;
+
+        [[nodiscard]] std::size_t size() const { return m_isAliveEntitiesCount; }
+
+        template<DerivedComponent... ComponentCls>
+        auto view();
 
     private:
-        std::function<void(entityId_t, ComponentsPtr&&)> emplace = nullptr;         ///< Internal emplace function
-        std::function<entityId_t()> generateId = nullptr;                           ///< Internal ID generation function
-        std::unique_ptr<IEntitiesManager> m_instance = nullptr;                     ///< Type-erased manager instance
+        std::size_t m_isAliveEntitiesCount = 0;
+        entityId_t m_lastEntityId = INVALID_ENTITY_ID + 1;
+        std::queue<Entity> m_freeEntities;
 
-    public:
-        /**
-         * @brief Returns an iterator to the beginning of the managed entity collection.
-         *
-         * Delegates to the underlying manager instance's begin() method, providing
-         * uniform iteration access regardless of the concrete manager type.
-         *
-         * @return ranges::EntitiesIterator Iterator to the first entity
-         */
-        [[nodiscard]] ranges::EntitiesIterator begin() const { return m_instance->begin(); }
+        EntitiesArchetypeStorage m_storage;
+        std::vector<entityVersion_t> m_versionByEntityIndex;
+        std::vector<ArchetypedChunkEntityLocation> m_entitiesLocationByEntityIndex;
 
-        /**
-         * @brief Returns an iterator to the end of the managed entity collection.
-         *
-         * Delegates to the underlying manager instance's end() method, providing
-         * a sentinel iterator for termination conditions in iteration loops.
-         *
-         * @return ranges::EntitiesIterator Iterator representing the end marker
-         */
-        [[nodiscard]] ranges::EntitiesIterator end() const { return m_instance->end(); }
-
-        /**
-         * @brief Factory method that creates an EntitiesManager from a concrete implementation.
-         *
-         * Constructs a type-erased EntitiesManager wrapper around a concrete manager type.
-         * This method sets up all necessary function objects to forward calls to the
-         * underlying implementation and stores the instance for polymorphic access.
-         *
-         * @tparam T The concrete manager type that satisfies EntitiesManagerConcept
-         * @return EntitiesManager A fully initialized type-erased manager wrapper
-         */
-        template <EntitiesManagerConcept T>
-        static EntitiesManager Create();
-
-        friend class Registry;
+        void resize(std::size_t size);
     };
 
-
-    template<EntitiesManagerConcept T>
-    EntitiesManager EntitiesManager::Create()
-    {
-        auto managerUniquePtr = std::make_unique<T>();
-        T* managerPtr = managerUniquePtr.get();
-
-        EntitiesManager entitiesManager;
-
-        entitiesManager.find = [managerPtr](entityId_t id) -> Components* {return managerPtr->find(id);};
-        entitiesManager.size = [managerPtr]() -> std::size_t { return managerPtr->size(); };
-        entitiesManager.emplace = [managerPtr](entityId_t id, ComponentsPtr&& c) {managerPtr->emplace(id, std::move(c));};
-        entitiesManager.generateId = [managerPtr]() -> entityId_t {return managerPtr->generateId();};
-        entitiesManager.m_instance = std::move(managerUniquePtr);
-
-        return entitiesManager;
-    }
-
-}
+} // namespace ecs
+#endif
+#include "detail/EntitiesManager.ipp"

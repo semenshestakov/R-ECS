@@ -24,25 +24,26 @@ struct SystemTestId final : ecs::ISystem<SystemTestId>
     inline static unsigned int Counter = {0};
     void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
     {
-        for (auto& components : registry.view())
-        {
-            components.mustGet<TestId>().id++;
-        }
-        static const unsigned int s_Counter1 = ++Counter;
+        // for (auto& entity : registry.Entities().view())
+        // {
+        //     // entiry.Get<TestId>().id++;
+        //     // entity
+        // }
+        // static const unsigned int s_Counter1 = ++Counter;
 
-        for (auto [testId] : registry.view<TestId>())
+        for (auto [testId] : registry.Entities().view<TestId>())
         {
             testId.id++;
         }
         static const unsigned int s_Counter2 = ++Counter;
 
-        for (auto [testId, position] : registry.view<TestId, PositionY>())
+        for (auto [testId, position] : registry.Entities().view<TestId, PositionY>())
         {
             testId.id++;
         }
         static const unsigned int s_Counter3 = ++Counter;
 
-        for (auto [testId, position] : registry.view<TestId, PositionZ>()) // filtered all
+        for (auto [testId, position] : registry.Entities().view<TestId, PositionZ>()) // filtered all
         {
             testId.id++;
         }

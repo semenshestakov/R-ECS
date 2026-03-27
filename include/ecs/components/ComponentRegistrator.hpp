@@ -1,4 +1,6 @@
-#pragma once
+#ifndef COMPONENTS_REGISTRATOR_HPP
+#define COMPONENTS_REGISTRATOR_HPP
+
 #include "../utils/ComponentUtils.hpp"
 #include "reg/Registrator.hpp"
 
@@ -39,6 +41,7 @@ namespace ecs
         using Super = reg::Registrator<RegisterComponentInfo>;
     public:
         template <typename ComponentCls>
+
         /**
          * @brief Registers a component type and assigns it a unique ID.
          *
@@ -61,8 +64,11 @@ namespace ecs
          * @note Registration is idempotent - calling multiple times returns the same ID
          */
         static componentId_t Register(const std::string& name);
+
+
+        static const RegisterComponentInfo& GetInfo(componentId_t componentId);
     };
 
 }
-
+#endif
 #include "detail/ComponentRegistrator.ipp"

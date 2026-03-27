@@ -1,5 +1,8 @@
-#pragma once
-#include <map>
+#ifndef SYSTEM_MANAGER_HPP
+#define SYSTEM_MANAGER_HPP
+
+#include <unordered_map>
+#include <cassert>
 #include "common_recs/utils/ClassUtils.hpp"
 #include "IBaseSystem.hpp"
 #include "SystemsSchedule.hpp"
@@ -82,23 +85,9 @@ namespace ecs
         void swap(SystemsManager& other) noexcept;
 
     DEEP_TEST_PRIVATE_ACCESS:
-        using systemPtr_t = std::unique_ptr<IBaseSystem>;           ///< Type alias for system ownership
-
-        SystemsSchedule m_schedule;                                 ///< Schedule for update systems
-        std::map<systemHash_t, systemPtr_t> m_systemsMap = {};            ///< Map of type hash to system instance
-
-    public:
-        /**
-         * @brief Registers a new system type with the manager.
-         *
-         * Creates an instance of the specified system type and stores it in the manager.
-         * The system is automatically organized under its declared UPDATE_TAG for batch
-         * updates. Registration fails silently if a system of the same type already exists.
-         *
-         * @tparam System The system type to register (must derive from IBaseSystem)
-         * @return true if the system was successfully registered, false if a system of the same type already exists
-         */
-        template<typename System> bool Register();
+        SystemsSchedule m_schedule;                                                 ///< Schedule for update systems
+        using systemPtr_t = std::unique_ptr<IBaseSystem>;                           ///< Type alias for system ownership
+        std::unordered_map<systemHash_t, systemPtr_t> m_systemsMap = {};            ///< Map of type hash to system instance
 
         /**
          * @brief Initializes all registered systems with the given state
@@ -126,6 +115,19 @@ namespace ecs
          */
         void Update(Registry& registry);
 
+    public:
+        /**
+         * @brief Registers a new system type with the manager.
+         *
+         * Creates an instance of the specified system type and stores it in the manager.
+         * The system is automatically organized under its declared UPDATE_TAG for batch
+         * updates. Registration fails silently if a system of the same type already exists.
+         *
+         * @tparam System The system type to register (must derive from IBaseSystem)
+         * @return true if the system was successfully registered, false if a system of the same type already exists
+         */
+        template<typename System> bool Register();
+
         /**
          * @brief Returns the number of registered systems
          * @return std::size_t Total count of systems currently managed
@@ -144,7 +146,11 @@ namespace ecs
          * @note The returned pointer remains valid until the system is unregistered
          *       or the manager is destroyed
          */
-        template<typename SystemCls> [[nodiscard]] SystemCls* get();
+        template<typename SystemCls> [[nodiscard]] SystemCls& Get();
+        template<typename SystemCls> [[nodiscard]] const SystemCls& Get() const;
+
+        template<typename SystemCls> [[nodiscard]] SystemCls* TryGet();
+        template<typename SystemCls> [[nodiscard]] const SystemCls* TryGet() const;
 
         /**
          * @brief Friend declaration granting Registry access to private members
@@ -155,27 +161,6 @@ namespace ecs
         friend class Registry;
     };
 
-
-    template<typename SystemCls>
-    bool SystemsManager::Register()
-    {
-        const systemHash_t hash = getSystemHash<SystemCls>();
-        if (m_systemsMap.contains(hash))
-            return false;
-
-        m_systemsMap[hash] = std::make_unique<SystemCls>();
-        m_schedule.Add(*m_systemsMap[hash].get(), hash);
-        return true;
-    }
-
-    template<typename SystemCls>
-    SystemCls* SystemsManager::get()
-    {
-        const auto it = m_systemsMap.find(getSystemHash<SystemCls>());
-        if (it == m_systemsMap.end())
-            return nullptr;
-
-        return dynamic_cast<SystemCls*>(it->second.get());
-    }
-
-}
+} // namespace ecs
+#endif
+#include "detail/SystemsManager.ipp"

@@ -24,8 +24,18 @@ namespace collections
         auto id = getCtxT<T>();
         assert(m_data.contains(id) && "Context: type not found");
 
-        auto* invoker = static_cast<Holder<T>*>(m_data[id].get());
-        return invoker->value;
+        auto* holder = static_cast<Holder<T>*>(m_data[id].get());
+        return holder->value;
+    }
+    
+    template<typename T>
+    const T& Context::get() const
+    {
+        auto id = getCtxT<T>();
+        assert(m_data.contains(id) && "Context: type not found");
+
+        auto* holder = static_cast<Holder<T>*>(m_data[id].get());
+        return holder->value;
     }
 
     template<typename T, typename... Args>

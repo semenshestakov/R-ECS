@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 #include "ecs/Registry.hpp"
 #include "ecs/registry/RegistryRegistrator.hpp"
-#include "ecs/entities/UMapEntitiesManager.hpp"
 #include "ComponentsClass.hpp"
 #include "SystemsClass.hpp"
 
@@ -68,11 +67,7 @@ TEST(AutoRegistrationTest, SystemsCount)
 TEST(AutoRegistrationTest, SimpleSystems)
 {
 
-    auto registry = Registry(
-        EntitiesManager::Create<UMapEntitiesManager>(),
-        *RegistryRegistrator::GetComponentsManager("test1"),
-        *RegistryRegistrator::GetSystemsManager("test1")
-        );
+    auto registry = Registry(*RegistryRegistrator::GetSystemsManager("test1"));
     registry.Init();
 
     EXPECT_EQ(AutoSystem1::IsUpdated, false);

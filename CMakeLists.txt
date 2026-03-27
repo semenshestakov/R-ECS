@@ -19,10 +19,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(R-ECS
     STATIC
         src/ecs/Registry.cpp
+        src/ecs/EntityWrapper.cpp
         src/ecs/SystemsManager.cpp
-        src/ecs/EntitiesIterator.cpp
         src/ecs/ComponentsManager.cpp
         src/ecs/SystemsSchedule.cpp
+        src/ecs/EntitiesManager.cpp
+        src/ecs/EntitiesArchetypeStorage.cpp
 )
 
 target_include_directories(R-ECS
@@ -45,9 +47,8 @@ if(TEST_ENABLE)
     add_executable(test_recs
             test/ecs/AutoRegistration.cpp
             test/ecs/Components.cpp
-            test/ecs/Registry.cpp
-            test/ecs/Systems.cpp
-            test/ecs/SystemEventHandler.cpp
+            test/ecs/EntitiesManager.cpp
+            test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
             test/context/Context.cpp
             test/dag/DirectedAcyclicGraph.cpp

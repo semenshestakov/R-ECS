@@ -13,7 +13,7 @@ namespace event
     struct AbstractEvent
     {
         AbstractEvent() : id(s_lastEventId++) {}                    ///< Auto-assign unique ID
-        ~AbstractEvent() = default;
+        virtual ~AbstractEvent() = default;
 
         ///< Unique event identifier (read-only)
         const eventId_t id;

@@ -50,8 +50,8 @@ if(TEST_ENABLE)
             test/ecs/EntitiesManager.cpp
             test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
-            test/context/Context.cpp
-            test/dag/DirectedAcyclicGraph.cpp
+            test/collections/Context.cpp
+            test/collections/DirectedAcyclicGraph.cpp
             test/reg/registrator_factory_tests.cpp
             test/event/Event.cpp
             test/event/Listener.cpp

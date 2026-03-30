@@ -185,3 +185,25 @@ TEST_F(EntitiesManagerTest, View_FiltersEntities)
 
     EXPECT_EQ(count, 1);
 }
+
+
+TEST_F(EntitiesManagerTest, ReuseEntityIds)
+{
+    const auto entity1 = manager.Create(Create2DPrefab());
+    manager.Destroy(entity1);
+
+    const auto entity2 = manager.Create(Create2DPrefab());
+    manager.Create(Create2DPrefab());
+    manager.Destroy(entity2);
+
+    EXPECT_EQ(entity1.getEntity().id, entity2.getEntity().id);
+    EXPECT_NE(entity1.getEntity().version, entity2.getEntity().version);
+    EXPECT_EQ(entity1.getEntity().version + 1, entity2.getEntity().version);
+
+    const auto entity3 = manager.Create(Create2DPrefab());
+    manager.Destroy(entity3);
+
+    EXPECT_EQ(entity1.getEntity().id, entity3.getEntity().id);
+    EXPECT_NE(entity2.getEntity().version, entity3.getEntity().version);
+    EXPECT_EQ(entity2.getEntity().version + 1, entity3.getEntity().version);
+}

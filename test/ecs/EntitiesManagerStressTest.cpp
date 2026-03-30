@@ -100,6 +100,32 @@ TEST_F(EntitiesManagerStressTest, View_100k)
 }
 
 
+TEST_F(EntitiesManagerStressTest, View_100k_ZeroSuitable)
+{
+    constexpr size_t N = 100'000;
+
+    for (size_t i = 0; i < N; ++i)
+        manager.Create(CreatePrefab());
+
+    const auto start = std::chrono::high_resolution_clock::now();
+
+    size_t count = 0;
+
+    for (auto [comp] : manager.view<DestructorTest>())
+    {
+        count++;
+    }
+
+    const auto end = std::chrono::high_resolution_clock::now();
+
+    EXPECT_EQ(count, 0);
+
+    std::cout << "[View 100k ZeroSuitable] Time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+              << " ms\n";
+}
+
+
 TEST_F(EntitiesManagerStressTest, Destroy_100k)
 {
     constexpr size_t N = 100'000;

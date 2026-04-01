@@ -1,6 +1,7 @@
-#pragma once
+#ifndef ECS_COMPONENTS_HPP
+#define ECS_COMPONENTS_HPP
+
 #include <memory>
-#include "ComponentRegistrator.hpp"
 #include "../utils/ComponentUtils.hpp"
 
 
@@ -199,5 +200,5 @@ namespace ecs
     using ComponentsPtr = std::unique_ptr<Components>;
 
 } // namespace ecs
-
+#endif
 #include "detail/Components.ipp"

@@ -23,9 +23,7 @@ namespace ecs
      */
     class RegistryRegistrator final
     {
-#ifdef DEEP_TEST_ENABLE
-    public:
-#endif
+    DEEP_TEST_PRIVATE_ACCESS:
         /**
          * @brief Internal structure storing registry metadata.
          *

@@ -92,12 +92,40 @@ namespace ecs
      */
     using systemHash_t = std::size_t;
 
+    /**
+    * @brief Generates a unique compile-time hash for a system type.
+    *
+    * Creates a hash value that uniquely identifies the system class type.
+    * Used for system lookup, dependency tracking, and registration.
+    *
+    * @tparam SystemCls The system class type to generate a hash for
+    * @return constexpr systemHash_t A unique hash code for the system type
+    *
+    * @note Uses typeid(SystemCls).hash_code() which is constexpr-friendly
+    *       and provides a unique identifier per type at compile time
+    *
+    * @par Example:
+    * @code
+    * class MovementSystem {};
+    * auto hash = getSystemHash<MovementSystem>(); // Unique system identifier
+    * @endcode
+    */
     template<class SystemCls>
     constexpr systemHash_t getSystemHash()
     {
         return typeid(SystemCls).hash_code();
     }
 
+    /**
+     * @brief Defines dependencies between systems.
+     *
+     * Specifies a set of systems that must be executed before or after
+     * a given system, ensuring proper execution order and data dependencies.
+     * Used by the system scheduler to resolve execution order.
+     *
+     * @note This structure holds a pointer to an array of system hashes,
+     *       allowing static initialization at compile time for performance.
+     */
     struct DependentSystems
     {
         const systemHash_t* systemHashes = nullptr;

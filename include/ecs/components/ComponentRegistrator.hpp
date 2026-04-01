@@ -65,7 +65,32 @@ namespace ecs
          */
         static componentId_t Register(const std::string& name);
 
-
+        /**
+         * @brief Retrieves registration information for a component by its ID.
+         *
+         * Returns a const reference to the registration metadata associated with the
+         * specified component ID. The returned information includes the component's
+         * name, size, constructor, destructor, and other metadata registered during
+         * the component registration process.
+         *
+         * This method is used internally by the ECS framework to obtain component
+         * information needed for memory management, serialization, and runtime
+         * type operations.
+         *
+         * @param componentId Unique identifier of the component (obtained from Register())
+         *
+         * @return const RegisterComponentInfo& Constant reference to the registration
+         *         information structure for the specified component
+         *
+         * @throw std::out_of_range If the provided componentId is invalid or
+         *         not registered in the system
+         *
+         * @note The returned reference remains valid for the lifetime of the program
+         * @note Component ID 0 (INVALID_COMPONENT_ID) will throw an exception
+         *
+         * @see Register() for obtaining component IDs
+         * @see RegisterComponentInfo for the structure of registration information
+         */
         static const RegisterComponentInfo& GetInfo(componentId_t componentId);
     };
 

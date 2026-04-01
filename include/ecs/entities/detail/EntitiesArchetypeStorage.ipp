@@ -2,243 +2,234 @@
 #include "../EntitiesArchetypeStorage.hpp"
 
 
-namespace ecs
+// ========================================= ArchetypedChunkEntityLocation =========================================
+
+/* static */ constexpr ecs::archetypeHash_t ecs::Archetype::GetArchetypeHash(const componentId_t* begin, const componentId_t* end)
 {
-    // ========================================= ArchetypedChunkEntityLocation =========================================
-
-    /* static */ constexpr archetypeHash_t Archetype::GetArchetypeHash(const componentId_t* begin, const componentId_t* end)
+    archetypeHash_t result = 0x9e3779b9;
+    for(; begin != end; ++begin)
     {
-        archetypeHash_t result = 0x9e3779b9;
-        for (; begin != end; ++begin)
+        result ^= *begin + 0x9e3779b9 + (result << 6) + (result >> 2);
+    }
+    return result;
+}
+
+template<ecs::DerivedComponent... ComponentCls>
+/* static */ const ecs::Archetype& ecs::Archetype::GetArchetype()
+{
+    static const Archetype s_archetype = []() {
+        Archetype archetype;
+        if(sizeof...(ComponentCls) > 0)
         {
-            result ^= *begin + 0x9e3779b9 + (result << 6) + (result >> 2);
+            archetype.componentsIds = {ComponentCls::componentId...};
+            std::ranges::sort(archetype.componentsIds);
+
+            archetype.hash = Archetype::GetArchetypeHash(
+                    archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size());
+            archetype.mask = Archetype::GetArchetypeMask(
+                    archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size());
         }
-        return result;
+        return archetype;
+    }();
+
+    return s_archetype;
+}
+
+template<ecs::DerivedComponent... ComponentCls>
+bool ecs::Archetype::matchArchetype() const
+{
+    static_assert(sizeof...(ComponentCls) > 0);
+    const Archetype& required = Archetype::GetArchetype<ComponentCls...>();
+
+    if(required.mask.size() > mask.size())
+        return false;
+
+    if(required.componentsIds.back() > componentsIds.back())
+        return false;
+
+    for(const componentId_t id: required.componentsIds)
+    {
+        if(id >= mask.size() || !mask[id])
+            return false;
     }
 
-    template<DerivedComponent... ComponentCls>
-    /* static */ const Archetype& Archetype::GetArchetype()
+    return true;
+}
+
+// ====================================== EntitiesArchetypeStorage::iterator ======================================
+
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(EntitiesArchetypeStorage* storage, const bool isEnd) :
+    m_storage(storage)
+{
+    if(isEnd || !m_storage)
     {
-        static const Archetype s_archetype = []()
-        {
-            Archetype archetype;
-            if (sizeof...(ComponentCls) > 0)
-            {
-                archetype.componentsIds = {ComponentCls::componentId...};
-                std::ranges::sort(archetype.componentsIds);
-
-                archetype.hash = Archetype::GetArchetypeHash(
-                    archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size()
-                    );
-                archetype.mask = Archetype::GetArchetypeMask(
-                archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size()
-                    );
-            }
-            return archetype;
-        }();
-
-        return s_archetype;
+        m_isEnded = true;
+        return;
     }
 
-    template<DerivedComponent... ComponentCls>
-    bool Archetype::matchArchetype() const
+    m_currentArchetype = 0;
+    m_entityLocation.chunkEntityIndex = 0;
+    advanceToNextValid();
+}
+
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::reference
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*() const
+{
+    if constexpr(std::is_same_v<std::tuple<ComponentCls&...>, value_type>)
     {
-        static_assert(sizeof...(ComponentCls) > 0);
-        const Archetype& required = Archetype::GetArchetype<ComponentCls...>();
+        return std::tuple<ComponentCls&...>{m_storage->GetComponent<ComponentCls>(m_entityLocation)...};
+    } else if constexpr(std::is_same_v<ArchetypedChunkEntityLocation, value_type>)
+    {
+        return m_entityLocation;
+    } else
+    {
+        assert(false);
+    }
+}
 
-        if (required.mask.size() > mask.size())
-            return false;
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::pointer
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator->() const
+{
+    return &this->operator*();
+}
 
-        if (required.componentsIds.back() > componentsIds.back())
-            return false;
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>&
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++()
+{
+    advance();
+    return *this;
+}
 
-        for (const componentId_t id : required.componentsIds)
-        {
-            if (id >= mask.size() || !mask[id])
-                return false;
-        }
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(int)
+{
+    iterator tmp = *this;
+    advance();
+    return tmp;
+}
 
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator==(const iterator& other) const
+{
+    if(m_isEnded && other.m_isEnded)
         return true;
-    }
 
-    // ====================================== EntitiesArchetypeStorage::iterator ======================================
-    
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(EntitiesArchetypeStorage* storage, bool isEnd)
-        : m_storage(storage)
+    return m_storage == other.m_storage && m_isEnded == other.m_isEnded &&
+           m_currentArchetype == other.m_currentArchetype && m_entityLocation == other.m_entityLocation;
+}
+
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator!=(const iterator& other) const
+{
+    return !(*this == other);
+}
+
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::begin() const
+{
+    return iterator<ValueType, ComponentCls...>(m_storage, false);
+}
+
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::end() const
+{
+    return iterator<ValueType, ComponentCls...>(m_storage, true);
+}
+
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advance()
+{
+    if(m_isEnded)
+        return;
+
+    ++m_entityLocation.chunkEntityIndex;
+    advanceToNextValid();
+}
+template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanceToNextValid()
+{
+    const auto& storage = *m_storage;
+
+    while(true)
     {
-        if (isEnd || !m_storage)
+        if(m_currentArchetype >= storage.m_storageByArchetypeIndex.size())
         {
             m_isEnded = true;
             return;
         }
 
-        m_currentArchetype = 0;
-        m_entityLocation.chunkEntityIndex = 0;
-        advanceToNextValid();
-    }
-    
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    typename EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::reference
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*() const
-    {
-        if constexpr (std::is_same_v<std::tuple<ComponentCls&...>, value_type>)
+        const auto& chunks = storage.m_storageByArchetypeIndex[m_currentArchetype];
+        if(!chunks.archetype().template matchArchetype<ComponentCls...>())
         {
-            return std::tuple<ComponentCls&...>{ m_storage->GetComponent<ComponentCls>(m_entityLocation)... };
+            ++m_currentArchetype;
+            m_entityLocation.chunkEntityIndex = 0;
+            continue;
         }
-        else if constexpr (std::is_same_v<ArchetypedChunkEntityLocation, value_type>)
+
+        const auto limit = chunks.getLastChunkEntityIndex();
+        while(m_entityLocation.chunkEntityIndex < limit)
         {
-            return m_entityLocation;
-        }
-        else
-        {
-            assert(false);
-        }
-    }
-    
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    typename EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::pointer
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator->() const
-    {
-        return &this->operator*();
-    }
-
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>&
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++()
-    {
-        advance();
-        return *this;
-    }
-
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(int)
-    {
-        iterator tmp = *this;
-        advance();
-        return tmp;
-    }
-
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    bool EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator==(const iterator& other) const
-    {
-        if (m_isEnded && other.m_isEnded)
-            return true;
-
-        return m_storage == other.m_storage &&
-               m_isEnded == other.m_isEnded &&
-               m_currentArchetype == other.m_currentArchetype &&
-               m_entityLocation == other.m_entityLocation;
-    }
-
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    bool EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator!=(const iterator& other) const
-    {
-        return !(*this == other);
-    }
-
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...> EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::begin() const
-    {
-        return iterator<ValueType, ComponentCls...>(m_storage, false);
-    }
-
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...> EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::end() const
-    {
-        return iterator<ValueType, ComponentCls...>(m_storage, true);
-    }
-
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    void EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advance()
-    {
-        if (m_isEnded)
-            return;
-
-        ++m_entityLocation.chunkEntityIndex;
-        advanceToNextValid();
-    }
-    template<typename ValueType, DerivedComponent... ComponentCls>
-    void EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanceToNextValid()
-    {
-        const auto& storage = *m_storage;
-
-        while (true)
-        {
-            if (m_currentArchetype >= storage.m_storageByArchetypeIndex.size())
+            if(chunks.IsAlive(m_entityLocation.chunkEntityIndex))
             {
-                m_isEnded = true;
+                m_entityLocation.archetypeIndex = m_currentArchetype;
                 return;
             }
 
-            const auto& chunks = storage.m_storageByArchetypeIndex[m_currentArchetype];
-            if (!chunks.archetype().template matchArchetype<ComponentCls...>())
-            {
-                ++m_currentArchetype;
-                m_entityLocation.chunkEntityIndex = 0;
-                continue;
-            }
-
-            const auto limit = chunks.getLastChunkEntityIndex();
-            while (m_entityLocation.chunkEntityIndex < limit)
-            {
-                if (chunks.IsAlive(m_entityLocation.chunkEntityIndex))
-                {
-                    m_entityLocation.archetypeIndex = m_currentArchetype;
-                    return;
-                }
-
-                ++m_entityLocation.chunkEntityIndex;
-            }
-
-            ++m_currentArchetype;
-            m_entityLocation.chunkEntityIndex = 0;
+            ++m_entityLocation.chunkEntityIndex;
         }
+
+        ++m_currentArchetype;
+        m_entityLocation.chunkEntityIndex = 0;
     }
+}
 
-    // ===================================== EntitiesArchetypeStorage::begin | end =====================================
+// ===================================== EntitiesArchetypeStorage::begin | end =====================================
 
-    template<DerivedComponent... ComponentCls>
-    auto EntitiesArchetypeStorage::begin()
-    {
-        return iterator<iter_value_type<ComponentCls...>, ComponentCls...>(this, false);
-    }
+template<ecs::DerivedComponent... ComponentCls>
+auto ecs::EntitiesArchetypeStorage::begin()
+{
+    return iterator<iter_value_type<ComponentCls...>, ComponentCls...>(this, false);
+}
 
-    template<DerivedComponent... ComponentCls>
-    auto EntitiesArchetypeStorage::end()
-    {
-        return iterator<iter_value_type<ComponentCls...>, ComponentCls...>(this, true);
-    }
+template<ecs::DerivedComponent... ComponentCls>
+auto ecs::EntitiesArchetypeStorage::end()
+{
+    return iterator<iter_value_type<ComponentCls...>, ComponentCls...>(this, true);
+}
 
-    // ======================================= EntitiesArchetypeStorage::methods =======================================
+// ======================================= EntitiesArchetypeStorage::methods =======================================
 
-    template<DerivedComponent ComponentCls>
-    ComponentCls* EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location)
-    {
-        return reinterpret_cast<ComponentCls*>(GetComponentData(location, ComponentCls::componentId));
-    }
+template<ecs::DerivedComponent ComponentCls>
+ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location)
+{
+    return reinterpret_cast<ComponentCls*>(GetComponentData(location, ComponentCls::componentId));
+}
 
-    template<DerivedComponent ComponentCls>
-    const ComponentCls* EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location) const
-    {
-        return reinterpret_cast<const ComponentCls*>(GetComponentData(location, ComponentCls::componentId));
-    }
+template<ecs::DerivedComponent ComponentCls>
+const ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location) const
+{
+    return reinterpret_cast<const ComponentCls*>(GetComponentData(location, ComponentCls::componentId));
+}
 
-    template<DerivedComponent ComponentCls>
-    ComponentCls& EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location)
-    {
-        ComponentCls* componentData = TryGetComponent<ComponentCls>(location);
-        assert(componentData != nullptr);
-        return *componentData;
-    }
+template<ecs::DerivedComponent ComponentCls>
+ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location)
+{
+    ComponentCls* componentData = TryGetComponent<ComponentCls>(location);
+    assert(componentData != nullptr);
+    return *componentData;
+}
 
-    template<DerivedComponent ComponentCls>
-    const ComponentCls& EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location) const
-    {
-        const ComponentCls* componentData = TryGetComponent<ComponentCls>(location);
-        assert(componentData != nullptr);
-        return *componentData;
-    }
-
-} // namespace ecs
+template<ecs::DerivedComponent ComponentCls>
+const ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location) const
+{
+    const ComponentCls* componentData = TryGetComponent<ComponentCls>(location);
+    assert(componentData != nullptr);
+    return *componentData;
+}

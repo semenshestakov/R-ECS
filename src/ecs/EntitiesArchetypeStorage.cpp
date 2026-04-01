@@ -52,7 +52,10 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity& entity
     if (m_freeChunkEntityIndex.empty())
     {
         chunkEntityIndex = m_lastChunkEntityIndex++;
-        m_isInWorld.resize(chunkEntityIndex + 1);
+        if (m_isInWorld.size() <= chunkEntityIndex)
+        {
+            m_isInWorld.resize(m_isInWorld.size() * 2);
+        }
     }
     else
     {
@@ -74,6 +77,7 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity& entity
 
         if (componentChunks.size() <= chunkIndex)
         {
+            componentChunks.reserve(chunkIndex * 2);
             componentChunks.resize(chunkIndex + 1);
             componentChunks[chunkIndex] = std::make_unique<byte[]>(componentSize * MAX_ENTITIES_IN_CHUNK);
         }

@@ -2,15 +2,9 @@
 
 
 
-ecs::SystemsSchedule::SystemsSchedule()
-{
+ecs::SystemsSchedule::SystemsSchedule() = default;
 
-}
-
-ecs::SystemsSchedule::~SystemsSchedule()
-{
-
-}
+ecs::SystemsSchedule::~SystemsSchedule() = default;
 
 void ecs::SystemsSchedule::Add(const IBaseSystem& system, const systemHash_t hash)
 {

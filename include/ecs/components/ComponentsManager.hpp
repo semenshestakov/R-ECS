@@ -1,5 +1,6 @@
 #pragma once
-#include "../utils/ComponentUtils.hpp"
+#include "ecs/utils/ComponentUtils.hpp"
+#include "ComponentRegistrator.hpp"
 #include "Components.hpp"
 
 
@@ -65,7 +66,6 @@ namespace ecs
         [[nodiscard]] ComponentsPtr CreateComponents() const;
 
     private:
-
         /**
          * @brief Initializes component data buffer and calculates layout.
          *

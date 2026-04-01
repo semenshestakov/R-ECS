@@ -4,6 +4,7 @@
 
 namespace ecs::error
 {
+
     inline constexpr char g_systemsErrorName[] = "SystemsError: ";
     using BaseSystemsError = recs::error::BaseNamedError<g_systemsErrorName>;
 

@@ -172,7 +172,6 @@ namespace ecs
           *
           * @warning The behavior is undefined if Init() hasn't been called or if the
           *          schedule has been modified after the last Init() call.
-          *
         */
         [[nodiscard]] auto begin() const {return m_stagesGraph.begin();}
 

@@ -8,7 +8,7 @@ namespace ecs
     struct Entity
     {
         entityId_t id = INVALID_ENTITY_ID;                  ///< Unique identifier for the entity across the entire system
-        entityVersion_t version = INVALID_ENTITY_VERSION;
+        entityVersion_t version = INVALID_ENTITY_VERSION;   ///< Unique identifier for this->id
 
         /**
          * @brief Three-way comparison operator for ordering entities by their IDs.

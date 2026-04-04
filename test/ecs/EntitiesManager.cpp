@@ -32,6 +32,13 @@ protected:
         prefab.AddComponent<Position3d>();
         return prefab;
     }
+
+    static PrefabEntity CreateTestIdPrefab()
+    {
+        PrefabEntity prefab;
+        prefab.AddComponent<TestId>();
+        return prefab;
+    }
 };
 
 
@@ -206,4 +213,32 @@ TEST_F(EntitiesManagerTest, ReuseEntityIds)
     EXPECT_EQ(entity1.getEntity().id, entity3.getEntity().id);
     EXPECT_NE(entity2.getEntity().version, entity3.getEntity().version);
     EXPECT_EQ(entity2.getEntity().version + 1, entity3.getEntity().version);
+}
+
+
+TEST_F(EntitiesManagerTest, UniqueTestId)
+{
+    constexpr size_t N = 10'000;
+    PrefabEntity prefab = CreateTestIdPrefab();
+    std::unordered_set<unsigned int> ids;
+    std::vector<Entity> entities;
+
+    for (size_t i = INVALID_ENTITY_ID + 1; i < N; ++i)
+    {
+        EntityWrapper entity = manager.Create(prefab);
+        EXPECT_EQ(entity.getEntity().id, i);
+        entities.push_back(entity.getEntity());
+
+        entity.GetComponent<TestId>().id = i;
+        ids.emplace(i);
+    }
+    EXPECT_EQ(ids.size(), manager.size());
+
+    for (const Entity& entity : entities)
+    {
+        EXPECT_EQ(manager.GetComponent<TestId>(entity).id, entity.id);
+        ids.erase(manager.GetComponent<TestId>(entity).id);
+    }
+
+    EXPECT_TRUE(ids.empty());
 }

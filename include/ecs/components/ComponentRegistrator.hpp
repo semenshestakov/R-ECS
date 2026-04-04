@@ -18,6 +18,7 @@ namespace ecs
         componentId_t componentId {INVALID_COMPONENT_ID};           ///< Unique identifier for the component
         void(*constructor)(byte*) = nullptr;                        ///< Placement new constructor function
         void(*destructor)(byte*) = nullptr;                         ///< Destructor function
+        void(*copy)(byte* to, byte* from) = nullptr;                ///< Copy function
 
         template <typename ComponentCls>
         static RegisterComponentInfo Create(const std::string& name);

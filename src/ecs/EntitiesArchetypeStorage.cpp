@@ -72,21 +72,21 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity& entity
     const PrefabEntity::componentsData_t& componentsData = entity.GetComponentsData();
     for (const componentId_t componentId : m_archetype.componentsIds)
     {
-        const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
+        const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
         componentChunks_t& componentChunks = m_chunksByComponentId[componentId];
 
         if (componentChunks.size() <= chunkIndex)
         {
             componentChunks.reserve(chunkIndex * 2);
             componentChunks.resize(chunkIndex + 1);
-            componentChunks[chunkIndex] = std::make_unique<byte[]>(componentSize * MAX_ENTITIES_IN_CHUNK);
+            componentChunks[chunkIndex] = std::make_unique<byte[]>(componentInfo.componentSize * MAX_ENTITIES_IN_CHUNK);
         }
 
         assert(componentsData[componentId] != nullptr);
-        memcpy(
-            /*  to  */ &componentChunks[chunkIndex][componentSize * localEntityIndex],
-            /* from */ componentsData[componentId].get(),
-            /* size */ componentSize
+
+        componentInfo.copy(
+            &componentChunks[chunkIndex][componentInfo.componentSize * localEntityIndex],
+            componentsData[componentId].get()
             );
     }
 

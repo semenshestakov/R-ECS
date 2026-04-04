@@ -49,7 +49,6 @@ ecs::EntityWrapper ecs::EntitiesManager::Create(PrefabEntity& prefabEntity)
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 
-    prefabEntity.clear();
     return {entity, *this};
 }
 

@@ -30,6 +30,13 @@ namespace ecs
     struct PrefabEntity
     {
         PrefabEntity() = default;
+        ~PrefabEntity();
+
+        PrefabEntity(PrefabEntity&&) = default;
+        PrefabEntity& operator=(PrefabEntity&&) = default;
+
+        PrefabEntity(const PrefabEntity&) = default;
+        PrefabEntity& operator=(const PrefabEntity&) = delete;
 
         /**
          * @brief Adds a component to the prefab entity.
@@ -90,7 +97,5 @@ namespace ecs
 
         m_dataByComponentsIndex[ComponentCls::componentId] = std::move(ptr);
     }
-
-    inline void PrefabEntity::clear() { m_dataByComponentsIndex.clear(); }
 
 } // namespace ecs

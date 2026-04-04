@@ -19,6 +19,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(R-ECS
     STATIC
         src/ecs/Registry.cpp
+        src/ecs/PrefabEntity.cpp
         src/ecs/EntityWrapper.cpp
         src/ecs/SystemsManager.cpp
         src/ecs/ComponentsManager.cpp

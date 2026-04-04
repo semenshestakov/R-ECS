@@ -9,7 +9,9 @@ ecs::RegisterComponentInfo ecs::RegisterComponentInfo::Create(const std::string&
             .componentSize = sizeof(ComponentCls),
             .componentId = ComponentCls::componentId,
             .constructor = [](byte* ptr) { new(ptr) ComponentCls(); },
-            .destructor = [](byte* ptr) { reinterpret_cast<ComponentCls*>(ptr)->~ComponentCls(); }};
+            .destructor = [](byte* ptr) { reinterpret_cast<ComponentCls*>(ptr)->~ComponentCls(); },
+            .copy = [](byte* to, byte* from) { new(to) ComponentCls(reinterpret_cast<const ComponentCls&>(*from)); }
+    };
 }
 
 template<typename ComponentCls>

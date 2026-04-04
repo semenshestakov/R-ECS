@@ -27,13 +27,10 @@ TEST_F(EntitiesManagerStressTest, Create_100k_Entities)
     constexpr size_t N = 100'000;
     const auto start = std::chrono::high_resolution_clock::now();
 
-    std::vector<EntityWrapper> entities;
-    entities.reserve(N);
+    PrefabEntity prefab = CreatePrefab();
 
     for (size_t i = 0; i < N; ++i)
-    {
-        entities.emplace_back(manager.Create(CreatePrefab()));
-    }
+        manager.Create(prefab);
 
     const auto end = std::chrono::high_resolution_clock::now();
     const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

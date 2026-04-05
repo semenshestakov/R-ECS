@@ -1,10 +1,8 @@
-#pragma once
 #include <cstddef>
 
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
-#include "ecs/entities/EntityWrapper.hpp"
 #include "ecs/systems/SystemRegistrator.hpp"
 
 
@@ -19,7 +17,7 @@ struct Position2d
 };
 
 
-struct MoveSystem : ecs::ISystem<MoveSystem>
+struct MoveSystem final : ecs::ISystem<MoveSystem>
 {
     ECS_REGISTRY("MyName")
 
@@ -40,7 +38,7 @@ struct MoveSystem : ecs::ISystem<MoveSystem>
 
 int main()
 {
-    ecs::Registry registry = ecs::Registry(
+    auto registry = ecs::Registry(
         *ecs::SystemRegistrator::GetSystemsManager("MyName")
         );
     registry.Init();
@@ -53,8 +51,8 @@ int main()
     {
         ecs::EntityWrapper entity = registry.Entities().Create(prefab);
 
-        entity.GetComponent<Position2d>.x = static_cast<float>(i);
-        entity.GetComponent<Position2d>.y = -static_cast<float>(i);
+        entity.GetComponent<Position2d>().x = static_cast<float>(i);
+        entity.GetComponent<Position2d>().y = -static_cast<float>(i);
     }
 
     registry.Update();

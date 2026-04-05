@@ -1,0 +1,163 @@
+#pragma once
+#include "AbstractListener.hpp"
+#include "Listener.hpp"
+
+
+namespace event
+{
+
+    /**
+     * @class ListenerSystem
+     * @brief Centralized system for managing multiple smart listeners with key-based access.
+     *
+     * Provides a dictionary-like interface for managing event subscriptions where each
+     * subscription is identified by a key. Automatically handles cleanup of all managed
+     * listeners upon destruction.
+     *
+     * @tparam K The key type, must be key for use with std::unordered_map
+     * @tparam T The callback identifier storage type for the managed listeners
+     *
+     * @note Non-copyable and non-movable to maintain ownership semantics
+     * @note Thread safety: Not thread-safe by default. External synchronization required
+     *       for concurrent access.
+     *
+     * @example
+     * // Create a listener system using string keys
+     * SmartListenerSystemT<std::string, callbackId_t> listenerSystem;
+     *
+     * // Subscribe to an event with key "player_moved"
+     * listenerSystem.subscribe("player_moved", &movementEvent,
+     *     [](float x, float y) {
+     *         std::cout << "Player moved to: " << x << ", " << y << std::endl;
+     *     });
+     *
+     * // Later, unsubscribe by key
+     * listenerSystem.unsubscribe("player_moved");
+     */
+    template<typename K /* key */, typename T /* abstract_smart_listener_type */>
+    class ListenerSystem
+    {
+    public:
+        /**
+         * @brief Template alias for creating typed listeners.
+         * @tparam Args Event argument types
+         */
+        using AbstractSmartListener_t = AbstractListener<T>;
+        template<typename... Args> using SmartListener_t = Listener<T, Args...>;
+        using mapListeners_t = std::unordered_map<K, std::unique_ptr<AbstractSmartListener_t>>;
+
+        /**
+         * @brief Default constructor.
+         */
+        ListenerSystem();
+
+        /**
+         * @brief Constructs a listener system with custom deleter for all managed listeners.
+         * @param deleter The deleter to use for all listeners created by this system
+         */
+        explicit ListenerSystem(const deleter_t &deleter);
+
+        /**
+         * @brief Destructor automatically unsubscribes all managed listeners.
+         */
+        ~ListenerSystem();
+
+        // delete copy | move
+        ListenerSystem(const ListenerSystem&) = delete;
+        ListenerSystem& operator=(const ListenerSystem&) = delete;
+        ListenerSystem(ListenerSystem&&) = delete;
+        ListenerSystem& operator=(ListenerSystem&&) = delete;
+
+        /**
+         * @brief Registers an event type for a given key.
+         * @tparam Args Event argument types
+         * @param key The key to associate with the event
+         * @param event Pointer to the event instance
+         * @return true if registration succeeded, false if already registered
+         */
+        template<typename... Args>
+        bool reg(const K& key, Event<Args...>* event);
+
+        /**
+         * @brief Checks if a listener for a specific event is already registered under a key.
+         * @param key The key to check
+         * @param event Pointer to the event to check
+         * @return Pair containing:
+         *         - bool: true if registered, false otherwise
+         *         - const_iterator to the found entry (end() if not found)
+         */
+        std::pair<bool, typename mapListeners_t::const_iterator> isRegistered(const K& key, const AbstractEvent* event) const;
+
+        /**
+         * @brief Subscribes to an event with a unique key identifier.
+         *
+         * Creates a new smart listener for the specified event and callback, storing it
+         * in the internal map under the provided key. If a listener already exists for
+         * this key, it will be replaced (after proper cleanup of the old listener).
+         *
+         * @tparam Args The event argument types
+         * @param key Unique identifier for this subscription
+         * @param event Pointer to the event to subscribe to
+         * @param callback The callback function to register
+         *
+         * @note The system takes ownership of the created listener
+         */
+        template<typename... Args>
+        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
+
+        /**
+         * @brief Type-erased subscription method for use with CallbackCollector.
+         * @param key The key identifying the subscription
+         * @param event Pointer to the abstract event
+         * @param callback The callback stored in std::any
+         * @return true if subscription succeeded, false otherwise
+         *
+         * @note This method attempts to cast the std::any to the correct callback type
+         *       based on the event's type information.
+         */
+        bool subscribeAny(const K& key, AbstractEvent*, const std::any& callback);
+
+        /**
+         * @brief Unsubscribes and removes a listener by its key.
+         *
+         * @param key The key identifying the listener to remove
+         *
+         * @note If no listener exists for the key, this method does nothing (no-op)
+         * @note The listener is properly destroyed and all its callbacks are unregistered
+         */
+        void unsubscribe(const K& key);
+
+        /**
+         * @brief Unsubscribes all listeners for all keys.
+         *
+         * @note This clears all subscriptions but keeps the map structure.
+         *       For complete removal, use clear().
+         */
+        void unsubscribeAll();
+
+        /**
+         * @brief Completely clears the listener system.
+         *
+         * Unsubscribes all listeners and removes all entries from the map.
+         * After calling this, the system is empty.
+         */
+        void clear();
+
+        /**
+         * @brief Gets the number of registered listeners.
+         * @return Number of key-listener pairs in the system
+         */
+        [[nodiscard]] std::size_t size() const;
+
+    private:
+        /// Map of key to listener pointers. Uses unique_ptr for automatic memory management.
+        mapListeners_t m_mapListeners;
+
+        /// Optional custom deleter applied to all listeners created by this system
+        deleter_t m_deleter;
+    };
+
+}
+
+#include "detail/ListenerSystem.ipp"
+

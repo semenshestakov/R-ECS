@@ -8,6 +8,9 @@ AlignConsecutiveDeclarations: false
 AlignOperands: true
 AlignTrailingComments: false
 AlwaysBreakTemplateDeclarations: Yes
+PointerAlignment: Left
+ReferenceAlignment: Left
+SpaceBeforeParens: Never
 BraceWrapping: 
   AfterCaseLabel: false
   AfterClass: true

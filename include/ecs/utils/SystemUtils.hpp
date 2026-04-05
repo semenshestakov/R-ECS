@@ -65,7 +65,7 @@ namespace ecs
      */
     struct InitState
     {
-        const char* nameFactory;            ///< Identifier for the componentsManager or creator of this system
+        const char* nameFactory;            ///< Identifier for the systemsManager or creator of this system
         void* args;                         ///< Pointer to system-specific initialization arguments
         EventSystem& eventSystem;           ///< Ref local Event System for ECS
     };

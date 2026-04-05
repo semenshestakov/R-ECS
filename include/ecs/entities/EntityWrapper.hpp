@@ -58,7 +58,7 @@ namespace ecs
          * @return Reference to component data
          * @note Asserts that entity is alive and has the component
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] ComponentCls& GetComponent();
 
         /**
@@ -67,7 +67,7 @@ namespace ecs
          * @return Const reference to component data
          * @note Asserts that entity is alive and has the component
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] const ComponentCls& GetComponent() const;
 
         /**
@@ -75,7 +75,7 @@ namespace ecs
          * @tparam ComponentCls Component type to retrieve
          * @return Pointer to component data, or nullptr if entity dead or missing component
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] ComponentCls* TryGetComponent();
 
         /**
@@ -83,7 +83,7 @@ namespace ecs
          * @tparam ComponentCls Component type to retrieve
          * @return Const pointer to component data, or nullptr if entity dead or missing component
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] const ComponentCls* TryGetComponent() const;
 
         /**

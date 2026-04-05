@@ -37,11 +37,12 @@ namespace ecs
      *
      * @tparam ComponentCls The component type to register.
      */
-    class ComponentRegistrator final : protected reg::Registrator<RegisterComponentInfo>
+    class ComponentRegistrator final : protected reg::Registrator<RegisterComponentInfo, reg::RegistrationStrategy::UNIQUE>
     {
-        using Super = reg::Registrator<RegisterComponentInfo>;
+        using Super = reg::Registrator<RegisterComponentInfo, reg::RegistrationStrategy::UNIQUE>;
     public:
-        template <typename ComponentCls>
+
+        ComponentRegistrator() = delete;
 
         /**
          * @brief Registers a component type and assigns it a unique ID.
@@ -57,14 +58,14 @@ namespace ecs
          * 4. Returns the assigned ID for immediate use
          *
          * @tparam ComponentCls Type of component to register
-         * @param name Name to identify the component (typically from typeid().name() or a string literal)
          *
          * @return componentId_t Unique ID assigned to this component type
          *
          * @note Component IDs start from 1 (0 is reserved for invalid/unregistered)
          * @note Registration is idempotent - calling multiple times returns the same ID
          */
-        static componentId_t Register(const std::string& name);
+        template<typename ComponentCls>
+        static componentId_t Register();
 
         /**
          * @brief Retrieves registration information for a component by its ID.
@@ -93,6 +94,22 @@ namespace ecs
          * @see RegisterComponentInfo for the structure of registration information
          */
         static const RegisterComponentInfo& GetInfo(componentId_t componentId);
+
+        /**
+         * @brief Retrieves the component ID for a given component type.
+         *
+         * Template function that returns the unique `componentId_t` corresponding
+         * to the provided component class. The component class must have been
+         * registered with the ECS system beforehand.
+         *
+         * @tparam ComponentCls Component type to get the ID for.
+         *
+         * @return componentId_t Unique ID of the component type.
+         *
+         * @note If the component type was not registered, behavior is undefined.
+         */
+        template<typename ComponentCls>
+        static componentId_t GetСomponentId();
     };
 
 }

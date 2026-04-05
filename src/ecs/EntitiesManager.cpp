@@ -100,7 +100,7 @@ ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& entity, const co
     return m_storage.GetComponentData(m_entitiesLocationByEntityIndex[entity.id], componentId);
 }
 
-const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& entity, componentId_t componentId) const
+const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& entity, const componentId_t componentId) const
 {
     if (!IsAlive(entity))
         return nullptr;

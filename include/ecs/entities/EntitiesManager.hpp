@@ -101,7 +101,7 @@ namespace ecs
          * @return Reference to component data
          * @note Asserts that entity is alive and has the component
          */
-        template<DerivedComponent ComponentCls> [[nodiscard]] ComponentCls& GetComponent(const Entity& entity);
+        template<IsComponent ComponentCls> [[nodiscard]] ComponentCls& GetComponent(const Entity& entity);
 
         /**
          * @brief Gets const component of specified type (asserts existence).
@@ -110,7 +110,7 @@ namespace ecs
          * @return Const reference to component data
          * @note Asserts that entity is alive and has the component
          */
-        template<DerivedComponent ComponentCls> [[nodiscard]] const ComponentCls& GetComponent(const Entity& entity) const;
+        template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls& GetComponent(const Entity& entity) const;
 
         /**
          * @brief Attempts to get component of specified type.
@@ -118,7 +118,7 @@ namespace ecs
          * @param entity Entity owning the component
          * @return Pointer to component data, or nullptr if entity dead or missing component
          */
-        template<DerivedComponent ComponentCls> [[nodiscard]] ComponentCls* TryGetComponent(const Entity& entity);
+        template<IsComponent ComponentCls> [[nodiscard]] ComponentCls* TryGetComponent(const Entity& entity);
 
         /**
          * @brief Attempts to get const component of specified type.
@@ -126,7 +126,7 @@ namespace ecs
          * @param entity Entity owning the component
          * @return Const pointer to component data, or nullptr if entity dead or missing component
          */
-        template<DerivedComponent ComponentCls> [[nodiscard]] const ComponentCls* TryGetComponent(const Entity& entity) const;
+        template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls* TryGetComponent(const Entity& entity) const;
 
         /**
          * @brief Gets mutable component data by component ID.
@@ -161,7 +161,7 @@ namespace ecs
          * @return Range object supporting begin()/end() iteration
          * @note Example: for (auto [pos, vel] : manager.view<Position, Velocity>())
          */
-        template<DerivedComponent... ComponentCls>
+        template<IsComponent... ComponentCls>
         auto view();
 
     private:

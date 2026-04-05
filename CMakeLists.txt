@@ -22,7 +22,6 @@ add_library(R-ECS
         src/ecs/PrefabEntity.cpp
         src/ecs/EntityWrapper.cpp
         src/ecs/SystemsManager.cpp
-        src/ecs/ComponentsManager.cpp
         src/ecs/SystemsSchedule.cpp
         src/ecs/EntitiesManager.cpp
         src/ecs/EntitiesArchetypeStorage.cpp
@@ -46,17 +45,16 @@ if(TEST_ENABLE)
     FetchContent_MakeAvailable(googletest)
 
     add_executable(test_recs
-            test/ecs/AutoRegistration.cpp
-            test/ecs/Components.cpp
-            test/ecs/EntitiesManager.cpp
-            test/ecs/EntitiesManagerStressTest.cpp
-            test/ecs/Schedule.cpp
-            test/collections/Context.cpp
-            test/collections/DirectedAcyclicGraph.cpp
             test/reg/registrator_factory_tests.cpp
             test/event/Event.cpp
             test/event/Listener.cpp
             test/event/EventSystem.cpp
+            test/collections/Context.cpp
+            test/collections/DirectedAcyclicGraph.cpp
+            test/ecs/AutoRegistration.cpp
+            test/ecs/EntitiesManager.cpp
+            test/ecs/EntitiesManagerStressTest.cpp
+            test/ecs/Schedule.cpp
     )
     target_include_directories(R-ECS
         PUBLIC

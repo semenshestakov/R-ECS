@@ -151,14 +151,6 @@ namespace ecs
 
         template<typename SystemCls> [[nodiscard]] SystemCls* TryGet();
         template<typename SystemCls> [[nodiscard]] const SystemCls* TryGet() const;
-
-        /**
-         * @brief Friend declaration granting Registry access to private members
-         *
-         * Allows the Registry class to interact with SystemsManager's internal
-         * state for proper ECS integration and management.
-         */
-        friend class Registry;
     };
 
 } // namespace ecs

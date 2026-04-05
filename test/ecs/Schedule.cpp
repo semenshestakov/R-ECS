@@ -15,7 +15,7 @@ protected:
     {
         g_systemCallOrder.clear();
 
-        registry = Registry(*RegistryRegistrator::GetSystemsManager("test_schedule"));
+        registry = Registry(*SystemRegistrator::GetSystemsManager("test_schedule"));
         registry.Init();
     }
 

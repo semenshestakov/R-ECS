@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 #include "ecs/entities/EntitiesManager.hpp"
-#include "ecs/entities/PrefabEntity.hpp"
+
+#include <unordered_set>
+
 #include "ComponentsClass.hpp"
+#include "ecs/entities/PrefabEntity.hpp"
 
 
 using namespace ecs;

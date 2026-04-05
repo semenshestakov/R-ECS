@@ -1,44 +1,15 @@
-#include "gtest/gtest.h"
-#include "ecs/Registry.hpp"
-#include "ecs/registry/RegistryRegistrator.hpp"
+#include "../../include/ecs/systems/SystemRegistrator.hpp"
 #include "ComponentsClass.hpp"
 #include "SystemsClass.hpp"
+#include "ecs/Registry.hpp"
+#include "gtest/gtest.h"
 
 using namespace ecs;
 
 
 TEST(AutoRegistrationTest, RegistryRegistratorSize)
 {
-    EXPECT_EQ(RegistryRegistrator::Registrator::size(), 4);
-}
-
-TEST(AutoRegistrationTest, ComponentsIsRegistered)
-{
-    EXPECT_EQ(PositionX::IsRegistered, true);
-    EXPECT_EQ(PositionY::IsRegistered, true);
-    EXPECT_EQ(PositionZ::IsRegistered, false);
-}
-
-
-TEST(AutoRegistrationTest, TestUnknownRegistryName)
-{
-    EXPECT_EQ(RegistryRegistrator::GetComponentsManager("test_null"), nullptr);
-}
-
-
-TEST(AutoRegistrationTest, SimpleComponents)
-{
-    ComponentsManager* componentsManager = RegistryRegistrator::GetComponentsManager("test1");
-    EXPECT_NE(componentsManager, nullptr);
-    {
-        ComponentsPtr components = componentsManager->CreateComponents();
-        components->initialize();
-
-        EXPECT_EQ(components->get<PositionX>()->x, PositionX().x);
-        EXPECT_EQ(components->get<PositionY>()->y, PositionY().y);
-
-        EXPECT_EQ(components->get<PositionZ>(), nullptr);
-    }
+    EXPECT_EQ(SystemRegistrator::Registrator::size(), 4);
 }
 
 
@@ -50,16 +21,15 @@ TEST(AutoRegistrationTest, SystemsIsRegistered)
 }
 
 
-
 TEST(AutoRegistrationTest, SystemsCount)
 {
     {
-        SystemsManager* systemsManager = RegistryRegistrator::GetSystemsManager("test1");
+        SystemsManager* systemsManager = SystemRegistrator::GetSystemsManager("test1");
         EXPECT_EQ(systemsManager->size(), 2);
     }
 
     {
-        SystemsManager* systemsManager = RegistryRegistrator::GetSystemsManager("test2");
+        SystemsManager* systemsManager = SystemRegistrator::GetSystemsManager("test2");
         EXPECT_EQ(systemsManager->size(), 1);
     }
 }
@@ -67,7 +37,7 @@ TEST(AutoRegistrationTest, SystemsCount)
 TEST(AutoRegistrationTest, SimpleSystems)
 {
 
-    auto registry = Registry(*RegistryRegistrator::GetSystemsManager("test1"));
+    auto registry = Registry(*SystemRegistrator::GetSystemsManager("test1"));
     registry.Init();
 
     EXPECT_EQ(AutoSystem1::IsUpdated, false);

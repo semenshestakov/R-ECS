@@ -1,5 +1,7 @@
 #pragma once
 #include <vector>
+
+#include "ecs/components/ComponentRegistrator.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
 
 
@@ -41,7 +43,7 @@ namespace ecs
         /**
          * @brief Adds a component to the prefab entity.
          * Constructs component in-place using forwarded arguments and stores it
-         * at the index corresponding to ComponentCls::componentId.
+         * at the index corresponding to ComponentRegistrator::GetСomponentId<ComponentCls>().
          *
          * @tparam ComponentCls Component type to add (must be registered)
          * @tparam Args Argument types for component constructor
@@ -54,7 +56,7 @@ namespace ecs
          * prefab.AddComponent<Transform>(position, rotation);
          * prefab.AddComponent<Health>(100);
          */
-        template<DerivedComponent ComponentCls, typename... Args>
+        template<IsComponent ComponentCls, typename... Args>
         void AddComponent(Args&&... args);
 
         /**
@@ -84,18 +86,19 @@ namespace ecs
     };
 
 
-    template<DerivedComponent ComponentCls, typename... Args>
+    template<IsComponent ComponentCls, typename... Args>
     void PrefabEntity::AddComponent(Args&&... args)
     {
-        if(m_dataByComponentsIndex.size() < ComponentCls::componentId)
+        static const componentId_t componentId = ComponentRegistrator::GetСomponentId<ComponentCls>();
+        if(m_dataByComponentsIndex.size() <= componentId)
         {
-            m_dataByComponentsIndex.resize(ComponentCls::componentId + 1);
+            m_dataByComponentsIndex.resize(componentId + 1);
         }
 
         auto ptr = std::make_unique<byte[]>(sizeof(ComponentCls));
         new(ptr.get()) ComponentCls(std::forward<Args>(args)...);
 
-        m_dataByComponentsIndex[ComponentCls::componentId] = std::move(ptr);
+        m_dataByComponentsIndex[componentId] = std::move(ptr);
     }
 
 } // namespace ecs

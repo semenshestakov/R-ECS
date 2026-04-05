@@ -9,10 +9,10 @@
  */
 
 #include "common_recs/utils/ClassUtils.hpp"
-#include "registry/RegistryRegistrator.hpp"
-#include "systems/IBaseSystem.hpp"
-#include "event/Listener.hpp"
 #include "event/EventSystem.hpp"
+#include "event/Listener.hpp"
+#include "systems/IBaseSystem.hpp"
+#include "systems/SystemRegistrator.hpp"
 
 
 namespace ecs
@@ -160,9 +160,9 @@ namespace ecs
          * @brief Static flag that triggers automatic system registration
          *
          * This static member's initialization causes the system type to be
-         * automatically registered with the RegistryRegistrator.
+         * automatically registered with the SystemRegistrator.
          */
-        [[maybe_unused]] static inline const bool IsRegistered = RegistryRegistrator::RegisterSystem<SystemCls>(SystemCls::ECS_REGISTRY_NAMES);
+        [[maybe_unused]] static inline const bool IsRegistered = SystemRegistrator::Register<SystemCls>(SystemCls::ECS_REGISTRY_NAMES);
 
         /**
          * @brief Collection of event registration functions
@@ -230,5 +230,31 @@ namespace ecs
     ecs::DependentSystems GetDependents() const override {                  \
     static const auto s_dependents = GetSystemsHashArray<__VA_ARGS__>();    \
     return {s_dependents.cbegin(), s_dependents.size() }; }
+
+/**
+ * @brief Macro to define factory registration names for an ECS component
+ *
+ * This macro should be used within a component class definition to specify
+ * one or more factory names under which the component will be registered.
+ * The names enable factory-based creation and lookup of the component type.
+ *
+ * @param ... One or more string literals representing factory names
+ *
+ * @note The macro:
+ *       1. Defines ECS_REGISTRY_NAMES as a private static constexpr array
+ *       2. Restores original access specifier (public) after definition
+ *
+ * @warning Must be used inside a component class derived from IComponent<T>
+ * @warning Names must be string literals (compile-time constants)
+ *
+ * @see IComponent
+ * @see SystemRegistrator::Register
+ */
+#define ECS_REGISTRY(...)                                                                                   \
+friend struct ISystem;                                                                                      \
+private:                                                                                                    \
+static constexpr std::array<std::string_view, sizeof((const char*[]){__VA_ARGS__}) / sizeof(const char*)>   \
+ECS_REGISTRY_NAMES = {__VA_ARGS__};                                                                         \
+public:
 
 #include "systems/detail/ISystem.ipp"

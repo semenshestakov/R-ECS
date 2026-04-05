@@ -2,7 +2,6 @@
 #include <gmock/gmock.h>
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
-#include "ecs/registry/AutoRegistry.hpp"
 #include "ComponentsClass.hpp"
 
 
@@ -24,13 +23,6 @@ struct SystemTestId final : ecs::ISystem<SystemTestId>
     inline static unsigned int Counter = {0};
     void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
     {
-        // for (auto& entity : registry.Entities().view())
-        // {
-        //     // entiry.Get<TestId>().id++;
-        //     // entity
-        // }
-        // static const unsigned int s_Counter1 = ++Counter;
-
         for (auto [testId] : registry.Entities().view<TestId>())
         {
             testId.id++;

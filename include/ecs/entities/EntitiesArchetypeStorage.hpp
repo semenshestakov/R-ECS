@@ -66,7 +66,7 @@ namespace ecs
          * @tparam ComponentCls Component types that form the archetype
          * @return Const reference to the archetype instance
          */
-        template<DerivedComponent... ComponentCls>
+        template<IsComponent... ComponentCls>
         static const Archetype& GetArchetype();
 
         /**
@@ -83,7 +83,7 @@ namespace ecs
          * @tparam ComponentCls Component types to check for
          * @return true if archetype has all specified components
          */
-        template<DerivedComponent... ComponentCls>
+        template<IsComponent... ComponentCls>
         [[nodiscard]] bool matchArchetype() const;
     };
 
@@ -222,7 +222,7 @@ namespace ecs
          * @tparam ValueType Type returned on dereference (tuple of components or location)
          * @tparam ComponentCls Component types that entities must have
          */
-        template<typename ValueType, DerivedComponent... ComponentCls>
+        template<typename ValueType, IsComponent... ComponentCls>
         class iterator
         {
         public:
@@ -307,7 +307,7 @@ namespace ecs
          * @brief Value type returned by iterator when components are requested.
          * Tuple of references to requested components.
          */
-        template<DerivedComponent... ComponentCls>
+        template<IsComponent... ComponentCls>
         using iter_value_type = std::conditional_t<
             (sizeof...(ComponentCls) > 0),
             std::tuple<ComponentCls&...>,
@@ -319,7 +319,7 @@ namespace ecs
          * @tparam ComponentCls Required component types
          * @return Iterator at first matching entity
          */
-        template<DerivedComponent... ComponentCls>
+        template<IsComponent... ComponentCls>
         [[nodiscard]] auto begin();
 
         /**
@@ -327,7 +327,7 @@ namespace ecs
          * @tparam ComponentCls Required component types
          * @return End iterator
          */
-        template<DerivedComponent... ComponentCls>
+        template<IsComponent... ComponentCls>
         [[nodiscard]] auto end();
 
         // ========================================= EntitiesArchetypeStorage =========================================
@@ -376,7 +376,7 @@ namespace ecs
          * @param location Location of entity
          * @return Pointer to component, or nullptr if not present
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] ComponentCls* TryGetComponent(const ArchetypedChunkEntityLocation& location);
 
         /**
@@ -385,7 +385,7 @@ namespace ecs
          * @param location Location of entity
          * @return Const pointer to component, or nullptr if not present
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] const ComponentCls* TryGetComponent(const ArchetypedChunkEntityLocation& location) const;
 
         /**
@@ -395,7 +395,7 @@ namespace ecs
          * @return Reference to component
          * @note Asserts that entity has this component
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] ComponentCls& GetComponent(const ArchetypedChunkEntityLocation& location);
 
         /**
@@ -405,7 +405,7 @@ namespace ecs
          * @return Const reference to component
          * @note Asserts that entity has this component
          */
-        template<DerivedComponent ComponentCls>
+        template<IsComponent ComponentCls>
         [[nodiscard]] const ComponentCls& GetComponent(const ArchetypedChunkEntityLocation& location) const;
 
     private:

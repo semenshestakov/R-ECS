@@ -50,7 +50,7 @@ namespace ecs
          *
          * @note Takes ownership of the systems manager via move semantics.
          */
-        explicit Registry(SystemsManager  systemManager);
+        explicit Registry(SystemsManager systemManager);
 
         Registry() = default;                                           ///< Default construction
         ~Registry() = default;                                          ///< Default destructor

@@ -127,11 +127,28 @@ ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_t chun
     if (!IsAlive(chunkEntityIndex))
         return nullptr;
 
+    if (componentId >= m_chunksByComponentId.size())
+        return nullptr;
+
+    const auto& componentChunks = m_chunksByComponentId[componentId];
+    if (componentChunks.empty())
+        return nullptr;
+
     const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
-    return &m_chunksByComponentId[componentId][chunkIndex][componentSize * localEntityIndex];
+    if (chunkIndex >= componentChunks.size())
+        return nullptr;
+
+    auto& chunk = componentChunks[chunkIndex];
+    if (!chunk)
+        return nullptr;
+
+    if (localEntityIndex >= MAX_ENTITIES_IN_CHUNK)
+        return nullptr;
+
+    return &chunk[componentSize * localEntityIndex];
 }
 
 const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId) const
@@ -139,11 +156,28 @@ const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_
     if (!IsAlive(chunkEntityIndex))
         return nullptr;
 
+    if (componentId >= m_chunksByComponentId.size())
+        return nullptr;
+
+    const auto& componentChunks = m_chunksByComponentId[componentId];
+    if (componentChunks.empty())
+        return nullptr;
+
     const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
-    return &m_chunksByComponentId[componentId][chunkIndex][componentSize * localEntityIndex];
+    if (chunkIndex >= componentChunks.size())
+        return nullptr;
+
+    auto& chunk = componentChunks[chunkIndex];
+    if (!chunk)
+        return nullptr;
+
+    if (localEntityIndex >= MAX_ENTITIES_IN_CHUNK)
+        return nullptr;
+
+    return &chunk[componentSize * localEntityIndex];
 }
 
 ecs::chunkEntityIndex_t ecs::ArchetypedChunks::getLastChunkEntityIndex() const

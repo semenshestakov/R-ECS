@@ -1,9 +1,10 @@
 #pragma once
 #include <cassert>
 #include "../EntityWrapper.hpp"
+#include "ecs/components/ComponentRegistrator.hpp"
 
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 ComponentCls& ecs::EntityWrapper::GetComponent()
 {
     ComponentCls* componentPtr = TryGetComponent<ComponentCls>();
@@ -11,7 +12,7 @@ ComponentCls& ecs::EntityWrapper::GetComponent()
     return *componentPtr;
 }
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 const ComponentCls& ecs::EntityWrapper::GetComponent() const
 {
     const ComponentCls* componentPtr = TryGetComponent<ComponentCls>();
@@ -19,14 +20,14 @@ const ComponentCls& ecs::EntityWrapper::GetComponent() const
     return *componentPtr;
 }
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntityWrapper::TryGetComponent()
 {
-    return reinterpret_cast<ComponentCls*>(GetComponentData(ComponentCls::componentId));
+    return reinterpret_cast<ComponentCls*>(GetComponentData(ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntityWrapper::TryGetComponent() const
 {
-    return reinterpret_cast<const ComponentCls*>(GetComponentData(ComponentCls::componentId));
+    return reinterpret_cast<const ComponentCls*>(GetComponentData(ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }

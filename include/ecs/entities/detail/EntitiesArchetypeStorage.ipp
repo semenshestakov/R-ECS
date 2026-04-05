@@ -1,5 +1,6 @@
 #pragma once
 #include "../EntitiesArchetypeStorage.hpp"
+#include "ecs/components/ComponentRegistrator.hpp"
 
 
 // ========================================= ArchetypedChunkEntityLocation =========================================
@@ -14,14 +15,14 @@
     return result;
 }
 
-template<ecs::DerivedComponent... ComponentCls>
+template<ecs::IsComponent... ComponentCls>
 /* static */ const ecs::Archetype& ecs::Archetype::GetArchetype()
 {
     static const Archetype s_archetype = []() {
         Archetype archetype;
         if(sizeof...(ComponentCls) > 0)
         {
-            archetype.componentsIds = {ComponentCls::componentId...};
+            archetype.componentsIds = {ComponentRegistrator::GetСomponentId<ComponentCls>()...};
             std::ranges::sort(archetype.componentsIds);
 
             archetype.hash = Archetype::GetArchetypeHash(
@@ -35,7 +36,7 @@ template<ecs::DerivedComponent... ComponentCls>
     return s_archetype;
 }
 
-template<ecs::DerivedComponent... ComponentCls>
+template<ecs::IsComponent... ComponentCls>
 bool ecs::Archetype::matchArchetype() const
 {
     static_assert(sizeof...(ComponentCls) > 0);
@@ -58,7 +59,7 @@ bool ecs::Archetype::matchArchetype() const
 
 // ====================================== EntitiesArchetypeStorage::iterator ======================================
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(EntitiesArchetypeStorage* storage, const bool isEnd) :
     m_storage(storage)
 {
@@ -73,7 +74,7 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(En
     advanceToNextValid();
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::reference
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*() const
 {
@@ -89,14 +90,14 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*()
     }
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::pointer
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator->() const
 {
     return &this->operator*();
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>&
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++()
 {
@@ -104,7 +105,7 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(
     return *this;
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(int)
 {
@@ -113,7 +114,7 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(
     return tmp;
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator==(const iterator& other) const
 {
     if(m_isEnded && other.m_isEnded)
@@ -123,27 +124,27 @@ bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operat
            m_currentArchetype == other.m_currentArchetype && m_entityLocation == other.m_entityLocation;
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator!=(const iterator& other) const
 {
     return !(*this == other);
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::begin() const
 {
     return iterator<ValueType, ComponentCls...>(m_storage, false);
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::end() const
 {
     return iterator<ValueType, ComponentCls...>(m_storage, true);
 }
 
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advance()
 {
     if(m_isEnded)
@@ -152,7 +153,7 @@ void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanc
     ++m_entityLocation.chunkEntityIndex;
     advanceToNextValid();
 }
-template<typename ValueType, ecs::DerivedComponent... ComponentCls>
+template<typename ValueType, ecs::IsComponent... ComponentCls>
 void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanceToNextValid()
 {
     const auto& storage = *m_storage;
@@ -192,13 +193,13 @@ void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanc
 
 // ===================================== EntitiesArchetypeStorage::begin | end =====================================
 
-template<ecs::DerivedComponent... ComponentCls>
+template<ecs::IsComponent... ComponentCls>
 auto ecs::EntitiesArchetypeStorage::begin()
 {
     return iterator<iter_value_type<ComponentCls...>, ComponentCls...>(this, false);
 }
 
-template<ecs::DerivedComponent... ComponentCls>
+template<ecs::IsComponent... ComponentCls>
 auto ecs::EntitiesArchetypeStorage::end()
 {
     return iterator<iter_value_type<ComponentCls...>, ComponentCls...>(this, true);
@@ -206,19 +207,19 @@ auto ecs::EntitiesArchetypeStorage::end()
 
 // ======================================= EntitiesArchetypeStorage::methods =======================================
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location)
 {
-    return reinterpret_cast<ComponentCls*>(GetComponentData(location, ComponentCls::componentId));
+    return reinterpret_cast<ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location) const
 {
-    return reinterpret_cast<const ComponentCls*>(GetComponentData(location, ComponentCls::componentId));
+    return reinterpret_cast<const ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location)
 {
     ComponentCls* componentData = TryGetComponent<ComponentCls>(location);
@@ -226,7 +227,7 @@ ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkE
     return *componentData;
 }
 
-template<ecs::DerivedComponent ComponentCls>
+template<ecs::IsComponent ComponentCls>
 const ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location) const
 {
     const ComponentCls* componentData = TryGetComponent<ComponentCls>(location);

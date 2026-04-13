@@ -50,7 +50,9 @@ namespace event
     }
 
     template<typename K, typename T> template<typename... Args>
-    bool ListenerSystem<K, T>::subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback)
+    bool ListenerSystem<K, T>::subscribe(
+        const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, int priority /* = 0 */
+        )
     {
         if (callback == nullptr)
             return false;
@@ -74,7 +76,7 @@ namespace event
         if (!listener)
             throw std::runtime_error("!smartEvent");
 
-        listener->subscribe(callback);
+        listener->subscribe(callback, priority);
         return true;
     }
 

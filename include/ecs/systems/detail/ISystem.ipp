@@ -34,11 +34,13 @@ auto ecs::ISystem<SystemCls>::RegisterEvent(void (SystemCls::*method)(Registry&,
     std::unique_ptr<EventListener<Event>> listenerPtr = std::make_unique<EventListener<Event>>();
     std::function<void(EventSystem&)> registerFunction = [this, listener = listenerPtr.get(),
                                                           method](EventSystem& eventSystem) {
-        eventSystem.Create<Registry&, const Event&>(getEventKey<Event>());
-        listener->subscribe(eventSystem.get<Registry&, const Event&>(getEventKey<Event>()),
-                            [this, method](Registry& registry, const Event& event) {
-                                (static_cast<SystemCls*>(this)->*method)(registry, event);
-                            });
+        eventSystem.Create<Registry&, const Event&>(TryGetKey<Event>());
+        listener->subscribe(
+            eventSystem.TryGet<Registry&, const Event&>(TryGetKey<Event>()),
+            [this, method](Registry& registry, const Event& event)
+            {
+                (static_cast<SystemCls*>(this)->*method)(registry, event);
+            });
     };
     m_registerEventFunctions.emplace_back(registerFunction);
     return listenerPtr;

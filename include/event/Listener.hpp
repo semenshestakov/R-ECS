@@ -50,12 +50,6 @@ namespace event
          */
         explicit Listener(Event_t* event);
 
-        /**
-         * @brief Constructs a listener with a single initial callback.
-         * @param event Pointer to the event
-         * @param callback The callback function to register immediately
-         */
-        Listener(Event_t* event, const Callback_t& callback);
 
         /**
          * @brief Constructs a listener with callback and custom deleter.
@@ -63,14 +57,7 @@ namespace event
          * @param callback The callback function to register
          * @param deleter Custom deleter for extended cleanup
          */
-        Listener(Event_t* event, const Callback_t& callback, const deleter_t& deleter);
-
-        /**
-         * @brief Constructs a listener with multiple initial callbacks.
-         * @param event Pointer to the event
-         * @param callbacks Vector of callbacks to register immediately
-         */
-        Listener(Event_t* event, const std::vector<Callback_t>&& callbacks);
+        Listener(Event_t* event, const Callback_t& callback, const deleter_t& deleter = nullptr);
 
         /**
          * @brief Constructs a listener with multiple callbacks and custom deleter.
@@ -78,7 +65,15 @@ namespace event
          * @param callbacks Vector of callbacks to register
          * @param deleter Custom deleter for extended cleanup
          */
-        Listener(Event_t* event, const std::vector<Callback_t>&& callbacks, const deleter_t& deleter);
+        Listener(Event_t* event, const std::vector<Callback_t>& callbacks, const deleter_t& deleter = nullptr);
+
+        /**
+         * @brief Constructs a listener with multiple callbacks and custom deleter.
+         * @param event Pointer to the event
+         * @param callbacksWithPriority Vector of Callbacks & Priority to register
+         * @param deleter Custom deleter for extended cleanup
+         */
+        Listener(Event_t* event, const std::vector<std::pair<Callback_t, int>>& callbacksWithPriority, const deleter_t& deleter = nullptr);
 
         // Non-copyable
         Listener(const Listener&) = delete;
@@ -104,25 +99,26 @@ namespace event
          * callback IDs, and deleter.
          * @param other The listener to swap with
          */
-        void swap(Listener && other);
+        void swap(Listener&& other);
 
         /**
-         * @brief Adds an additional callback to this listener.
+         * @brief Adds a callback to this listener.
          * @param callback The callback function to add
+         * @param priority The callback priority
          */
-        void subscribe(const Callback_t& callback);
+        void subscribe(const Callback_t& callback, int priority = 0);
 
         /**
          * @brief Adds a callback using a specified event.
          * @param event Pointer to the event to subscribe to
          * @param callback The callback function to add
+         * @param priority The callback priority
          *
          * @note This updates the listener's associated event to the provided one.
          *       Any previously associated event remains unchanged but the listener
          *       will now use this new event for future operations.
          */
-        void subscribe(Event_t* event, const Callback_t& callback);
-
+        void subscribe(Event_t* event, const Callback_t& callback, int priority = 0);
     };
 
     /**
@@ -132,7 +128,7 @@ namespace event
      * exactly one callback per event type. It uses `callbackId_t` as the storage type,
      * which is optimized for single callback management.
      *
-     * @tparam Args... The event argument types that the callback will receive
+     * @tparam Args The event argument types that the callback will receive
      *
      * @details
      * `SingleListener` is ideal for scenarios where you need to listen to an event

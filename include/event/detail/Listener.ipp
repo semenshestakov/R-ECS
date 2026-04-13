@@ -5,34 +5,30 @@ namespace event
 {
 
     template<typename T, typename... Args>
-    Listener<T, Args...>::Listener() : Listener(nullptr)
+    Listener<T, Args...>::Listener() :
+        Listener(nullptr)
     {
     }
 
     template<typename T, typename... Args>
-    Listener<T, Args...>::Listener(Event_t* event) : Listener(event, nullptr)
+    Listener<T, Args...>::Listener(Event_t* event) :
+        Listener(event, nullptr)
     {
     }
 
     template<typename T, typename... Args>
-    Listener<T, Args...>::Listener(Event_t* event, const Callback_t& callback) : Listener(event, callback, nullptr)
-    {
-    }
-
-    template<typename T, typename... Args>
-    Listener<T, Args...>::Listener(Event_t* event, const Callback_t& callback, const deleter_t& deleter) :
+    Listener<T, Args...>::Listener(
+        Event_t* event, const Callback_t& callback, const deleter_t& deleter /* = nullptr */
+        ) :
         AbstractListener<T>(event, deleter)
     {
         subscribe(callback);
     }
 
     template<typename T, typename... Args>
-    Listener<T, Args...>::Listener(Event_t* event, const std::vector<Callback_t>&& callbacks) : Listener(event, std::move(callbacks), nullptr)
-    {
-    }
-
-    template<typename T, typename... Args>
-    Listener<T, Args...>::Listener(Event_t* event, const std::vector<Callback_t>&& callbacks, const deleter_t& deleter) :
+    Listener<T, Args...>::Listener(
+        Event_t* event, const std::vector<Callback_t>& callbacks, const deleter_t& deleter /* = nullptr */
+        ) :
         AbstractListener<T>(event, deleter)
     {
         static_assert(!std::is_same_v<T, callbackId_t>, "T must not be equal to callbackId_t");
@@ -40,9 +36,24 @@ namespace event
         if(this->m_event == nullptr)
             return;
 
-        for(const auto callback: callbacks)
+        for(const auto callback : callbacks)
         {
             subscribe(callback);
+        }
+    }
+    template<typename T, typename... Args>
+    Listener<T, Args...>::Listener(
+        Event_t* event, const std::vector<std::pair<Callback_t, int>>& callbacksWithPriority, const deleter_t& deleter /* = nullptr */
+        )
+    {
+        static_assert(!std::is_same_v<T, callbackId_t>, "T must not be equal to callbackId_t");
+
+        if(this->m_event == nullptr)
+            return;
+
+        for(const auto [callback, priority] : callbacksWithPriority)
+        {
+            subscribe(callback, priority);
         }
     }
 
@@ -51,13 +62,13 @@ namespace event
     {
         this->swap(std::move(other));
     }
+
     template<typename T, typename... Args>
     Listener<T, Args...>& Listener<T, Args...>::operator=(Listener&& other) noexcept
     {
         this->swap(std::move(other));
         return *this;
     }
-
 
     template<typename T, typename... Args>
     void Listener<T, Args...>::swap(Listener&& other)
@@ -67,7 +78,7 @@ namespace event
     }
 
     template<typename T, typename... Args>
-    void Listener<T, Args...>::subscribe(const Callback_t& callback)
+    void Listener<T, Args...>::subscribe(const Callback_t& callback, int priority /* = 0 */)
     {
         if(this->m_event == nullptr || callback == nullptr)
             return;
@@ -78,7 +89,7 @@ namespace event
     }
 
     template<typename T, typename... Args>
-    void Listener<T, Args...>::subscribe(Event_t* event, const Callback_t& callback)
+    void Listener<T, Args...>::subscribe(Event_t* event, const Callback_t& callback, const int priority /* = 0 */)
     {
         if(this->m_event != nullptr)
         {
@@ -90,7 +101,7 @@ namespace event
             return;
 
         this->m_event = event;
-        subscribe(callback);
+        subscribe(callback, priority);
     }
 
 } // end namespace Event 

@@ -5,7 +5,6 @@
 #include "event/ListenerSystem.hpp"
 
 
-
 namespace event
 {
     struct AbstractEvent;
@@ -61,10 +60,33 @@ namespace event
          * @note If the event doesn't exist or has wrong signature, this function does nothing
          */
         template<class... Args>
-        void on(const K& key, Args&&... args);
+        void OnEvent(const K& key, Args&&... args);
 
+        /**
+         * @brief Retrieve an event by key if it exists
+         *
+         * @tparam Args Event argument types
+         * @param key Key of the event to retrieve
+         * @return Pointer to the event if found, otherwise nullptr
+         *
+         * @note Safe lookup — returns nullptr if event is not registered
+         */
         template<class... Args>
-        Event<Args...>* get(const K& key);
+        Event<Args...>* TryGet(const K& key);
+
+        /**
+         * @brief Retrieve a reference to an event by key
+         *
+         * @tparam Args Event argument types
+         * @param key Key of the event to retrieve
+         * @return Reference to the event
+         *
+         * @throws assert if event with given key does not exist
+         *
+         * @note Use when the event is guaranteed to exist
+         */
+        template<class... Args>
+        Event<Args...>& Get(const K& key);
 
         /**
          * @brief Check if an event with the given key exists

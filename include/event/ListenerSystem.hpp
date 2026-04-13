@@ -100,11 +100,12 @@ namespace event
          * @param key Unique identifier for this subscription
          * @param event Pointer to the event to subscribe to
          * @param callback The callback function to register
+         * @param priority The callback priority
          *
          * @note The system takes ownership of the created listener
          */
         template<typename... Args>
-        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
+        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, int priority = 0);
 
         /**
          * @brief Unsubscribes and removes a listener by its key.

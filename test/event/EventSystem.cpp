@@ -74,7 +74,7 @@ TEST_F(EventSystemTest, OnEventWithCorrectSignature)
     
     system.Create<int>("IntEvent");
 
-    auto* event = system.get<int>("IntEvent");
+    auto* event = system.TryGet<int>("IntEvent");
     ASSERT_NE(event, nullptr);
     
     SingleListener<int> listener(
@@ -83,7 +83,7 @@ TEST_F(EventSystemTest, OnEventWithCorrectSignature)
         );
     
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
-    system.on("IntEvent", 42);
+    system.OnEvent("IntEvent", 42);
 }
 
 
@@ -93,7 +93,7 @@ TEST_F(EventSystemTest, OnEventWithWrongSignature)
     
     system.Create<int>("IntEvent");
     
-    auto* event = system.get<int>("IntEvent");
+    auto* event = system.TryGet<int>("IntEvent");
     ASSERT_NE(event, nullptr);
     
     SingleListener<int> listener(
@@ -103,7 +103,7 @@ TEST_F(EventSystemTest, OnEventWithWrongSignature)
     
     // Trigger with wrong signature - should be ignored
     EXPECT_CALL(mock, callWithInt(_)).Times(0);
-    system.on("IntEvent", "wrong", "signature");  // Wrong number/type of args
+    system.OnEvent("IntEvent", "wrong", "signature");  // Wrong number/type of args
 }
 
 
@@ -113,7 +113,7 @@ TEST_F(EventSystemTest, OnEventWithNonExistentEvent)
     EXPECT_CALL(mock, call()).Times(0);
     
     // Trigger non-existent event - should do nothing
-    system.on("NonExistent");
+    system.OnEvent("NonExistent");
 }
 
 
@@ -124,8 +124,8 @@ TEST_F(EventSystemTest, MultipleEventsWithSameSignature)
     system.Create<int>("Event1");
     system.Create<int>("Event2");
 
-    auto* event1 = system.get<int>("Event1");
-    auto* event2 = system.get<int>("Event2");
+    auto* event1 = system.TryGet<int>("Event1");
+    auto* event2 = system.TryGet<int>("Event2");
     
     SingleListener<int> listener1(event1, [&mock](int v) { mock.callWithInt(v); });
     SingleListener<int> listener2(event2, [&mock](int v) { mock.callWithInt(v); });
@@ -133,8 +133,8 @@ TEST_F(EventSystemTest, MultipleEventsWithSameSignature)
     EXPECT_CALL(mock, callWithInt(100)).Times(1);
     EXPECT_CALL(mock, callWithInt(200)).Times(1);
     
-    system.on("Event1", 100);
-    system.on("Event2", 200);
+    system.OnEvent("Event1", 100);
+    system.OnEvent("Event2", 200);
 }
 
 
@@ -170,8 +170,8 @@ TEST_F(EventSystemEnumTest, CreateAndTriggerWithEnumKeys)
     EXPECT_FALSE(system.contains(EventType::GameStarted));
     
     // Setup listeners
-    auto* damageEvent = system.get<int>(EventType::PlayerDamaged);
-    auto* deathEvent = system.get<std::string>(EventType::PlayerDied);
+    auto* damageEvent = system.TryGet<int>(EventType::PlayerDamaged);
+    auto* deathEvent = system.TryGet<std::string>(EventType::PlayerDied);
 
     SingleListener<int> damageListener(damageEvent, 
         [&mock](int v) { mock.callWithInt(v); });
@@ -183,8 +183,8 @@ TEST_F(EventSystemEnumTest, CreateAndTriggerWithEnumKeys)
     EXPECT_CALL(mock, callWithInt(50)).Times(1);
     EXPECT_CALL(mock, callWithString("Game Over")).Times(1);
     
-    system.on<int>(EventType::PlayerDamaged, 50);
-    system.on<std::string>(EventType::PlayerDied, "Game Over");
+    system.OnEvent<int>(EventType::PlayerDamaged, 50);
+    system.OnEvent<std::string>(EventType::PlayerDied, "Game Over");
 }
 
 
@@ -196,8 +196,8 @@ TEST_F(EventSystemTest, IntegerKeys)
     intSystem.Create<int>(1);
     intSystem.Create<std::string>(2);
     
-    auto* event1 = intSystem.get<int>(1);
-    auto* event2 = intSystem.get<std::string>(2);
+    auto* event1 = intSystem.TryGet<int>(1);
+    auto* event2 = intSystem.TryGet<std::string>(2);
     
     SingleListener<int> listener1(event1, [&mock](int v) { mock.callWithInt(v); });
     SingleListener<std::string> listener2(event2, [&mock](const std::string& v) { mock.callWithString(v); });
@@ -205,8 +205,8 @@ TEST_F(EventSystemTest, IntegerKeys)
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
     EXPECT_CALL(mock, callWithString("test")).Times(1);
     
-    intSystem.on<int>(1, 42);
-    intSystem.on<std::string>(2, "test");
+    intSystem.OnEvent<int>(1, 42);
+    intSystem.OnEvent<std::string>(2, "test");
 }
 
 
@@ -230,7 +230,7 @@ TEST_F(EventSystemTest, ComplexEventTypes)
     
     system.Create<int, std::string, double>("ComplexEvent");
     
-    auto* event = system.get<int, std::string, double>("ComplexEvent");
+    auto* event = system.TryGet<int, std::string, double>("ComplexEvent");
     
     SingleListener<int, std::string, double> listener(event,
         [&mock](int i, const std::string& s, double d)
@@ -242,7 +242,7 @@ TEST_F(EventSystemTest, ComplexEventTypes)
     EXPECT_CALL(mock, callWithInt(42)).Times(1);
     EXPECT_CALL(mock, callWithString("test")).Times(1);
     
-    system.on<int, std::string, double>("ComplexEvent", 42, "test", 3.14);
+    system.OnEvent<int, std::string, double>("ComplexEvent", 42, "test", 3.14);
 }
 
 
@@ -260,7 +260,7 @@ TEST_F(EventSystemTest, PerfectForwarding)
     
     system.Create<MoveOnlyType>("MoveOnlyEvent");
     
-    auto* event = system.get<MoveOnlyType>("MoveOnlyEvent");
+    auto* event = system.TryGet<MoveOnlyType>("MoveOnlyEvent");
     
     bool callbackCalled = false;
     SingleListener<MoveOnlyType> listener(event,
@@ -271,7 +271,7 @@ TEST_F(EventSystemTest, PerfectForwarding)
         });
     
     MoveOnlyType mot(100);
-    system.on("MoveOnlyEvent", std::move(mot));
+    system.OnEvent("MoveOnlyEvent", std::move(mot));
     
     EXPECT_TRUE(callbackCalled);
 }

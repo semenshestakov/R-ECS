@@ -37,11 +37,11 @@ namespace ecs
      * @par Example:
      * @code
      * struct PlayerDiedEvent {};
-     * auto key = getEventKey<PlayerDiedEvent>(); // Unique identifier
+     * auto key = TryGetKey<PlayerDiedEvent>(); // Unique identifier
      * @endcode
      */
     template<class Event>
-    constexpr std::size_t getEventKey()
+    constexpr std::size_t TryGetKey()
     {
         return typeid(Event).hash_code();
     }

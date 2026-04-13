@@ -40,21 +40,30 @@ namespace event
 
     template<typename K>
     template<typename... Args>
-    void EventSystem<K>::on(const K& key, Args&&... args)
+    void EventSystem<K>::OnEvent(const K& key, Args&&... args)
     {
-        if(auto* event = get<Args...>(key))
+        if(auto* event = TryGet<Args...>(key))
             (*event)(std::forward<Args>(args)...);
     }
 
     template<typename K>
     template<class... Args>
-    Event<Args...>* EventSystem<K>::get(const K& key)
+    Event<Args...>* EventSystem<K>::TryGet(const K& key)
     {
         const auto it = m_eventsMap.find(key);
         if(it == m_eventsMap.end())
             return nullptr;
 
         return dynamic_cast<Event<Args...>*>(it->second.get());
+    }
+
+    template<typename K>
+    template<class... Args>
+    Event<Args...>& EventSystem<K>::Get(const K& key)
+    {
+        Event<Args...>* event = TryGet<Args...>(key);
+        assert(event != nullptr);
+        return *event;
     }
 
     template<typename K>

@@ -141,21 +141,6 @@ TEST_F(EventTest, TriggerWithTwoIntArguments)
 }
 
 
-TEST_F(EventTest, AddAny)
-{
-    Event<int> event;
-    EventMockCallback mock;
-
-    EXPECT_CALL(mock, callWithInt(10)).Times(1);
-
-    {
-        AbstractEvent& abstractEvent = event;
-        abstractEvent.addAny(std::make_any<decltype(event)::Callback>( [&mock](int a) { mock.callWithInt(a); }));
-    }
-    event(10);
-}
-
-
 TEST_F(EventTest, TriggerWithMixedArguments)
 {
     Event<int, std::string, double> event;

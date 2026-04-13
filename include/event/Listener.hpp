@@ -40,7 +40,7 @@ namespace event
     {
     public:
         using Callback_t = eventCallback_t<Args...> ;                   ///< Type alias for the callback signature
-        using Event_t = Event<Args...>;                                ///< Type alias for the specific event type
+        using Event_t = Event<Args...>;                                 ///< Type alias for the specific event type
 
         /**
          * @brief Default constructor creating an empty listener.

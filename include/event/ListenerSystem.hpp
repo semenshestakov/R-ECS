@@ -106,18 +106,6 @@ namespace event
         bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
 
         /**
-         * @brief Type-erased subscription method for use with CallbackCollector.
-         * @param key The key identifying the subscription
-         * @param event Pointer to the abstract event
-         * @param callback The callback stored in std::any
-         * @return true if subscription succeeded, false otherwise
-         *
-         * @note This method attempts to cast the std::any to the correct callback type
-         *       based on the event's type information.
-         */
-        bool subscribeAny(const K& key, AbstractEvent*, const std::any& callback);
-
-        /**
          * @brief Unsubscribes and removes a listener by its key.
          *
          * @param key The key identifying the listener to remove

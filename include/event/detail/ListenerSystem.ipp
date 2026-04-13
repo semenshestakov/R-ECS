@@ -79,21 +79,6 @@ namespace event
     }
 
     template<typename K, typename T>
-    bool ListenerSystem<K, T>::subscribeAny(const K& key, AbstractEvent* event, const std::any& callback)
-    {
-        const auto [isReg, it] = isRegistered(key, event);
-        if (!isReg)
-            return false;
-
-        AbstractSmartListener_t* absListener = it->second.get();
-        if (absListener->eventId() != event->id)
-            throw std::runtime_error("eventId != newEventId");
-
-        absListener->addCallbackAny(callback);
-        return true;
-    }
-
-    template<typename K, typename T>
     void ListenerSystem<K, T>::unsubscribe(const K& key)
     {
         auto it = m_mapListeners.find(key);

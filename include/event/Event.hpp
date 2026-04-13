@@ -40,17 +40,6 @@ namespace event
         callbackId_t add(const Callback& callback);
 
         /**
-         * @brief Adds a type-erased callback stored in std::any
-         * @param callback The callback wrapped in std::any
-         * @return Unique callback ID, or INVALID_CALLBACK_ID if cast fails
-         *
-         * Attempts to cast the std::any to the expected Callback type.
-         * If the cast succeeds, the callback is added normally.
-         * If the cast fails, returns INVALID_CALLBACK_ID and does nothing.
-         */
-        callbackId_t addAny(const std::any& callback) override;
-
-        /**
          * @brief Factory method to create concrete event instance.
          */
         [[nodiscard]] AbstractEvent* New() const override;

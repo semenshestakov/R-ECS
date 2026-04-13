@@ -104,15 +104,6 @@ namespace event
     }
 
     template<ValidCallbackIdType T>
-    void AbstractListener<T>::addCallbackAny(const std::any& callback) const
-    {
-        if (m_event == nullptr)
-            return;
-
-        m_event->addAny(callback);
-    }
-
-    template<ValidCallbackIdType T>
     void AbstractListener<T>::unsubscribeAll()
     {
         if constexpr (std::is_same_v<T, callbackId_t>)

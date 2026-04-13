@@ -14,14 +14,6 @@ namespace event
     }
 
     template<typename... Args>
-    callbackId_t Event<Args...>::addAny(const std::any& callback)
-    {
-        if (callback.type() != typeid(Callback))
-            return INVALID_CALLBACK_ID;
-        return add(std::any_cast<Callback>(callback));
-    }
-
-    template<typename... Args>
     AbstractEvent* Event<Args...>::New() const
     {
        return new Event();

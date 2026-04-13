@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LISTENER_SYSTEM_HPP
+#define LISTENER_SYSTEM_HPP
 #include "AbstractListener.hpp"
 #include "Listener.hpp"
 
@@ -146,6 +147,6 @@ namespace event
     };
 
 }
-
+#endif
 #include "detail/ListenerSystem.ipp"
 

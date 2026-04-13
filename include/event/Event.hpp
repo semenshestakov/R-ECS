@@ -1,7 +1,5 @@
-#pragma once
-#include <map>
-#include <any>
-
+#ifndef EVENT_T_HPP
+#define EVENT_T_HPP
 #include "AbstractEvent.hpp"
 #include "EventUtils.hpp"
 
@@ -12,7 +10,7 @@ namespace event
     /**
      * Typed event implementation supporting variadic arguments.
      *
-     * @tparam Args... Event argument types
+     * @tparam Args Event argument types
      *
      * @note Final class - not intended for further derivation
      * @note Non-copyable, non-movable
@@ -72,5 +70,5 @@ namespace event
     };
 
 }
-
+#endif
 #include "detail/Event.ipp"

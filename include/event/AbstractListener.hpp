@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ABSTRACT_LISTENER_HPP
+#define ABSTRACT_LISTENER_HPP
 #include "EventUtils.hpp"
 #include "AbstractEvent.hpp"
 
@@ -134,4 +135,5 @@ namespace event
     };
 
 }
+#endif
 #include "detail/AbstractListener.ipp"

@@ -1,9 +1,6 @@
-#pragma once
-#include <algorithm>
-#include <utility>
-
+#ifndef LISTENER_HPP
+#define LISTENER_HPP
 #include "AbstractListener.hpp"
-#include "Event.hpp"
 
 
 namespace event
@@ -176,6 +173,6 @@ namespace event
     template<typename... Args>
     using SingleListener = Listener<callbackId_t, Args...>;
 }
-
+#endif
 
 #include "detail/Listener.ipp"

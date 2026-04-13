@@ -1,4 +1,5 @@
-#pragma once
+#ifndef EVENT_SYSTEM_HPP
+#define EVENT_SYSTEM_HPP
 #include <unordered_map>
 #include "event/Event.hpp"
 #include "event/ListenerSystem.hpp"
@@ -86,4 +87,5 @@ namespace event
     };
 
 } // namespace event
+#endif
 #include "detail/EventSystem.ipp"

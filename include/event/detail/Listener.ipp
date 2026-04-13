@@ -1,6 +1,4 @@
 #pragma once
-#include <memory>
-#include <stdexcept>
 #include "../Listener.hpp"
 
 namespace event

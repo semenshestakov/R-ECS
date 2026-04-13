@@ -51,7 +51,7 @@ namespace event
 
     template<typename K, typename T> template<typename... Args>
     bool ListenerSystem<K, T>::subscribe(
-        const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, int priority /* = 0 */
+        const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, priority_t priority /* = DEFAULT_PRIORITY */
         )
     {
         if (callback == nullptr)

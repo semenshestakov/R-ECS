@@ -22,8 +22,8 @@ namespace event
         using Callback = eventCallback_t<Args...>;
         struct Entry
         {
-            callbackId_t id{};
-            int priority{};
+            callbackId_t id = INVALID_CALLBACK_ID;
+            priority_t priority = DEFAULT_PRIORITY;
             Callback callback;
             bool removed = false;
         };
@@ -43,7 +43,7 @@ namespace event
          * @param priority Priority
          * @return Unique callback ID for later removal
          */
-        callbackId_t add(const Callback& callback, int priority = 0);
+        callbackId_t add(const Callback& callback, priority_t priority = DEFAULT_PRIORITY);
 
         /**
          * @brief Factory method to create concrete event instance.

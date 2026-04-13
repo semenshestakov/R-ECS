@@ -1,4 +1,5 @@
 #pragma once
+#include "event/EventUtils.hpp"
 
 
 namespace event
@@ -67,7 +68,19 @@ namespace ecs
     {
         const char* nameFactory;            ///< Identifier for the systemsManager or creator of this system
         void* args;                         ///< Pointer to system-specific initialization arguments
-        EventSystem& eventSystem;           ///< Ref local Event System for ECS
+    };
+
+    /**
+     * @brief Initialization state for system event subscription.
+     *
+     * Contains required context for subscribing a system to the ECS event system,
+     * including a reference to the event dispatcher and optional priority for
+     * ordering event processing.
+     */
+    struct SubscribeState
+    {
+        std::reference_wrapper<EventSystem> eventSystem;       ///< Reference to the ECS event system used for subscriptions
+        event::priority_t priority = event::DEFAULT_PRIORITY;  ///< Priority of the system in event processing order (higher = earlier execution)
     };
 
     /**

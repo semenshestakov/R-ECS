@@ -47,7 +47,13 @@ namespace ecs
          */
         [[nodiscard]] virtual IBaseSystem* New() const = 0;
 
-
+        /**
+         * @brief Returns the system name identifier.
+         *
+         * Used for debugging, logging, and system registration.
+         *
+         * @return std::string_view Name of the system.
+         */
         [[nodiscard]] virtual std::string_view name() const { static constexpr char s_name[] = "IBaseSystem"; return s_name;};
 
         /**
@@ -61,7 +67,18 @@ namespace ecs
          * @throw DoubleInitialization if System is inited
          * @param state Structure containing initialization parameters
          */
-        virtual void Init(const InitState& state){ if (m_isInit) {throw error::DoubleInitialization("Init::%s", this->name());} m_isInit = true;}
+        virtual void Init(const InitState& state);
+
+        /**
+         * @brief Subscribes the system to the event system.
+         *
+         * Called after initialization to register system callbacks into the
+         * ECS event infrastructure. Derived systems must implement this method
+         * to bind their event handlers using the provided EventSystem instance.
+         *
+         * @param state Structure containing event system reference and subscription parameters.
+         */
+        virtual void Subscribe(const SubscribeState& state) = 0;
 
         /**
          * @brief Performs the system's main logic for a single update cycle.
@@ -92,4 +109,14 @@ namespace ecs
         bool m_isInit = false;
 
     };
-}
+
+    inline void IBaseSystem::Init(const InitState& state)
+    {
+        if (m_isInit)
+        {
+            throw error::DoubleInitialization("Init::%s", this->name());
+        }
+        m_isInit = true;
+    }
+
+} // namespace ecs

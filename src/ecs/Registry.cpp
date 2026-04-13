@@ -11,7 +11,10 @@ ecs::Registry::Registry(SystemsManager systemManager) :
 
 bool ecs::Registry::Init(void* args /* = nullptr */)
 {
-    return m_systemManager.Init({"", args, m_eventSystem});
+    const bool result = m_systemManager.Init({"", args});
+    if (result)
+        return result&m_systemManager.Subscribe({m_eventSystem});
+    return result;
 }
 
 void ecs::Registry::Update()

@@ -104,6 +104,25 @@ namespace ecs
         [[maybe_unused]] bool Init(const InitState &state);
 
         /**
+         * @brief Subscribes all registered systems to the event system with stage-based priority.
+         *
+         * Iterates through the internal system schedule and subscribes each system
+         * to the provided EventSystem using a computed priority value.
+         *
+         * Priority is assigned based on system execution stage:
+         * - The first stage receives the highest priority (MAX_PRIORITY)
+         * - Each subsequent stage receives a decremented priority value
+         *
+         * This ensures deterministic ordering of system callbacks during event dispatch.
+         *
+         * @param state Subscription state containing the EventSystem reference and base configuration.
+         *               A local copy is created for each system with an assigned priority.
+         *
+         * @return true Always returns true after successful subscription of all systems.
+         */
+        [[maybe_unused]] bool Subscribe(const SubscribeState& state);
+
+        /**
          * @brief Updates all systems or systems with a specific update tag.
          *
          * Executes the Update method on all registered systems, optionally filtered by

@@ -105,7 +105,7 @@ namespace event
          * @note The system takes ownership of the created listener
          */
         template<typename... Args>
-        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, int priority = 0);
+        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, priority_t priority = DEFAULT_PRIORITY);
 
         /**
          * @brief Unsubscribes and removes a listener by its key.

@@ -1,5 +1,6 @@
-#include "ecs/systems/SystemsManager.hpp"
 #include <ranges>
+#include "event/EventUtils.hpp"
+#include "ecs/systems/SystemsManager.hpp"
 
 
 ecs::SystemsManager::SystemsManager() = default;
@@ -48,6 +49,23 @@ bool ecs::SystemsManager::Init(const InitState& state)
             system->Init(state);
     }
     m_schedule.Init();
+    return true;
+}
+
+bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
+{
+    event::priority_t priority = event::MAX_PRIORITY;
+    for(const auto& stageSystems: m_schedule)
+    {
+        for(auto& systemHash: stageSystems)
+        {
+            SubscribeState localState = state;
+            localState.priority = priority;
+
+            m_systemsMap[systemHash]->Subscribe(localState);
+        }
+        --priority;
+    }
     return true;
 }
 

@@ -54,6 +54,7 @@ namespace ecs
         friend class SystemsManager;
         using Super = ISystem<SystemCls>;                   ///< @brief Alias for the base class (ISystem<SystemCls>)
         using SelfSystemCls = SystemCls;                    ///< @brief Alias for the concrete system class
+
                                                             ///  @brief Event listener type alias for a specific event
                                                             ///  @tparam Event The event type to listen for
         template <class Event> using EventListener = event::Listener<event::callbackId_t, Registry&, const Event&>;
@@ -87,6 +88,27 @@ namespace ecs
          * @note Implements IBaseSystem interface
          */
         void Init(const InitState& state) override;
+
+        /**
+         * @brief Subscribes the system's event registrations to the provided EventSystem.
+         *
+         * Executes all previously registered event-binding functions stored in the system
+         * and attaches them to the given EventSystem instance. Each function typically
+         * binds the system's handlers to specific events.
+         *
+         * After successful subscription, the internal list of registration functions
+         * is cleared to prevent duplicate subscriptions.
+         *
+         * @tparam SystemCls Concrete system class type used for CRTP-based system design.
+         *
+         * @param state Subscription state containing a reference to the EventSystem
+         *              and additional subscription parameters such as priority.
+         *
+         * @note This method is typically called once during system initialization.
+         * @note After execution, m_registerEventFunctions is cleared and cannot be reused
+         *       unless re-populated explicitly.
+         */
+        void Subscribe(const SubscribeState& state) override;
 
     DEEP_TEST_PROTECTED_ACCESS:
         /**
@@ -170,7 +192,7 @@ namespace ecs
          * Stores lambdas that will register event listeners when the event system
          * becomes available during system initialization.
          */
-        std::vector<std::function<void(EventSystem&)>> m_registerEventFunctions;
+        std::vector<std::function<void(EventSystem&, event::priority_t)>> m_registerEventFunctions;
     };
 
 } // namespace ecs

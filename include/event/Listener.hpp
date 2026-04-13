@@ -106,7 +106,7 @@ namespace event
          * @param callback The callback function to add
          * @param priority The callback priority
          */
-        void subscribe(const Callback_t& callback, int priority = 0);
+        void subscribe(const Callback_t& callback, priority_t priority = DEFAULT_PRIORITY);
 
         /**
          * @brief Adds a callback using a specified event.
@@ -118,7 +118,7 @@ namespace event
          *       Any previously associated event remains unchanged but the listener
          *       will now use this new event for future operations.
          */
-        void subscribe(Event_t* event, const Callback_t& callback, int priority = 0);
+        void subscribe(Event_t* event, const Callback_t& callback, priority_t priority = DEFAULT_PRIORITY);
     };
 
     /**

@@ -78,18 +78,20 @@ namespace event
     }
 
     template<typename T, typename... Args>
-    void Listener<T, Args...>::subscribe(const Callback_t& callback, int priority /* = 0 */)
+    void Listener<T, Args...>::subscribe(const Callback_t& callback, priority_t priority /* = DEFAULT_PRIORITY */)
     {
         if(this->m_event == nullptr || callback == nullptr)
             return;
 
         auto* event = dynamic_cast<Event<Args...>*>(this->m_event);
         if(event != nullptr)
-            this->addCallbackId(event->add(callback));
+            this->addCallbackId(event->add(callback, priority));
     }
 
     template<typename T, typename... Args>
-    void Listener<T, Args...>::subscribe(Event_t* event, const Callback_t& callback, const int priority /* = 0 */)
+    void Listener<T, Args...>::subscribe(
+        Event_t* event, const Callback_t& callback, const priority_t priority /* = DEFAULT_PRIORITY */
+        )
     {
         if(this->m_event != nullptr)
         {

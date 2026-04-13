@@ -372,7 +372,7 @@ TEST_F(EventTest, MixedPrioritiesExecutionOrderIsCorrect)
     event.add([&]() { order.push_back(2); }, 100);
     event.add([&]() { order.push_back(3); }, 50);
     event.add([&]() { order.push_back(4); }, 50);
-    event.add([&]() { order.push_back(5); }, 0);
+    event.add([&]() { order.push_back(5); }, -1);
 
     event();
 

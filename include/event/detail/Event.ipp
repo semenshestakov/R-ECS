@@ -6,7 +6,7 @@ namespace event
 {
 
     template<typename... Args>
-    callbackId_t Event<Args...>::add(const Callback& callback, const int priority /* = 0 */)
+    callbackId_t Event<Args...>::add(const Callback& callback, const priority_t priority /* = DEFAULT_PRIORITY */)
     {
         callbackId_t id = m_lastCallbackId++;
 

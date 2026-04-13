@@ -12,6 +12,10 @@ namespace event
     constexpr eventId_t INVALID_CALLBACK_ID = 0;
     using deleter_t = std::function<void(callbackId_t)>;
 
+    using priority_t = std::int32_t;
+    constexpr priority_t DEFAULT_PRIORITY = 0;
+    constexpr priority_t MAX_PRIORITY = std::numeric_limits<priority_t>::max();
+
     template<typename... Args> using eventCallback_t = std::function<void(Args...)>;
 
     // = = = = = = = = = = = = = = = = = = = = make callback = = = = = = = = = = = = = = = = = = = = 

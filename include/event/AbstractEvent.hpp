@@ -22,7 +22,7 @@ namespace event
          * Remove a callback by its ID.
          * @param callbackId ID of callback to remove
          */
-        virtual void remove(const callbackId_t& callbackId) = 0;
+        virtual void remove(callbackId_t callbackId) = 0;
 
         /**
          * @brief Factory method to create concrete event instance.

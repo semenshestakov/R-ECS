@@ -22,9 +22,16 @@ namespace event
     {
         /// Callback signature type
         using Callback = eventCallback_t<Args...>;
+        struct Entry
+        {
+            callbackId_t id{};
+            int priority{};
+            Callback callback;
+            bool removed = false;
+        };
 
         Event() = default;
-        ~Event() = default;
+        ~Event() override = default;
 
         // Non-copyable, non-movable
         Event(const Event&) = delete;
@@ -35,9 +42,10 @@ namespace event
         /**
          * Register a callback for this event.
          * @param callback Function to call when event is triggered
+         * @param priority Priority
          * @return Unique callback ID for later removal
          */
-        callbackId_t add(const Callback& callback);
+        callbackId_t add(const Callback& callback, int priority = 0);
 
         /**
          * @brief Factory method to create concrete event instance.
@@ -48,7 +56,7 @@ namespace event
          * Remove callback by ID.
          * @param callbackId ID returned by add()
          */
-        void remove(const callbackId_t& callbackId) override;
+        void remove(callbackId_t callbackId) override;
 
         /**
          * Trigger the event, calling all registered callbacks.
@@ -56,10 +64,11 @@ namespace event
          */
         void operator()(Args... args);
     
-    protected:
-        std::map<callbackId_t, Callback> m_callbacksMap;                              ///< Callback storage (sorted by ID)
-        callbackId_t m_lastCallbackId = INVALID_CALLBACK_ID + 1;                      ///< Next callback ID
-        
+    private:
+        std::vector<Entry> m_callbacks;                                                 ///< Callback storage (sorted by ID)
+        callbackId_t m_lastCallbackId = INVALID_CALLBACK_ID + 1;                        ///< Next callback ID
+        bool m_dispatching = false;
+
     };
 
 }

@@ -16,7 +16,7 @@ namespace event
      * @tparam K The key type used as event key (e.g., std::string, enum class, int)
      */
     template<typename K /* key */>
-    class EventSystem final
+    class EventSystem
     {
     public:
         EventSystem();

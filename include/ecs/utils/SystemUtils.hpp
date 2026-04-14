@@ -42,19 +42,18 @@ namespace ecs
      * @endcode
      */
     template<class Event>
-    constexpr std::size_t TryGetKey()
+    constexpr std::size_t GetEventKey()
     {
         return typeid(Event).hash_code();
     }
 
     /**
-     * @brief ECS-specific event system type alias
+     * @brief ECS-specific event system class
      *
      * Specializes the generic EventSystem to use eventKey_t (std::size_t)
      * as the key type for event identification within the ECS.
      */
-    using EventSystem = event::EventSystem<eventKey_t>;
-
+    class EventSystem;
 
     /**
      * @brief Structure containing initialization parameters for system startup.

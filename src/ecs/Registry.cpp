@@ -5,8 +5,15 @@
 
 
 ecs::Registry::Registry(SystemsManager systemManager) :
-    m_systemManager(std::move(systemManager))
+    m_systemManager(std::move(systemManager)),
+    m_eventSystem(*this)
 {
+}
+
+ecs::Registry::Registry() :
+     m_eventSystem(*this)
+{
+
 }
 
 bool ecs::Registry::Init(void* args /* = nullptr */)

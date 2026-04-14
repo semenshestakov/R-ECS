@@ -2,7 +2,7 @@
 #include "collections/Context.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 #include "entities/EntitiesManager.hpp"
-#include "event/EventSystem.hpp"
+#include "systems/EventSystem.hpp"
 #include "systems/SystemsManager.hpp"
 
 
@@ -52,7 +52,7 @@ namespace ecs
          */
         explicit Registry(SystemsManager systemManager);
 
-        Registry() = default;                                           ///< Default construction
+        Registry();                                                     ///< Default construction
         ~Registry() = default;                                          ///< Default destructor
         Registry(Registry&&) noexcept = default;                        ///< Move constructible
         Registry& operator=(Registry&&) noexcept = default;             ///< Move assignable

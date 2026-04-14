@@ -1,5 +1,6 @@
 #pragma once
 #include "ecs/ISystem.hpp"
+#include "ecs/systems/EventSystem.hpp"
 
 
 template<typename SystemCls>
@@ -42,9 +43,9 @@ auto ecs::ISystem<SystemCls>::RegisterEvent(
         EventSystem& eventSystem, event::priority_t priority
         )
     {
-        eventSystem.Create<Registry&, const Event&>(TryGetKey<Event>());
+        eventSystem.Create<Registry&, const Event&>(GetEventKey<Event>());
         listener->subscribe(
-            eventSystem.TryGet<Registry&, const Event&>(TryGetKey<Event>()),
+            eventSystem.TryGet<Registry&, const Event&>(GetEventKey<Event>()),
             [this, method](Registry& registry, const Event& event)
             {
                 (static_cast<SystemCls*>(this)->*method)(registry, event);

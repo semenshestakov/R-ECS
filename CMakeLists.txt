@@ -53,6 +53,7 @@ if(TEST_ENABLE)
             test/collections/DirectedAcyclicGraph.cpp
             test/ecs/AutoRegistration.cpp
             test/ecs/EntitiesManager.cpp
+            test/ecs/SystemsEvent.cpp
             test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
     )

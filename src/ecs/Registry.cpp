@@ -1,7 +1,5 @@
 #include "ecs/Registry.hpp"
-
 #include <utility>
-#include "ecs/utils/RegistryError.hpp"
 
 
 ecs::Registry::Registry(SystemsManager systemManager) :
@@ -27,4 +25,5 @@ bool ecs::Registry::Init(void* args /* = nullptr */)
 void ecs::Registry::Update()
 {
     m_systemManager.Update(*this);
+    m_eventSystem.FlushEvents({});
 }

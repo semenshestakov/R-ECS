@@ -25,6 +25,8 @@ namespace ecs
         /// Bring base class overloads of OnEvent into the current scope
         /// so that they are not hidden by the templated ECS-specific OnEvent(Event) method.
         using Super::OnEvent;
+        using Super::PushEvent;
+        using Super::FlushEvents;
 
     public:
         /**

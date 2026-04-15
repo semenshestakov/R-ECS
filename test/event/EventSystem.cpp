@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <string>
 #include "event/EventSystem.hpp"
-#include "event/Listener.hpp"
+#include "TrackedObj.hpp"
 
 
 using namespace event;
@@ -274,4 +274,181 @@ TEST_F(EventSystemTest, PerfectForwarding)
     system.OnEvent("MoveOnlyEvent", std::move(mot));
     
     EXPECT_TRUE(callbackCalled);
+}
+
+
+TEST_F(EventSystemTest, PushEvent_DoesNotTriggerImmediately)
+{
+    EventSystemMockCallback mock;
+
+    system.Create<>("test");
+
+    EXPECT_CALL(mock, call()).Times(0);
+
+    system.Get<>("test").add([&]() { mock.call(); });
+
+    system.PushEvent("test");
+}
+
+
+TEST_F(EventSystemTest, FlushEvents_TriggersQueuedEvents)
+{
+    EventSystemMockCallback mock;
+
+    system.Create<>("test");
+
+    EXPECT_CALL(mock, call()).Times(1);
+
+    system.Get<>("test").add([&]() { mock.call(); });
+
+    system.PushEvent("test");
+    system.FlushEvents();
+}
+
+
+TEST_F(EventSystemTest, FlushEvents_ProcessesEventsInOrder)
+{
+    std::vector<int> order;
+
+    system.Create<>("e1");
+    system.Create<>("e2");
+
+    system.Get<>("e1").add([&]() { order.push_back(1); });
+    system.Get<>("e2").add([&]() { order.push_back(2); });
+
+    system.PushEvent("e1");
+    system.PushEvent("e2");
+
+    system.FlushEvents();
+
+    ASSERT_EQ(order.size(), 2);
+    EXPECT_EQ(order[0], 1);
+    EXPECT_EQ(order[1], 2);
+}
+
+
+TEST_F(EventSystemTest, FlushEvents_ClearsQueue)
+{
+    EventSystemMockCallback mock;
+
+    system.Create<>("test");
+
+    EXPECT_CALL(mock, call()).Times(1);
+
+    system.Get<>("test").add([&]() { mock.call(); });
+
+    system.PushEvent("test");
+    system.FlushEvents();
+
+    system.FlushEvents();
+}
+
+
+TEST_F(EventSystemTest, PushEvent_WithArguments)
+{
+    EventSystemMockCallback mock;
+
+    system.Create<int>("test");
+
+    EXPECT_CALL(mock, callWithInt(42)).Times(1);
+
+    system.Get<int>("test").add(
+        [&](int v) { mock.callWithInt(v); });
+
+    system.PushEvent("test", 42);
+    system.FlushEvents();
+}
+
+
+TEST_F(EventSystemTest, PushEvent_WithMultipleArguments)
+{
+    EventSystemMockCallback mock;
+
+    system.Create<int, int>("test");
+
+    EXPECT_CALL(mock, callWithTwoInts(10, 20)).Times(1);
+
+    system.Get<int, int>("test").add(
+        [&](int a, int b) { mock.callWithTwoInts(a, b); });
+
+    system.PushEvent("test", 10, 20);
+    system.FlushEvents();
+}
+
+
+TEST_F(EventSystemTest, PushEvent_NonExistentEvent_DoesNothing)
+{
+    EXPECT_NO_THROW(system.PushEvent("unknown"));
+    EXPECT_NO_THROW(system.FlushEvents());
+}
+
+
+TEST_F(EventSystemTest, PushEvent_DuringFlush_ExecutedNextFlush)
+{
+    std::vector<int> order;
+
+    system.Create<>("test");
+
+    system.Get<>("test").add([&]()
+    {
+        order.push_back(1);
+        system.PushEvent("test"); // enqueue during flush
+    });
+
+    system.PushEvent("test");
+    system.FlushEvents();
+
+    ASSERT_EQ(order.size(), 1);
+
+    system.FlushEvents();
+
+    ASSERT_EQ(order.size(), 2);
+}
+
+
+TEST_F(EventSystemTest, PushEvent_NoExtraCopies)
+{
+    TrackedObj::Reset();
+
+    system.Create<TrackedObj>("test");
+
+    EventSystemMockCallback mock;
+
+    EXPECT_CALL(mock, call()).Times(1);
+
+    system.Get<TrackedObj>("test").add([&](TrackedObj t)
+    {
+        mock.call();
+    });
+
+    TrackedObj obj(42);
+
+    system.PushEvent("test", obj);   // <-- lvalue
+    system.FlushEvents();
+
+
+    EXPECT_LE(TrackedObj::copyCount, 1);
+}
+
+
+TEST_F(EventSystemTest, PushEvent_UsesMoveForPValue)
+{
+    TrackedObj::Reset();
+
+    system.Create<TrackedObj>("test");
+
+    EventSystemMockCallback mock;
+
+    EXPECT_CALL(mock, call()).Times(1);
+
+    system.Get<TrackedObj>("test").add([&](TrackedObj t)
+    {
+        mock.call();
+    });
+
+    system.PushEvent("test", TrackedObj(42));  // pvalue
+    system.FlushEvents();
+
+    EXPECT_EQ(TrackedObj::copyCount, 0);
+    EXPECT_GE(TrackedObj::moveCount, 1);
 }

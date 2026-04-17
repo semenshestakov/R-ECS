@@ -142,6 +142,37 @@ namespace ecs
          *       have executed, or immediately based on event system configuration.
          */
         void Update();
+
+        /**
+         * @brief Creates a fully configured registry by name
+         * @param name The registry name used to look up system configurations
+         * @return Registry A new registry instance with pre-registered systems
+         *
+         * Factory method that creates a Registry with systems automatically registered
+         * based on the named configuration. This is the preferred way to create a
+         * registry when using declarative system registration.
+         *
+         * The method:
+         * 1. Looks up registry information by name from RegistryRegistrator
+         * 2. Creates a SystemsManager with all systems registered to this registry
+         * 3. Returns a Registry instance owning that SystemsManager
+         *
+         * @pre Registry with given name must have been registered with RegistryRegistrator
+         * @throws assert if registry name not found
+         *
+         * @par Example:
+         * @code
+         * auto registry = Registry::Create("game_world");
+         * registry.Init();
+         * while (running) {
+         *     registry.Update();
+         * }
+         * @endcode
+         *
+         * @see RegistryRegistrator
+         * @see SystemsManager::Create
+         */
+        static Registry Create(const std::string& name);
     };
 
 } // namespace ecs

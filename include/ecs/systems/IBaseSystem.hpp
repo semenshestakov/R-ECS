@@ -90,7 +90,7 @@ namespace ecs
          * @param registry Reference to the main ECS Registry for entity operations
          * @param state Structure containing update context information
          */
-        virtual void Update(Registry& registry, const UpdateState& state) {};
+        virtual void Update(Registry& registry, const UpdateState& state) {}
 
         /**
          * @brief Checks if the system has been initialized.
@@ -118,5 +118,6 @@ namespace ecs
         }
         m_isInit = true;
     }
+    using baseSystemPtr_t = std::unique_ptr<IBaseSystem>;                           ///< Type alias for system ownership
 
 } // namespace ecs

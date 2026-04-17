@@ -19,7 +19,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
 {
     Super registrator = Super::Create<ComponentCls>(typeid(ComponentCls).name());
 
-    const std::size_t& index = Super::getIndex(registrator);
+    const std::size_t& index = registrator.getIndex();
     Super::setIndex(registrator, Super::INVALID_INDEX);
 
     const auto componentId = static_cast<componentId_t>(index + 1);

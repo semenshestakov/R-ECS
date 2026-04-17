@@ -129,7 +129,12 @@ namespace ecs
     template<class Event>
     void EventSystem::PushEvent(Event&& event)
     {
-        Super::PushEvent<Registry&, const Event&>(GetEventKey<Event>(), m_registryRef.get(), std::forward<Event>(event));
+        using Decayed = std::decay_t<Event>;
+        m_eventQueue.emplace_back(
+            [this, ev = std::forward<Event>(event)]() mutable
+            {
+                EventSystem::OnEvent<Decayed>(ev);
+            });
     }
 
     inline void EventSystem::FlushEvents(FlushEventsToken _)

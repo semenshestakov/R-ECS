@@ -14,7 +14,7 @@ protected:
     {
         g_systemEventCallOrder.clear();
 
-        registry = Registry(*SystemRegistrator::GetSystemsManager("test_schedule"));
+        registry = Registry::Create("test_schedule");
         registry.Init();
     }
 
@@ -61,4 +61,136 @@ TEST_F(OrderSystemEventTest, EventCall_SystemWithoutEventNotCalled)
     const auto it = std::ranges::find(g_systemEventCallOrder, ai);
 
     EXPECT_EQ(it, g_systemEventCallOrder.end());
+}
+
+
+class EventSystemFlushTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        g_eventExecutionOrder.clear();
+
+        registry = Registry::Create("test_ecs_event_system");
+        registry.Init();
+    }
+
+    Registry registry;
+};
+
+
+TEST_F(EventSystemFlushTest, PushEvent_DoesNotTriggerImmediately)
+{
+    registry.Events().PushEvent(EventCallOrder{});
+
+    EXPECT_TRUE(g_eventExecutionOrder.empty());
+}
+
+
+TEST_F(EventSystemFlushTest, PushEventTriggeredOnFlush)
+{
+    registry.Events().PushEvent(EventCallOrder{});
+
+    registry.Update();
+
+    EXPECT_EQ(g_eventExecutionOrder.size(), 3);
+}
+
+
+TEST_F(EventSystemFlushTest, EventCallOrderRespectsSystemDependencies)
+{
+    registry.Events().PushEvent(EventCallOrder{});
+    registry.Update();
+
+    ASSERT_EQ(g_eventExecutionOrder.size(), 3);
+
+    const auto first  = ecs::getSystemHash<FirstEventSystem>();
+    const auto second = ecs::getSystemHash<SecondEventSystem>();
+    const auto third  = ecs::getSystemHash<ThirdEventSystem>();
+
+    const auto itFirst  = std::ranges::find(g_eventExecutionOrder, first);
+    const auto itSecond = std::ranges::find(g_eventExecutionOrder, second);
+    const auto itThird  = std::ranges::find(g_eventExecutionOrder, third);
+
+    ASSERT_NE(itFirst, g_eventExecutionOrder.end());
+    ASSERT_NE(itSecond, g_eventExecutionOrder.end());
+    ASSERT_NE(itThird, g_eventExecutionOrder.end());
+
+    EXPECT_LT(itFirst, itThird);
+    EXPECT_LT(itSecond, itThird);
+}
+
+
+TEST_F(EventSystemFlushTest, MultipleEventsPreserveSystemOrder)
+{
+    registry.Events().PushEvent(EventCallOrder{});
+    registry.Events().PushEvent(EventCallOrder{});
+
+    registry.Update();
+
+    ASSERT_EQ(g_eventExecutionOrder.size(), 6);
+
+    const auto third = ecs::getSystemHash<ThirdEventSystem>();
+
+    EXPECT_EQ(g_eventExecutionOrder[2], third);
+    EXPECT_EQ(g_eventExecutionOrder[5], third);
+}
+
+
+TEST_F(EventSystemFlushTest, DeterministicOrderBetweenFrames)
+{
+    registry.Events().PushEvent(EventCallOrder{});
+    registry.Update();
+
+    const auto firstRun = g_eventExecutionOrder;
+
+    g_eventExecutionOrder.clear();
+
+    registry.Events().PushEvent(EventCallOrder{});
+    registry.Update();
+
+    EXPECT_EQ(firstRun, g_eventExecutionOrder);
+}
+
+
+struct UnusedEvent { };
+
+TEST_F(EventSystemFlushTest, EventWithoutSubscribersDoesNothing)
+{
+    registry.Events().PushEvent(UnusedEvent{});
+
+    EXPECT_NO_THROW(registry.Update());
+    EXPECT_TRUE(g_eventExecutionOrder.empty());
+}
+
+
+TEST_F(EventSystemFlushTest, IndependentSystemsExecuteBeforeDependent)
+{
+    registry.Events().PushEvent(EventCallOrder{});
+    registry.Update();
+
+    const auto first  = ecs::getSystemHash<FirstEventSystem>();
+    const auto second = ecs::getSystemHash<SecondEventSystem>();
+    const auto third  = ecs::getSystemHash<ThirdEventSystem>();
+
+    const auto itFirst  = std::ranges::find(g_eventExecutionOrder, first);
+    const auto itSecond = std::ranges::find(g_eventExecutionOrder, second);
+    const auto itThird  = std::ranges::find(g_eventExecutionOrder, third);
+
+    EXPECT_LT(itFirst, itThird);
+    EXPECT_LT(itSecond, itThird);
+}
+
+
+TEST_F(EventSystemFlushTest, PushAfterFlushExecutesNextFrame)
+{
+    registry.Events().PushEvent(EventCallOrder{});
+    registry.Update();
+
+    const size_t firstFrameCalls = g_eventExecutionOrder.size();
+
+    registry.Events().PushEvent(EventCallOrder{});
+    registry.Update();
+
+    EXPECT_EQ(g_eventExecutionOrder.size(), firstFrameCalls * 2);
 }

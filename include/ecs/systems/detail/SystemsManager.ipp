@@ -5,13 +5,7 @@
 template<typename SystemCls>
 bool ecs::SystemsManager::Register()
 {
-    const systemHash_t hash = getSystemHash<SystemCls>();
-    if(m_systemsMap.contains(hash))
-        return false;
-
-    m_systemsMap[hash] = std::make_unique<SystemCls>();
-    m_schedule.Add(*m_systemsMap[hash].get(), hash);
-    return true;
+    return Register(SystemCls::RegisterInfo.getIndex());
 }
 
 template<typename SystemCls>

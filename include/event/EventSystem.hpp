@@ -150,7 +150,7 @@ namespace event
          */
         [[nodiscard]] size_t size() const;
 
-    private:
+    protected:
         using absEventPtr_t = std::unique_ptr<AbstractEvent>;
         using queueEventFunc_t = std::function<void()>;
 

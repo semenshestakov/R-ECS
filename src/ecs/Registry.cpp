@@ -1,18 +1,16 @@
-#include "ecs/Registry.hpp"
 #include <utility>
+#include "ecs/Registry.hpp"
+#include "ecs/registry/RegistryRegistrator.hpp"
 
 
 ecs::Registry::Registry(SystemsManager systemManager) :
     m_systemManager(std::move(systemManager)),
     m_eventSystem(*this)
-{
-}
+{}
 
 ecs::Registry::Registry() :
      m_eventSystem(*this)
-{
-
-}
+{}
 
 bool ecs::Registry::Init(void* args /* = nullptr */)
 {
@@ -26,4 +24,9 @@ void ecs::Registry::Update()
 {
     m_systemManager.Update(*this);
     m_eventSystem.FlushEvents({});
+}
+
+ecs::Registry ecs::Registry::Create(const std::string& name)
+{
+    return Registry{SystemsManager::Create(RegistryRegistrator::Get(name).systemRegIndexes)};
 }

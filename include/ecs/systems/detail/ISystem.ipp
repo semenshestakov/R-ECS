@@ -19,7 +19,7 @@ template<typename SystemCls>
 void ecs::ISystem<SystemCls>::Init(const InitState& state)
 {
     IBaseSystem::Init(state);
-    (void) (SystemCls::IsRegistered);
+    (void) (SystemCls::RegisterInfo);
 }
 
 template<typename SystemCls>

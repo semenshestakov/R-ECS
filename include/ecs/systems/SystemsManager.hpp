@@ -2,7 +2,7 @@
 #define SYSTEM_MANAGER_HPP
 
 #include <unordered_map>
-#include <cassert>
+#include <span>
 #include "common_recs/utils/ClassUtils.hpp"
 #include "IBaseSystem.hpp"
 #include "SystemsSchedule.hpp"
@@ -86,8 +86,7 @@ namespace ecs
 
     DEEP_TEST_PRIVATE_ACCESS:
         SystemsSchedule m_schedule;                                                 ///< Schedule for update systems
-        using systemPtr_t = std::unique_ptr<IBaseSystem>;                           ///< Type alias for system ownership
-        std::unordered_map<systemHash_t, systemPtr_t> m_systemsMap = {};            ///< Map of type hash to system instance
+        std::unordered_map<systemHash_t, baseSystemPtr_t> m_systemsMap = {};        ///< Map of type hash to system instance
 
         /**
          * @brief Initializes all registered systems with the given state
@@ -148,6 +147,20 @@ namespace ecs
         template<typename System> bool Register();
 
         /**
+         * @brief Registers a system by its registration index
+         * @param systemRegIndex The registration index obtained from SystemRegistrator
+         * @return true if the system was successfully registered, false if already exists
+         *
+         * This method creates a system instance using the factory function stored in
+         * SystemRegistrator and adds it to the manager's internal storage.
+         *
+         * @pre systemRegIndex must be valid (obtained from SystemRegistrator::Register)
+         * @note The system is automatically added to the update schedule
+         * @see SystemRegistrator::Get
+         */
+        bool Register(std::size_t systemRegIndex);
+
+        /**
          * @brief Returns the number of registered systems
          * @return std::size_t Total count of systems currently managed
          */
@@ -168,8 +181,31 @@ namespace ecs
         template<typename SystemCls> [[nodiscard]] SystemCls& Get();
         template<typename SystemCls> [[nodiscard]] const SystemCls& Get() const;
 
+        /**
+         * @brief Attempts to retrieve a registered system by type (non-const version)
+         * @tparam SystemCls The system type to retrieve
+         * @return SystemCls* Pointer to the system instance, or nullptr if not found
+         *
+         * Safe non-throwing version of Get(). Returns nullptr instead of throwing
+         * an exception when the system is not registered.
+         */
         template<typename SystemCls> [[nodiscard]] SystemCls* TryGet();
         template<typename SystemCls> [[nodiscard]] const SystemCls* TryGet() const;
+
+
+        /**
+         * @brief Creates a SystemsManager instance with pre-registered systems
+         * @param systemRegIndexes Span of system registration indices to include
+         * @return SystemsManager A new manager instance containing the specified systems
+         *
+         * Factory method that constructs a SystemsManager and registers all systems
+         * whose indices are provided in the span. This is more efficient than creating
+         * an empty manager and registering systems individually.
+         *
+         * @note The systems are registered in the order they appear in the span
+         * @warning The span must contain valid registration indices
+         */
+        static SystemsManager Create(std::span<const std::size_t> systemRegIndexes);
     };
 
 } // namespace ecs

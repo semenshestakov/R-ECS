@@ -8,19 +8,19 @@ cache locality and runtime performance while maintaining a clean, intuitive API.
 
 ---
 ## 🎯 Roadmap / Feature
-| Roadmap / Feature                                                                                              |  Version  | Tests |
-|:---------------------------------------------------------------------------------------------------------------|:---------:|:-----:|
-| DynamicComponentsFactory (DEPRICATED)                                                                          | v0.1.0 ⚠️ |  ⚠️   |
-| ComponentsFactory (DEPRICATED)                                                                                 | v0.2.0 ⚠️ |  ⚠️   |
-| Registry, auto-registration, iterators                                                                         | v0.3.0 ✅  |   ✅   |
-| Event system                                                                                                   | v0.4.0 ✅  |   ✅   |
-| EventSystem for ECS                                                                                            | v0.5.0 ✅  |   ✅   |
-| ECS context                                                                                                    | v0.6.0 ✅  |   ✅   |
-| Directed Acyclic Graph, Systems Schedule                                                                       | v0.7.0 ✅  |   ✅   |
-| Refactor: Entity / EntitiesManager <br/> New: PrefabEntity, EntityWrapper, Archetype, EntitiesArchetypeStorage | v0.8.0 ✅  |   ✅   |
-| Event System: PushEvent / FlushEvents /  priority                                                              | v0.9.0 ✅  |   ✅   |
-| Benchmark / optimization: add Google Benchmark & entt, add benchmark for create entities / view / delete       | v0.10.0 ✅ |   ✅   |
-| Cooking: Cooker, Recipe (hierarchy PrefabEntity)                                                               | v0.11.0 ❌ |   ❌   |
+| Roadmap / Feature                                                                                                |  Version  | Tests |
+|:-----------------------------------------------------------------------------------------------------------------|:---------:|:-----:|
+| DynamicComponentsFactory (DEPRICATED)                                                                            | v0.1.0 ⚠️ |  ⚠️   |
+| ComponentsFactory (DEPRICATED)                                                                                   | v0.2.0 ⚠️ |  ⚠️   |
+| Registry, auto-registration, iterators                                                                           | v0.3.0 ✅  |   ✅   |
+| Event system                                                                                                     | v0.4.0 ✅  |   ✅   |
+| EventSystem for ECS                                                                                              | v0.5.0 ✅  |   ✅   |
+| ECS context                                                                                                      | v0.6.0 ✅  |   ✅   |
+| Directed Acyclic Graph, Systems Schedule                                                                         | v0.7.0 ✅  |   ✅   |
+| Refactor: Entity / EntitiesManager <br/> New: PrefabEntity, EntityWrapper, Archetype, EntitiesArchetypeStorage   | v0.8.0 ✅  |   ✅   |
+| Event System: PushEvent / FlushEvents /  priority                                                                | v0.9.0 ✅  |   ✅   |
+| Benchmark / optimization: add Google Benchmark & entt & Flecs, add benchmark for create entities / view / delete | v0.10.0 ✅ |   ✅   |
+| Cooking: Cooker, Recipe (hierarchy PrefabEntity)                                                                 | v0.11.0 ❌ |   ❌   |
 
 
 ## 🚀 Quick Start

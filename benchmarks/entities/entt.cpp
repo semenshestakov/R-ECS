@@ -127,7 +127,7 @@ BENCHMARK_F(EnTTBenchmark, View_Zero)(benchmark::State& state)
 }
 
 
-BENCHMARK_F(EnTTBenchmark, CreateDestroy_100k)(benchmark::State& state)
+BENCHMARK_F(EnTTBenchmark, Destroy_100k)(benchmark::State& state)
 {
 
     for (auto _ : state)
@@ -161,10 +161,9 @@ BENCHMARK_F(EnTTBenchmark, CreateDestroy_Cycles)(benchmark::State& state)
 {
     for (auto _ : state)
     {
+        entt::registry registry;
         for (size_t c = 0; c < BENCHMARK_CYCLES; ++c)
         {
-            entt::registry registry;
-
             std::vector<entt::entity> entities;
             entities.reserve(BENCHMARK_M);
 

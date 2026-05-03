@@ -131,7 +131,7 @@ BENCHMARK_F(RECSBenchmark, View_Zero)(benchmark::State& state)
 }
 
 
-BENCHMARK_F(RECSBenchmark, CreateDestroy_100k)(benchmark::State& state)
+BENCHMARK_F(RECSBenchmark, Destroy_100k)(benchmark::State& state)
 {
     for (auto _ : state)
     {
@@ -162,9 +162,9 @@ BENCHMARK_F(RECSBenchmark, CreateDestroy_Cycles)(benchmark::State& state)
 {
     for (auto _ : state)
     {
+        EntitiesManager manager;
         for (size_t c = 0; c < BENCHMARK_CYCLES; ++c)
         {
-            EntitiesManager manager;
             PrefabEntity prefab = CreatePrefab();
 
             std::vector<EntityWrapper> entities;

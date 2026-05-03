@@ -96,7 +96,6 @@ if (BENCHMARK_ENABLE)
     FetchContent_MakeAvailable(benchmark)
 
     # Entt
-    include(FetchContent)
     FetchContent_Declare(
             entt
             GIT_REPOSITORY https://github.com/skypjack/entt.git
@@ -104,10 +103,19 @@ if (BENCHMARK_ENABLE)
     )
     FetchContent_MakeAvailable(entt)
 
+    # Flecs
+    FetchContent_Declare(
+            flecs
+            GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
+            GIT_TAG v4.1.5
+    )
+    FetchContent_MakeAvailable(flecs)
+
     # Target
     add_executable(recs_bench
-            benchmarks/ecs.cpp
-            benchmarks/entt.cpp
+            benchmarks/entities/ecs.cpp
+            benchmarks/entities/entt.cpp
+            benchmarks/entities/flecs.cpp
     )
     target_include_directories(recs_bench
          PRIVATE
@@ -119,6 +127,7 @@ if (BENCHMARK_ENABLE)
             benchmark::benchmark_main
             R-ECS
             EnTT::EnTT
+            flecs::flecs
     )
 else ()
     message("[R-ECS] BENCHMARK disable")

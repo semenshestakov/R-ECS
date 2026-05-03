@@ -18,7 +18,9 @@ cache locality and runtime performance while maintaining a clean, intuitive API.
 | ECS context                                                                                                    | v0.6.0 ✅  |   ✅   |
 | Directed Acyclic Graph, Systems Schedule                                                                       | v0.7.0 ✅  |   ✅   |
 | Refactor: Entity / EntitiesManager <br/> New: PrefabEntity, EntityWrapper, Archetype, EntitiesArchetypeStorage | v0.8.0 ✅  |   ✅   |
-| Cooking: Cooker, Recipe (hierarchy PrefabEntity)                                                               | v0.9.0 ❌  |   ❌   |
+| Event System: PushEvent / FlushEvents /  priority                                                              | v0.9.0 ✅  |   ✅   |
+| Benchmark / optimization: add Google Benchmark & entt, add benchmark for create entities / view / delete       | v0.10.0 ✅ |   ✅   |
+| Cooking: Cooker, Recipe (hierarchy PrefabEntity)                                                               | v0.11.0 ❌ |   ❌   |
 
 
 ## 🚀 Quick Start

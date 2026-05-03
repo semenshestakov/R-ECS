@@ -266,6 +266,3 @@ struct ThirdEventSystem final : ecs::ISystem<ThirdEventSystem>
 
     ECS_EVENT(OnTestEvent, EventCallOrder)
 };
-
-
-

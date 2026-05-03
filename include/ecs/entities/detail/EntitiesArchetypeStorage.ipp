@@ -1,61 +1,6 @@
 #pragma once
 #include "../EntitiesArchetypeStorage.hpp"
-#include "ecs/components/ComponentRegistrator.hpp"
 
-
-// ========================================= ArchetypedChunkEntityLocation =========================================
-
-/* static */ constexpr ecs::archetypeHash_t ecs::Archetype::GetArchetypeHash(const componentId_t* begin, const componentId_t* end)
-{
-    archetypeHash_t result = 0x9e3779b9;
-    for(; begin != end; ++begin)
-    {
-        result ^= *begin + 0x9e3779b9 + (result << 6) + (result >> 2);
-    }
-    return result;
-}
-
-template<ecs::IsComponent... ComponentCls>
-/* static */ const ecs::Archetype& ecs::Archetype::GetArchetype()
-{
-    static const Archetype s_archetype = []() {
-        Archetype archetype;
-        if(sizeof...(ComponentCls) > 0)
-        {
-            archetype.componentsIds = {ComponentRegistrator::GetСomponentId<ComponentCls>()...};
-            std::ranges::sort(archetype.componentsIds);
-
-            archetype.hash = Archetype::GetArchetypeHash(
-                    archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size());
-            archetype.mask = Archetype::GetArchetypeMask(
-                    archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size());
-        }
-        return archetype;
-    }();
-
-    return s_archetype;
-}
-
-template<ecs::IsComponent... ComponentCls>
-bool ecs::Archetype::matchArchetype() const
-{
-    static_assert(sizeof...(ComponentCls) > 0);
-    const Archetype& required = Archetype::GetArchetype<ComponentCls...>();
-
-    if(required.mask.size() > mask.size())
-        return false;
-
-    if(required.componentsIds.back() > componentsIds.back())
-        return false;
-
-    for(const componentId_t id: required.componentsIds)
-    {
-        if(id >= mask.size() || !mask[id])
-            return false;
-    }
-
-    return true;
-}
 
 // ====================================== EntitiesArchetypeStorage::iterator ======================================
 

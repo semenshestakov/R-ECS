@@ -17,25 +17,6 @@ bool ecs::ArchetypedChunkEntityLocation::operator!=(const ArchetypedChunkEntityL
 
 // ================================================= ArchetypedChunks =================================================
 
-std::vector<bool> ecs::Archetype::GetArchetypeMask(const componentId_t* begin, const componentId_t* end)
-{
-    componentId_t maxId = 0;
-    for (const componentId_t* _begin = begin; _begin != end; ++_begin)
-    {
-        maxId = std::max(maxId, *_begin);
-    }
-    assert(maxId > 0);
-
-    std::vector<bool> resultMask;
-    resultMask.resize(maxId + 1);
-
-    for (const componentId_t* _begin = begin; _begin != end; ++_begin)
-    {
-        resultMask[*_begin] = true;
-    }
-
-    return resultMask;
-}
 
 ecs::ArchetypedChunks::ArchetypedChunks(Archetype&& a_archetype) :
     m_archetype(std::move(a_archetype))

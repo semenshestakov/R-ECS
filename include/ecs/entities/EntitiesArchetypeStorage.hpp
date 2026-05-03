@@ -5,6 +5,7 @@
 #include <queue>
 #include "ecs/utils/ComponentUtils.hpp"
 #include "ecs/utils/EntitiesUtils.hpp"
+#include "Archetype.hpp"
 
 
 namespace ecs
@@ -19,9 +20,6 @@ namespace ecs
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNKS = ~0u;
 
     // ========================================= ArchetypedChunkEntityLocation =========================================
-
-    using archetypeHash_t = std::size_t;
-    using archetypeIndex_t = std::uint16_t;
 
     /**
      * @brief Location descriptor for an entity within archetype storage.
@@ -41,51 +39,6 @@ namespace ecs
         [[nodiscard]] bool operator!=(const ArchetypedChunkEntityLocation& other) const;
     };
 
-    /**
-     * @brief Defines a composition of component types.
-     * Archetype represents a unique combination of components and serves as a template
-     * for organizing entities with identical component sets.
-     */
-    struct Archetype final
-    {
-        archetypeHash_t hash {};                            ///< Hash value uniquely identifying this component combination
-        std::vector<componentId_t> componentsIds;           ///< Sorted list of component IDs in this archetype
-        std::vector<bool> mask;                             ///< Bitmask for fast component presence checking
-
-        /**
-         * @brief Computes hash from a range of component IDs using a hash combining algorithm.
-         * @param begin Pointer to first component ID
-         * @param end Pointer to one past last component ID
-         * @return Combined hash value for the component ID sequence
-         */
-        static constexpr archetypeHash_t GetArchetypeHash(const componentId_t* begin, const componentId_t* end);
-
-        /**
-         * @brief Gets or creates the archetype for specified component types.
-         * Creates a static singleton archetype instance for the given component combination.
-         * @tparam ComponentCls Component types that form the archetype
-         * @return Const reference to the archetype instance
-         */
-        template<IsComponent... ComponentCls>
-        static const Archetype& GetArchetype();
-
-        /**
-         * @brief Creates a bitmask from component ID range.
-         * Builds a boolean vector where true indicates presence of component at given ID.
-         * @param begin Pointer to first component ID
-         * @param end Pointer to one past last component ID
-         * @return Bitmask vector with component IDs as indices
-         */
-        static std::vector<bool> GetArchetypeMask(const componentId_t* begin, const componentId_t* end);
-
-        /**
-         * @brief Checks if this archetype contains all required component types.
-         * @tparam ComponentCls Component types to check for
-         * @return true if archetype has all specified components
-         */
-        template<IsComponent... ComponentCls>
-        [[nodiscard]] bool matchArchetype() const;
-    };
 
     // =============================================== ArchetypedChunks ===============================================
 

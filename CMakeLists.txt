@@ -5,13 +5,6 @@ project(R-ECS
     LANGUAGES CXX
 )
 
-if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    SET(TEST_ENABLE ON)
-    add_compile_definitions(DEEP_TEST_ENABLE)
-else ()
-    SET(TEST_ENABLE OFF)
-endif ()
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -32,10 +25,24 @@ target_include_directories(R-ECS
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark = = = = = = = = = = = = = = = = = = = = = = = = =
+
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+    SET(TEST_ENABLE ON)
+    SET(BENCHMARK_ENABLE ON)
+    add_compile_definitions(DEEP_TEST_ENABLE)
+else ()
+    SET(TEST_ENABLE OFF)
+    SET(BENCHMARK_ENABLE OFF)
+endif ()
+
+
+# Test executable
 if(TEST_ENABLE)
-    message("= = = = = = = = = TEST enable = = = = = = = = =")
+    message("= = = = = = = = = R-ECS TEST enable = = = = = = = = =")
     include(FetchContent)
 
+    # Google Tests
     option(BUILD_GMOCK "Build GMock" ON)
     FetchContent_Declare(
             googletest
@@ -44,6 +51,7 @@ if(TEST_ENABLE)
     )
     FetchContent_MakeAvailable(googletest)
 
+    # Target
     add_executable(test_recs
             test/reg/registrator_factory_tests.cpp
             test/event/Event.cpp
@@ -57,11 +65,10 @@ if(TEST_ENABLE)
             test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
     )
-    target_include_directories(R-ECS
-        PUBLIC
+    target_include_directories(test_recs
+        PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/test/include
     )
-
     target_link_libraries(test_recs
         PRIVATE
             GTest::gtest_main
@@ -71,5 +78,48 @@ if(TEST_ENABLE)
     include(GoogleTest)
     gtest_discover_tests(test_recs)
 else ()
-    message("TEST disable")
+    message("[R-ECS] TEST disable")
+endif()
+
+
+# Benchmark executable
+if (BENCHMARK_ENABLE)
+    message("= = = = = = = = = R-ECS BENCHMARK enable = = = = = = = = =")
+    include(FetchContent)
+
+    # Google Benchmark
+    FetchContent_Declare(
+            benchmark
+            GIT_REPOSITORY https://github.com/google/benchmark.git
+            GIT_TAG v1.9.5
+    )
+    FetchContent_MakeAvailable(benchmark)
+
+    # Entt
+    include(FetchContent)
+    FetchContent_Declare(
+            entt
+            GIT_REPOSITORY https://github.com/skypjack/entt.git
+            GIT_TAG v3.16.0
+    )
+    FetchContent_MakeAvailable(entt)
+
+    # Target
+    add_executable(recs_bench
+            benchmarks/ecs.cpp
+            benchmarks/entt.cpp
+    )
+    target_include_directories(recs_bench
+         PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/include
+    )
+    target_link_libraries(recs_bench
+        PRIVATE
+            benchmark::benchmark
+            benchmark::benchmark_main
+            R-ECS
+            EnTT::EnTT
+    )
+else ()
+    message("[R-ECS] BENCHMARK disable")
 endif()

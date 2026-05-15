@@ -57,6 +57,7 @@ if(TEST_ENABLE)
             test/event/Event.cpp
             test/event/Listener.cpp
             test/event/EventSystem.cpp
+            test/collections/BitSet.cpp
             test/collections/Context.cpp
             test/collections/DirectedAcyclicGraph.cpp
             test/ecs/AutoRegistration.cpp

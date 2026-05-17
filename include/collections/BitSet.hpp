@@ -9,22 +9,58 @@ namespace collection
 
     struct BitSet
     {
+        struct  const_iterator
+        {
+            using value_type = std::size_t;
+            using difference_type = std::ptrdiff_t;
+            using reference = std::size_t;
+            using pointer = void;
+            using iterator_category = std::forward_iterator_tag;
+
+            const_iterator(const BitSet* bs, std::size_t pos);
+
+            std::size_t operator*() const noexcept;
+
+            const_iterator& operator++();
+
+            bool operator==(const const_iterator& other) const noexcept;
+
+            bool operator!=(const const_iterator& other) const noexcept;
+
+        private:
+            const BitSet* m_bs;
+            std::size_t m_pos;
+
+            void findNext();
+        };
+
         using dataItem_t = std::uint64_t;
         static constexpr std::size_t BYTE_COUNT = sizeof(dataItem_t);
         static constexpr unsigned char BIT_COUNT = BYTE_COUNT * 8;
 
         explicit BitSet(std::size_t size);
 
+    private:
+        using data_t = std::vector<dataItem_t>;
+        data_t m_data;
+        std::size_t m_size;
+
+    public:
         void set(std::size_t pos) noexcept;
         void reset(std::size_t pos) noexcept;
+        void resize(std::size_t pos) noexcept;
+
         [[nodiscard]] bool test(std::size_t pos) const noexcept;
-        [[nodiscard]] bool operator[](std::size_t pos) noexcept;
         [[nodiscard]] bool operator[](std::size_t pos) const noexcept;
 
-        void set_all() noexcept;
-        void reset_all() noexcept;
+        void setAll() noexcept;
+        void reset() noexcept;
+
+        [[nodiscard]] const_iterator begin() const noexcept;
+        [[nodiscard]] const_iterator end() const noexcept;
 
         [[nodiscard]] std::size_t size() const noexcept;
+        [[nodiscard]] const data_t& data() const noexcept;
         [[nodiscard]] bool empty() const noexcept;
 
         [[maybe_unused]] BitSet& flip() noexcept;
@@ -44,10 +80,6 @@ namespace collection
     private:
         static constexpr std::size_t getIdx(std::size_t pos) noexcept;
         static constexpr dataItem_t getBit(std::size_t pos) noexcept;
-
-        using data_t = std::vector<dataItem_t>;
-        data_t m_data;
-        std::size_t m_size;
     };
 
 } // namespace collection

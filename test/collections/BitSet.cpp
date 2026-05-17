@@ -7,7 +7,7 @@ using collection::BitSet;
 
 TEST(BitSetTest, ConstructorAndSize)
 {
-    BitSet bs(100);
+    const BitSet bs(100);
     EXPECT_EQ(bs.size(), 100);
     EXPECT_FALSE(bs.empty());
 }
@@ -15,7 +15,7 @@ TEST(BitSetTest, ConstructorAndSize)
 
 TEST(BitSetTest, EmptyBitSet)
 {
-    BitSet bs(0);
+    const BitSet bs(0);
     EXPECT_TRUE(bs.empty());
     EXPECT_EQ(bs.size(), 0);
 }
@@ -55,7 +55,7 @@ TEST(BitSetTest, OutOfRangeSetDoesNothing)
     BitSet bs(10);
 
     bs.set(100);
-    EXPECT_FALSE(bs.test(100));
+    EXPECT_TRUE(bs.test(100));
 }
 
 
@@ -84,12 +84,12 @@ TEST(BitSetTest, SetAllAndResetAll)
 {
     BitSet bs(100);
 
-    bs.set_all();
+    bs.setAll();
 
     for (size_t i = 0; i < 100; ++i)
         EXPECT_TRUE(bs.test(i));
 
-    bs.reset_all();
+    bs.reset();
 
     for (size_t i = 0; i < 100; ++i)
         EXPECT_FALSE(bs.test(i));
@@ -252,7 +252,7 @@ TEST(BitSetTest, LastBitsMasking)
 {
     BitSet bs(70);
 
-    bs.set_all();
+    bs.setAll();
 
     for (size_t i = 0; i < 70; ++i)
         EXPECT_TRUE(bs.test(i));
@@ -265,7 +265,7 @@ TEST(BitSetTest, FlipPreservesMask)
 {
     BitSet bs(70);
 
-    bs.set_all();
+    bs.setAll();
     bs.flip();
 
     for (size_t i = 0; i < 70; ++i)
@@ -404,7 +404,7 @@ TEST(BitSetTest, SetAllThenResetSingleBit)
 {
     BitSet bs(80);
 
-    bs.set_all();
+    bs.setAll();
     bs.reset(10);
 
     EXPECT_FALSE(bs.test(10));
@@ -442,9 +442,9 @@ TEST(BitSetTest, OperatorNotDoesNotModifyOriginal)
     bs.set(1);
     bs.set(2);
 
-    BitSet copy = bs;
+    const BitSet copy = bs;
 
-    auto inv = ~bs;
+    const auto inv = ~bs;
 
     EXPECT_EQ(bs, copy); // оригинал не изменился
     EXPECT_NE(inv, bs);
@@ -462,4 +462,486 @@ TEST(BitSetTest, MultipleResetIdempotence)
     bs.reset(10);
 
     EXPECT_FALSE(bs.test(10));
+}
+
+TEST(BitSetTest, SetExpandsBitsetSize)
+{
+    BitSet bs(10);
+
+    bs.set(100);
+
+    EXPECT_TRUE(bs.test(100));
+    EXPECT_EQ(bs.size(), 101);
+}
+
+
+TEST(BitSetTest, SetExpandsMultipleBlocks)
+{
+    BitSet bs(1);
+
+    bs.set(0);
+    bs.set(63);
+    bs.set(64);
+    bs.set(127);
+    bs.set(128);
+
+    EXPECT_TRUE(bs.test(0));
+    EXPECT_TRUE(bs.test(63));
+    EXPECT_TRUE(bs.test(64));
+    EXPECT_TRUE(bs.test(127));
+    EXPECT_TRUE(bs.test(128));
+
+    EXPECT_EQ(bs.size(), 129);
+}
+
+
+TEST(BitSetTest, SparseGrowthStress)
+{
+    BitSet bs(0);
+
+    for (size_t i = 0; i < 5000; i += 333)
+        bs.set(i);
+
+    for (size_t i = 0; i < 5000; i += 333)
+        EXPECT_TRUE(bs.test(i));
+
+    EXPECT_EQ(bs.size(), (5000 / 333) * 333 + 1);
+}
+
+
+TEST(BitSetTest, ResizeDoesNotBreakExistingBits)
+{
+    BitSet bs(100);
+
+    bs.set(1);
+    bs.set(63);
+
+    bs.set(1000);
+
+    EXPECT_TRUE(bs.test(1));
+    EXPECT_TRUE(bs.test(63));
+    EXPECT_TRUE(bs.test(1000));
+}
+
+
+TEST(BitSetTest, CrossBlockResizeIntegrity)
+{
+    BitSet bs(10);
+
+    for (size_t i = 0; i < 200; i += 7)
+        bs.set(i);
+
+    for (size_t i = 0; i < 200; i += 7)
+        EXPECT_TRUE(bs.test(i));
+
+    for (size_t i = 0; i < 200; ++i)
+    {
+        bool expected = (i % 7 == 0);
+        EXPECT_EQ(bs.test(i), expected);
+    }
+}
+
+
+TEST(BitSetTest, MassiveIndexGrowth)
+{
+    BitSet bs(5);
+
+    bs.set(10000);
+    bs.set(50000);
+    bs.set(100000);
+
+    EXPECT_TRUE(bs.test(10000));
+    EXPECT_TRUE(bs.test(50000));
+    EXPECT_TRUE(bs.test(100000));
+
+    EXPECT_EQ(bs.size(), 100000 + 1);
+}
+
+
+TEST(BitSetTest, ResizeAndBitwiseORConsistency)
+{
+    BitSet a(10), b(10);
+
+    a.set(5);
+    b.set(200);
+
+    const BitSet c = a | b;
+
+    EXPECT_TRUE(c.test(5));
+    EXPECT_TRUE(c.test(200));
+}
+
+
+TEST(BitSetTest, DataSizeMatchesInitialSize)
+{
+    BitSet bs(0);
+    EXPECT_EQ(bs.data().size(), 0);
+
+    BitSet bs2(1);
+    EXPECT_EQ(bs2.data().size(), 1);
+
+    BitSet bs3(64);
+    EXPECT_EQ(bs3.data().size(), 1);
+
+    BitSet bs4(65);
+    EXPECT_EQ(bs4.data().size(), 2);
+}
+
+
+TEST(BitSetTest, DataGrowsOnSetBeyondCapacity)
+{
+    BitSet bs(1);
+
+    bs.set(0);
+    EXPECT_EQ(bs.data().size(), 1);
+
+    bs.set(63);
+    EXPECT_EQ(bs.data().size(), 1);
+
+    bs.set(64);
+    EXPECT_EQ(bs.data().size(), 2);
+
+    bs.set(128);
+    EXPECT_EQ(bs.data().size(), 3);
+}
+
+
+TEST(BitSetTest, DataGrowsCorrectlyLargeIndexes)
+{
+    BitSet bs(0);
+
+    bs.set(0);
+    EXPECT_EQ(bs.data().size(), 1);
+
+    bs.set(1000);
+
+    std::size_t expectedBlocks = (1000 + 64) / 64;
+    EXPECT_EQ(bs.data().size(), expectedBlocks);
+
+    bs.set(100000);
+
+    expectedBlocks = (100000 + 64) / 64;
+    EXPECT_EQ(bs.data().size(), expectedBlocks);
+}
+
+
+TEST(BitSetTest, BasicFlipInvertsBits)
+{
+    BitSet bs(10);
+
+    bs.set(1);
+    bs.set(3);
+    bs.set(7);
+
+    bs.flip();
+
+    EXPECT_FALSE(bs.test(1));
+    EXPECT_FALSE(bs.test(3));
+    EXPECT_FALSE(bs.test(7));
+
+    for (size_t i = 0; i < 10; ++i)
+    {
+        if (i != 1 && i != 3 && i != 7)
+            EXPECT_TRUE(bs.test(i));
+    }
+}
+
+
+TEST(BitSetFlipTest, FlipDoesNotExposeGarbageBitsBeyondSize)
+{
+    BitSet bs(70);
+
+    bs.setAll();
+    bs.flip();
+
+    for (size_t i = 0; i < 70; ++i)
+        EXPECT_FALSE(bs.test(i));
+
+    EXPECT_FALSE(bs.test(100));
+    EXPECT_FALSE(bs.test(200));
+}
+
+TEST(BitSetTest, DataDoesNotGrowUnnecessarily)
+{
+    BitSet bs(200);
+
+    const std::size_t initial = bs.data().size();
+
+    bs.set(10);
+    bs.set(50);
+    bs.set(199);
+
+    EXPECT_EQ(bs.data().size(), initial);
+}
+
+
+TEST(BitSetTest, DataBlockCountIsExact)
+{
+    BitSet bs(0);
+
+    for (size_t i = 0; i < 1001; i += 100)
+        bs.set(i);
+
+    std::size_t expected = (999 / 64) + 1;
+
+    EXPECT_EQ(bs.data().size(), expected);
+}
+
+
+TEST(BitSetTest, BitwiseOperationsPreserveCorrectSize)
+{
+    BitSet a(0), b(0);
+
+    a.set(10);
+    const size_t sizeA = a.data().size();
+    b.set(200);
+    const size_t sizeB = b.data().size();
+
+    const BitSet andRes = a & b;
+    const BitSet orRes = a | b;
+    const BitSet xorRes = a ^ b;
+
+    EXPECT_EQ(andRes.data().size(), sizeA);
+    EXPECT_EQ(orRes.data().size(), sizeB);
+    EXPECT_EQ(xorRes.data().size(), sizeB);
+}
+
+
+TEST(BitSetTest, ResizeAndBitwiseANDWithEmptyOutsideRange)
+{
+    BitSet a(10), b(10);
+
+    a.set(5);
+    b.set(200);
+
+    BitSet c = a & b;
+
+    EXPECT_FALSE(c.test(5));
+    EXPECT_FALSE(c.test(200));
+}
+
+
+TEST(BitSetTest, RandomGrowthPatternStability)
+{
+    BitSet bs(0);
+
+    std::vector<size_t> positions = {
+        1, 2, 5, 8, 64, 65, 128, 129, 1023, 4096, 8192
+    };
+
+    for (auto p : positions)
+        bs.set(p);
+
+    for (auto p : positions)
+        EXPECT_TRUE(bs.test(p));
+
+    EXPECT_EQ(bs.size(), 8192 + 1);
+}
+
+
+TEST(BitSetTest, ResizePreservesLowerBlocks)
+{
+    BitSet bs(64);
+
+    bs.set(1);
+    bs.set(62);
+
+    bs.set(200);
+
+    EXPECT_TRUE(bs.test(1));
+    EXPECT_TRUE(bs.test(62));
+    EXPECT_TRUE(bs.test(200));
+}
+
+
+TEST(BitSetTest, RepeatedResizeIsStable)
+{
+    BitSet bs(1);
+
+    for (size_t i = 1; i <= 10; ++i)
+        bs.set(i * 1000);
+
+    for (size_t i = 1; i <= 10; ++i)
+        EXPECT_TRUE(bs.test(i * 1000));
+
+    EXPECT_EQ(bs.size(), 10000 + 1);
+}
+
+
+TEST(BitSetIteratorTest, IteratesSingleBitsCorrectly)
+{
+    BitSet bs(100);
+
+    bs.set(1);
+    bs.set(10);
+    bs.set(63);
+
+    std::vector<size_t> result;
+
+    for (auto i : bs)
+        result.push_back(i);
+
+    std::vector<size_t> expected = {1, 10, 63};
+
+    EXPECT_EQ(result, expected);
+}
+
+
+TEST(BitSetIteratorTest, SkipsUnsetBits)
+{
+    BitSet bs(100);
+
+    bs.set(0);
+    bs.set(50);
+    bs.set(99);
+
+    std::vector<size_t> result;
+
+    for (auto i : bs)
+        result.push_back(i);
+
+    EXPECT_EQ(result.size(), 3);
+    EXPECT_EQ(result[0], 0);
+    EXPECT_EQ(result[1], 50);
+    EXPECT_EQ(result[2], 99);
+}
+
+
+TEST(BitSetIteratorTest, IterationIsSorted)
+{
+    BitSet bs(1000);
+
+    bs.set(900);
+    bs.set(10);
+    bs.set(500);
+    bs.set(1);
+
+    size_t prev = 0;
+    bool first = true;
+
+    for (auto i : bs)
+    {
+        if (!first)
+            EXPECT_GT(i, prev);
+
+        prev = i;
+        first = false;
+    }
+}
+
+
+TEST(BitSetIteratorTest, BeginEndConsistency)
+{
+    BitSet bs(100);
+
+    bs.set(5);
+    bs.set(20);
+
+    auto it = bs.begin();
+    const auto end = bs.end();
+
+    std::vector<size_t> result;
+
+    while (it != end)
+    {
+        result.push_back(*it);
+        ++it;
+    }
+
+    EXPECT_EQ(result, std::vector<size_t>({5, 20}));
+}
+
+
+TEST(BitSetIteratorTest, EmptyBitSetIteration)
+{
+    const BitSet bs(100);
+
+    std::vector<size_t> result;
+
+    for (auto i : bs)
+        result.push_back(i);
+
+    EXPECT_TRUE(result.empty());
+}
+
+
+TEST(BitSetIteratorTest, SparseLargeValuesIteration)
+{
+    BitSet bs(0);
+
+    std::vector<size_t> expected;
+
+    for (size_t i = 0; i <= 10000; i += 333)
+    {
+        bs.set(i);
+        expected.push_back(i);
+    }
+
+    std::vector<size_t> result;
+
+    for (auto i : bs)
+        result.push_back(i);
+
+    EXPECT_EQ(result, expected);
+}
+
+
+TEST(BitSetIteratorTest, CrossBlockIteration)
+{
+    BitSet bs(130);
+
+    bs.set(63);
+    bs.set(64);
+    bs.set(65);
+    bs.set(127);
+    bs.set(128);
+
+    std::vector<size_t> result;
+
+    for (auto i : bs)
+        result.push_back(i);
+
+    std::vector<size_t> expected = {63, 64, 65, 127, 128};
+
+    EXPECT_EQ(result, expected);
+}
+
+
+TEST(BitSetIteratorTest, MultipleIterationsAreStable)
+{
+    BitSet bs(100);
+
+    bs.set(2);
+    bs.set(50);
+    bs.set(70);
+
+    std::vector<size_t> first;
+    std::vector<size_t> second;
+
+    for (auto i : bs)
+        first.push_back(i);
+
+    for (auto i : bs)
+        second.push_back(i);
+
+    EXPECT_EQ(first, second);
+}
+
+
+TEST(BitSetIteratorTest, IterationAfterResizeSet)
+{
+    BitSet bs(10);
+
+    bs.set(1);
+    bs.set(200);
+    bs.set(1000);
+
+    std::vector<size_t> result;
+
+    for (auto i : bs)
+        result.push_back(i);
+
+    const std::vector<size_t> expected = {1, 200, 1000};
+
+    EXPECT_EQ(result, expected);
 }

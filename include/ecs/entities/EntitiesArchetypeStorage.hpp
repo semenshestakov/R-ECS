@@ -62,7 +62,7 @@ namespace ecs
          * @pre The archetype must have at least one component ID
          * @post Component chunks vector is sized to accommodate the largest component ID
          */
-        explicit ArchetypedChunks(Archetype&& a_archetype);
+        explicit ArchetypedChunks(Archetype a_archetype);
 
         // Delete Copy
         ArchetypedChunks(const ArchetypedChunks& other) = delete;

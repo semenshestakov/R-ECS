@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 
+#include "Archetype.hpp"
 #include "ecs/components/ComponentRegistrator.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
 
@@ -81,10 +82,13 @@ namespace ecs
          */
         void clear();
 
+        const Archetype& getArchetype() const;
+
     private:
         componentsData_t m_dataByComponentsIndex {};        ///< Sparse vector of component data indexed by component ID
+        mutable Archetype m_archetype;
+        mutable bool m_isDirtyArchetype = false;
     };
-
 
     template<IsComponent ComponentCls, typename... Args>
     void PrefabEntity::AddComponent(Args&&... args)
@@ -98,7 +102,21 @@ namespace ecs
         auto ptr = std::make_unique<byte[]>(sizeof(ComponentCls));
         new(ptr.get()) ComponentCls(std::forward<Args>(args)...);
 
+        if (m_dataByComponentsIndex[componentId] == nullptr)
+            m_isDirtyArchetype = true;
+
+        m_archetype.set(componentId);
         m_dataByComponentsIndex[componentId] = std::move(ptr);
+    }
+
+    inline const Archetype& PrefabEntity::getArchetype() const
+    {
+        if (m_isDirtyArchetype)
+        {
+            m_archetype.updateHash();
+        }
+
+        return m_archetype;
     }
 
 } // namespace ecs

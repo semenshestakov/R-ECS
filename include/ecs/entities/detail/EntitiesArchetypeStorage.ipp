@@ -25,7 +25,7 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*()
 {
     if constexpr(std::is_same_v<std::tuple<ComponentCls&...>, value_type>)
     {
-        return std::tuple<ComponentCls&...>{m_storage->GetComponent<ComponentCls>(m_entityLocation)...};
+        return std::forward_as_tuple(m_storage->GetComponent<ComponentCls>(m_entityLocation)...);
     } else if constexpr(std::is_same_v<ArchetypedChunkEntityLocation, value_type>)
     {
         return m_entityLocation;
@@ -112,7 +112,7 @@ void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanc
         }
 
         const auto& chunks = storage.m_storageByArchetypeIndex[m_currentArchetype];
-        if(!chunks.archetype().template matchArchetype<ComponentCls...>())
+        if(!chunks.archetype().isSubsetOf(Archetype::GetArchetype<ComponentCls...>()))
         {
             ++m_currentArchetype;
             m_entityLocation.chunkEntityIndex = 0;

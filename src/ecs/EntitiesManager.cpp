@@ -18,7 +18,7 @@ ecs::EntitiesManager::~EntitiesManager()
     }
 }
 
-ecs::EntityWrapper ecs::EntitiesManager::Create(PrefabEntity& prefabEntity)
+ecs::EntityWrapper ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
 {
     Entity entity {};
 

@@ -18,12 +18,12 @@ bool ecs::ArchetypedChunkEntityLocation::operator!=(const ArchetypedChunkEntityL
 // ================================================= ArchetypedChunks =================================================
 
 
-ecs::ArchetypedChunks::ArchetypedChunks(Archetype&& a_archetype) :
+ecs::ArchetypedChunks::ArchetypedChunks(Archetype a_archetype) :
     m_archetype(std::move(a_archetype))
 {
-    assert(!m_archetype.componentsIds.empty());
+    assert(!m_archetype.empty());
     m_isInWorld.resize(1);
-    m_chunksByComponentId.resize(m_archetype.componentsIds.back() + 1); // sorted componentsIds [min -> max]
+    m_chunksByComponentId.resize(m_archetype.max() + 1);
 }
 
 ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity& entity)
@@ -51,7 +51,7 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity& entity
     // - - - Fill Data For Components - - -
 
     const PrefabEntity::componentsData_t& componentsData = entity.GetComponentsData();
-    for (const componentId_t componentId : m_archetype.componentsIds)
+    for (const componentId_t componentId : m_archetype)
     {
         const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
         componentChunks_t& componentChunks = m_chunksByComponentId[componentId];
@@ -82,7 +82,7 @@ void ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityIndex)
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
-    for (const componentId_t componentId : m_archetype.componentsIds)
+    for (const componentId_t componentId : m_archetype)
     {
         const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
 
@@ -189,28 +189,12 @@ ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(const P
 
     const PrefabEntity::componentsData_t& componentsData = prefabEntity.GetComponentsData();
 
-    Archetype archetype;
-    archetype.componentsIds.reserve(componentsData.size() + 1);
-
-    for (std::size_t componentId = 0; componentId < componentsData.size(); componentId++)
-    {
-        if (componentsData[componentId] != nullptr)
-        {
-            archetype.componentsIds.push_back(componentId);
-        }
-    }
-
-    archetype.hash = Archetype::GetArchetypeHash(
-        archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size()
-        );
-    archetype.mask = Archetype::GetArchetypeMask(
-        archetype.componentsIds.data(), archetype.componentsIds.data() + archetype.componentsIds.size()
-        );
+    const Archetype& archetype = prefabEntity.getArchetype();
 
     // - - - Find Archetype Index - - -
 
     archetypeIndex_t archetypeIndex;
-    if (const auto it = m_archetypeIndexByHash.find(archetype.hash); it != m_archetypeIndexByHash.end())
+    if (const auto it = m_archetypeIndexByHash.find(archetype.hash()); it != m_archetypeIndexByHash.end())
     {
         archetypeIndex = it->second;
     }
@@ -220,8 +204,8 @@ ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(const P
         assert(m_archetypeIndexByHash.size() == m_storageByArchetypeIndex.size());
         archetypeIndex = m_archetypeIndexByHash.size();
 
-        m_archetypeIndexByHash[archetype.hash] = archetypeIndex;
-        m_storageByArchetypeIndex.emplace_back(ArchetypedChunks(std::move(archetype)));
+        m_archetypeIndexByHash[archetype.hash()] = archetypeIndex;
+        m_storageByArchetypeIndex.emplace_back(archetype);
     }
 
     return {

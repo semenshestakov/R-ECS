@@ -9,7 +9,7 @@ namespace collection
 
     struct BitSet
     {
-        struct  const_iterator
+        struct const_iterator
         {
             using value_type = std::size_t;
             using difference_type = std::ptrdiff_t;
@@ -17,15 +17,14 @@ namespace collection
             using pointer = void;
             using iterator_category = std::forward_iterator_tag;
 
-            const_iterator(const BitSet* bs, std::size_t pos);
+            constexpr const_iterator(const BitSet* bs, std::size_t pos);
 
             std::size_t operator*() const noexcept;
 
             const_iterator& operator++();
 
-            bool operator==(const const_iterator& other) const noexcept;
-
-            bool operator!=(const const_iterator& other) const noexcept;
+            [[nodiscard]] bool operator==(const const_iterator& other) const noexcept;
+            [[nodiscard]] bool operator!=(const const_iterator& other) const noexcept;
 
         private:
             const BitSet* m_bs;
@@ -38,12 +37,13 @@ namespace collection
         static constexpr std::size_t BYTE_COUNT = sizeof(dataItem_t);
         static constexpr unsigned char BIT_COUNT = BYTE_COUNT * 8;
 
-        explicit BitSet(std::size_t size);
+        constexpr BitSet() = default;
+        constexpr explicit BitSet(std::size_t size);
 
-    private:
+    protected:
         using data_t = std::vector<dataItem_t>;
         data_t m_data;
-        std::size_t m_size;
+        std::size_t m_size = 0;
 
     public:
         void set(std::size_t pos) noexcept;
@@ -59,6 +59,7 @@ namespace collection
         [[nodiscard]] const_iterator begin() const noexcept;
         [[nodiscard]] const_iterator end() const noexcept;
 
+        [[nodiscard]] std::size_t max() const;
         [[nodiscard]] std::size_t size() const noexcept;
         [[nodiscard]] const data_t& data() const noexcept;
         [[nodiscard]] bool empty() const noexcept;
@@ -77,7 +78,10 @@ namespace collection
         [[nodiscard]] bool operator==(const BitSet& other) const;
         [[nodiscard]] bool operator!=(const BitSet& other) const;
 
+        [[nodiscard]] bool isSubsetOf(const BitSet& other) const;
+
     private:
+        static constexpr std::size_t highestBitPosition(dataItem_t value);
         static constexpr std::size_t getIdx(std::size_t pos) noexcept;
         static constexpr dataItem_t getBit(std::size_t pos) noexcept;
     };

@@ -4,7 +4,7 @@
 
 // = = = = = = = = = = = = = = = = = = = = = = = = = = const_iterator = = = = = = = = = = = = = = = = = = = = = = = = = =
 
-inline collection::BitSet::const_iterator::const_iterator(const BitSet* bs, const std::size_t pos) :
+constexpr collection::BitSet::const_iterator::const_iterator(const BitSet* bs, const std::size_t pos) :
     m_bs(bs),
     m_pos(pos)
 {
@@ -51,9 +51,10 @@ inline collection::BitSet::const_iterator collection::BitSet::end() const noexce
     return {this, m_size};
 }
 
-// = = = = = = = = = = = = = = = = = = = = = = = = = = = = BitSet = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+// = = = = = = = = = = = = = = = = = = = = = = = = = = = = BitSet = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
-inline collection::BitSet::BitSet(const std::size_t size) :
+
+constexpr collection::BitSet::BitSet(const std::size_t size) :
     m_data((size + BIT_COUNT - 1) / BIT_COUNT, 0),
     m_size(size)
 {
@@ -106,6 +107,24 @@ inline void collection::BitSet::setAll() noexcept
 inline void collection::BitSet::reset() noexcept
 {
     std::ranges::fill(m_data, 0);
+}
+
+inline std::size_t collection::BitSet::max() const
+{
+    if (empty())
+        return static_cast<std::size_t>(-1);
+
+    for (std::size_t i = m_data.size(); i > 0; --i)
+    {
+        const std::size_t blockIdx = i - 1;
+        if (const dataItem_t block = m_data[blockIdx]; block != 0)
+        {
+            const std::size_t bitPos = highestBitPosition(block);
+            return (blockIdx * BIT_COUNT) + bitPos;
+        }
+    }
+
+    return 0;
 }
 
 inline std::size_t collection::BitSet::size() const noexcept
@@ -203,12 +222,39 @@ inline bool collection::BitSet::operator!=(const BitSet& other) const
     return !(*this == other);
 }
 
+inline bool collection::BitSet::isSubsetOf(const BitSet& other) const
+{
+    if (m_size == 0)
+        return true;
+
+    for (std::size_t i = 0; i < m_data.size(); ++i)
+    {
+        if ((m_data[i] & ~other.m_data[i]) != 0)
+            return false;
+    }
+
+    return true;
+}
+
+/* static */ constexpr std::size_t collection::BitSet::highestBitPosition(dataItem_t value)
+{
+    std::size_t pos = 0;
+
+    if (value & 0xFFFFFFFF00000000ULL) { pos += 32; value >>= 32; }
+    if (value & 0x00000000FFFF0000ULL) { pos += 16; value >>= 16; }
+    if (value & 0x000000000000FF00ULL) { pos += 8;  value >>= 8;  }
+    if (value & 0x00000000000000F0ULL) { pos += 4;  value >>= 4;  }
+    if (value & 0x000000000000000CULL) { pos += 2;  value >>= 2;  }
+    if (value & 0x0000000000000002ULL) { pos += 1;                }
+
+    return pos;
+}
 /* static */ constexpr std::size_t collection::BitSet::getIdx(const std::size_t pos) noexcept
 {
     return pos >> 6;  // pos / 64 - faster than division
 }
 
-/* static */ constexpr collection::BitSet::dataItem_t collection::BitSet::getBit(std::size_t pos) noexcept
+/* static */ constexpr collection::BitSet::dataItem_t collection::BitSet::getBit(const std::size_t pos) noexcept
 {
     return static_cast<dataItem_t>(1) << (pos & 63); // pos % 64
 }

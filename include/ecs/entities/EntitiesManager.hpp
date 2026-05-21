@@ -53,7 +53,7 @@ namespace ecs
          * @param prefabEntity Prefab containing component data to initialize entity
          * @return Wrapper object providing safe access to the created entity
          */
-        EntityWrapper Create(PrefabEntity& prefabEntity);
+        EntityWrapper Create(const PrefabEntity& prefabEntity);
 
         /**
          * @brief Creates new entity from prefab data (rvalue reference).

@@ -20,6 +20,17 @@ namespace ecs
     {
 
         /**
+         * @brief Returns the hash value of this archetype
+         * @return Hash value
+         */
+        [[nodiscard]] archetypeHash_t hash() const;
+
+        /**
+         * @brief Updates the hash value based on current bitset state
+         */
+        void updateHash();
+
+        /**
          * @brief Computes hash from a range of component IDs using a hash combining algorithm.
          * @param bits set of bit
          * @return Combined hash value for the component ID sequence
@@ -34,11 +45,6 @@ namespace ecs
          */
         template<IsComponent... ComponentCls>
         static const Archetype& GetArchetype();
-
-
-        [[nodiscard]] archetypeHash_t hash() const;
-
-        void updateHash();
 
     private:
         archetypeHash_t m_hash {};                            ///< Hash value uniquely identifying this component combination

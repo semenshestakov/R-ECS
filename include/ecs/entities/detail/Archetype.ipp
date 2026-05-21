@@ -2,10 +2,20 @@
 #include "ecs/components/ComponentRegistrator.hpp"
 
 
+inline ecs::archetypeHash_t ecs::Archetype::hash() const
+{
+    return m_hash;
+}
+
+inline void ecs::Archetype::updateHash()
+{
+    m_hash = GetArchetypeHash(*this);
+}
+
 /* static */ constexpr ecs::archetypeHash_t ecs::Archetype::GetArchetypeHash(const collection::BitSet& bits)
 {
     archetypeHash_t result = 0x9e3779b9;
-    for(const std::size_t bitId: bits)
+    for(const auto bitId: bits.data())
     {
         result ^= bitId + 0x9e3779b9 + (result << 6) + (result >> 2);
     }
@@ -26,14 +36,4 @@ template<ecs::IsComponent... ComponentCls>
     }();
 
     return s_archetype;
-}
-
-inline ecs::archetypeHash_t ecs::Archetype::hash() const
-{
-    return m_hash;
-}
-
-inline void ecs::Archetype::updateHash()
-{
-    m_hash = GetArchetypeHash(*this);
 }

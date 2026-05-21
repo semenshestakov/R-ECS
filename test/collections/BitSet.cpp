@@ -647,7 +647,7 @@ TEST(BitSetTest, BasicFlipInvertsBits)
 }
 
 
-TEST(BitSetFlipTest, FlipDoesNotExposeGarbageBitsBeyondSize)
+TEST(BitSetTest, FlipDoesNotExposeGarbageBitsBeyondSize)
 {
     BitSet bs(70);
 
@@ -768,7 +768,7 @@ TEST(BitSetTest, RepeatedResizeIsStable)
 }
 
 
-TEST(BitSetIteratorTest, IteratesSingleBitsCorrectly)
+TEST(BitSetTest, IteratesSingleBitsCorrectly)
 {
     BitSet bs(100);
 
@@ -787,7 +787,7 @@ TEST(BitSetIteratorTest, IteratesSingleBitsCorrectly)
 }
 
 
-TEST(BitSetIteratorTest, SkipsUnsetBits)
+TEST(BitSetTest, SkipsUnsetBits)
 {
     BitSet bs(100);
 
@@ -807,7 +807,7 @@ TEST(BitSetIteratorTest, SkipsUnsetBits)
 }
 
 
-TEST(BitSetIteratorTest, IterationIsSorted)
+TEST(BitSetTest, IterationIsSorted)
 {
     BitSet bs(1000);
 
@@ -830,7 +830,7 @@ TEST(BitSetIteratorTest, IterationIsSorted)
 }
 
 
-TEST(BitSetIteratorTest, BeginEndConsistency)
+TEST(BitSetTest, BeginEndConsistency)
 {
     BitSet bs(100);
 
@@ -852,7 +852,7 @@ TEST(BitSetIteratorTest, BeginEndConsistency)
 }
 
 
-TEST(BitSetIteratorTest, EmptyBitSetIteration)
+TEST(BitSetTest, EmptyBitSetIteration)
 {
     const BitSet bs(100);
 
@@ -865,7 +865,7 @@ TEST(BitSetIteratorTest, EmptyBitSetIteration)
 }
 
 
-TEST(BitSetIteratorTest, SparseLargeValuesIteration)
+TEST(BitSetTest, SparseLargeValuesIteration)
 {
     BitSet bs(0);
 
@@ -886,7 +886,7 @@ TEST(BitSetIteratorTest, SparseLargeValuesIteration)
 }
 
 
-TEST(BitSetIteratorTest, CrossBlockIteration)
+TEST(BitSetTest, CrossBlockIteration)
 {
     BitSet bs(130);
 
@@ -907,7 +907,7 @@ TEST(BitSetIteratorTest, CrossBlockIteration)
 }
 
 
-TEST(BitSetIteratorTest, MultipleIterationsAreStable)
+TEST(BitSetTest, MultipleIterationsAreStable)
 {
     BitSet bs(100);
 
@@ -928,7 +928,7 @@ TEST(BitSetIteratorTest, MultipleIterationsAreStable)
 }
 
 
-TEST(BitSetIteratorTest, IterationAfterResizeSet)
+TEST(BitSetTest, IterationAfterResizeSet)
 {
     BitSet bs(10);
 
@@ -944,4 +944,269 @@ TEST(BitSetIteratorTest, IterationAfterResizeSet)
     const std::vector<size_t> expected = {1, 200, 1000};
 
     EXPECT_EQ(result, expected);
+}
+
+
+TEST(BitSetTest, IsSubsetOfEmptySet)
+{
+    BitSet empty(0);
+    BitSet bs(100);
+    bs.set(5);
+    bs.set(10);
+
+    // Пустое множество является подмножеством любого множества
+    EXPECT_TRUE(empty.isSubsetOf(bs));
+    EXPECT_TRUE(empty.isSubsetOf(empty));
+}
+
+TEST(BitSetTest, IsSubsetOfEqualSets)
+{
+    BitSet bs1(100);
+    BitSet bs2(100);
+
+    bs1.set(5);
+    bs1.set(10);
+    bs1.set(42);
+
+    bs2.set(5);
+    bs2.set(10);
+    bs2.set(42);
+
+    // Множество является подмножеством самого себя
+    EXPECT_TRUE(bs1.isSubsetOf(bs2));
+    EXPECT_TRUE(bs2.isSubsetOf(bs1));
+}
+
+TEST(BitSetTest, IsSubsetOfProperSubset)
+{
+    BitSet superset(100);
+    BitSet subset(100);
+
+    superset.set(1);
+    superset.set(2);
+    superset.set(3);
+    superset.set(4);
+    superset.set(5);
+
+    subset.set(2);
+    subset.set(4);
+
+    EXPECT_TRUE(subset.isSubsetOf(superset));
+    EXPECT_FALSE(superset.isSubsetOf(subset));
+}
+
+TEST(BitSetTest, IsSubsetOfWithDifferentSizes)
+{
+    BitSet small(50);
+    BitSet large(200);
+
+    small.set(10);
+    small.set(30);
+
+    large.set(10);
+    large.set(30);
+    large.set(100);
+
+    // Подмножество с меньшим размером
+    EXPECT_TRUE(small.isSubsetOf(large));
+
+    // НЕ подмножество, если есть биты за пределами размера large
+    large.set(250); // расширяем large
+    EXPECT_TRUE(small.isSubsetOf(large));
+}
+
+TEST(BitSetTest, IsSubsetOfNotSubset)
+{
+    BitSet bs1(100);
+    BitSet bs2(100);
+
+    bs1.set(5);
+    bs1.set(10);
+    bs1.set(42);
+
+    bs2.set(5);
+    bs2.set(10);
+    bs2.set(99);
+
+    EXPECT_FALSE(bs1.isSubsetOf(bs2));
+    EXPECT_FALSE(bs2.isSubsetOf(bs1));
+}
+
+TEST(BitSetTest, IsSubsetOfWithOverlappingBits)
+{
+    BitSet bs1(100);
+    BitSet bs2(100);
+
+    bs1.set(0);
+    bs1.set(63);  // граница блока
+    bs1.set(64);  // следующий блок
+
+    bs2.set(0);
+    bs2.set(63);
+    // нет бита 64
+
+    EXPECT_FALSE(bs1.isSubsetOf(bs2));
+    EXPECT_TRUE(bs2.isSubsetOf(bs1));
+}
+
+TEST(BitSetTest, IsSubsetOfEmptyVsNonEmpty)
+{
+    BitSet empty(0);
+    BitSet bs(50);
+    bs.set(25);
+
+    EXPECT_TRUE(empty.isSubsetOf(bs));
+    EXPECT_FALSE(bs.isSubsetOf(empty));
+}
+
+TEST(BitSetTest, MaxOnEmptySet)
+{
+    BitSet empty(0);
+    BitSet empty2(100); // размер 100, но ни одного бита не установлено
+
+    // Для пустого множества возвращает максимальное значение size_t
+    EXPECT_EQ(empty.max(), static_cast<std::size_t>(-1));
+    EXPECT_EQ(empty2.max(), static_cast<std::size_t>(-1));
+}
+
+TEST(BitSetTest, MaxWithSingleBit)
+{
+    BitSet bs(100);
+
+    bs.set(0);
+    EXPECT_EQ(bs.max(), 0);
+
+    bs.reset();
+    bs.set(42);
+    EXPECT_EQ(bs.max(), 42);
+
+    bs.reset();
+    bs.set(99);
+    EXPECT_EQ(bs.max(), 99);
+}
+
+TEST(BitSetTest, MaxWithMultipleBits)
+{
+    BitSet bs(200);
+
+    bs.set(5);
+    bs.set(10);
+    bs.set(150);
+    bs.set(42);
+
+    EXPECT_EQ(bs.max(), 150);
+}
+
+TEST(BitSetTest, MaxOnBlockBoundaries)
+{
+    BitSet bs(200);
+
+    // Границы 64-битных блоков
+    bs.set(63);
+    EXPECT_EQ(bs.max(), 63);
+
+    bs.set(64);
+    EXPECT_EQ(bs.max(), 64);
+
+    bs.set(127);
+    EXPECT_EQ(bs.max(), 127);
+
+    bs.set(128);
+    EXPECT_EQ(bs.max(), 128);
+}
+
+TEST(BitSetTest, MaxWithLastBitSet)
+{
+    BitSet bs(150);
+    bs.set(149); // последний бит
+
+    EXPECT_EQ(bs.max(), 149);
+}
+
+TEST(BitSetTest, MaxAfterResize)
+{
+    BitSet bs(10);
+    bs.set(5);
+    EXPECT_EQ(bs.max(), 5);
+
+    bs.set(200);
+    EXPECT_EQ(bs.max(), 200);
+
+    bs.set(1000);
+    EXPECT_EQ(bs.max(), 1000);
+}
+
+TEST(BitSetTest, MaxAfterReset)
+{
+    BitSet bs(200);
+    bs.set(50);
+    bs.set(100);
+    bs.set(150);
+
+    EXPECT_EQ(bs.max(), 150);
+
+    bs.reset(150);
+    EXPECT_EQ(bs.max(), 100);
+
+    bs.reset(100);
+    EXPECT_EQ(bs.max(), 50);
+
+    bs.reset(50);
+    EXPECT_EQ(bs.max(), static_cast<std::size_t>(-1));
+}
+
+TEST(BitSetTest, MaxWithAllBitsSet)
+{
+    BitSet bs(100);
+    bs.setAll();
+
+    EXPECT_EQ(bs.max(), 99);
+}
+
+TEST(BitSetTest, IsSubsetOfWithMaxMethod)
+{
+    BitSet bs1(100);
+    BitSet bs2(100);
+
+    bs1.set(10);
+    bs1.set(20);
+    bs1.set(30);
+
+    bs2.set(10);
+    bs2.set(20);
+    bs2.set(30);
+    bs2.set(40);
+
+    // Максимальный элемент подмножества не больше максимального элемента надмножества
+    if (bs1.isSubsetOf(bs2))
+    {
+        EXPECT_LE(bs1.max(), bs2.max());
+    }
+
+    // Обратное неверно
+    bs2.set(100);
+    EXPECT_TRUE(bs1.isSubsetOf(bs2));
+    EXPECT_LE(bs1.max(), bs2.max());
+}
+
+TEST(BitSetTest, CombinedSubsetAndMaxOperations)
+{
+    BitSet base(200);
+    base.set(10);
+    base.set(50);
+    base.set(100);
+    base.set(150);
+
+    BitSet subset(200);
+    subset.set(50);
+    subset.set(100);
+
+    EXPECT_TRUE(subset.isSubsetOf(base));
+    EXPECT_EQ(subset.max(), 100);
+    EXPECT_EQ(base.max(), 150);
+
+    // Добавляем в subset элемент больше, чем max в base
+    subset.set(180);
+    EXPECT_FALSE(subset.isSubsetOf(base));
+    EXPECT_EQ(subset.max(), 180);
 }

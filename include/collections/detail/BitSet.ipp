@@ -124,7 +124,7 @@ inline std::size_t collection::BitSet::max() const
         }
     }
 
-    return 0;
+    return static_cast<std::size_t>(-1);
 }
 
 inline std::size_t collection::BitSet::size() const noexcept
@@ -229,6 +229,9 @@ inline bool collection::BitSet::isSubsetOf(const BitSet& other) const
 
     for (std::size_t i = 0; i < m_data.size(); ++i)
     {
+        if (other.m_data.size() <= i)
+            return false;
+
         if ((m_data[i] & ~other.m_data[i]) != 0)
             return false;
     }

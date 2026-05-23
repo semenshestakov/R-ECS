@@ -27,7 +27,8 @@ ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
 template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) const
 {
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity) assert(component != nullptr);
+    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
+    assert(component != nullptr);
     return *component;
 }
 

@@ -1,5 +1,6 @@
 #ifndef LISTENER_SYSTEM_HPP
 #define LISTENER_SYSTEM_HPP
+#include <memory>
 #include "AbstractListener.hpp"
 #include "Listener.hpp"
 

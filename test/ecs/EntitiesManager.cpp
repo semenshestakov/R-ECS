@@ -147,6 +147,7 @@ TEST_F(EntitiesManagerTest, Destructor_IsCalled)
     EXPECT_TRUE(DestructorTest::testValue);
 }
 
+
 TEST_F(EntitiesManagerTest, View_SingleComponent)
 {
     manager.Create(Create2DPrefab());

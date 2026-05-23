@@ -1,5 +1,7 @@
 #pragma once
+#include <stdexcept>
 #include "../AbstractListener.hpp"
+
 
 namespace event
 {

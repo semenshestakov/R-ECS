@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 #include "../ComponentRegistrator.hpp"
 
 
@@ -27,8 +28,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
     return componentId;
 }
 
-/* static */ inline const ecs::RegisterComponentInfo&
-ecs::ComponentRegistrator::GetInfo(const componentId_t componentId)
+/* static */ inline const ecs::RegisterComponentInfo& ecs::ComponentRegistrator::GetInfo(const componentId_t componentId)
 {
     if(componentId == INVALID_COMPONENT_ID)
         throw std::out_of_range("Invalid component id");

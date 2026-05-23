@@ -9,6 +9,7 @@
  * It provides automatic registration capabilities and event handling infrastructure.
  */
 
+#include <array>
 #include "common_recs/utils/ClassUtils.hpp"
 #include "event/EventSystem.hpp"
 #include "systems/IBaseSystem.hpp"
@@ -271,7 +272,7 @@ namespace ecs
 #define ECS_DEPENDENT_SYSTEMS(...)                                          \
     ecs::DependentSystems GetDependents() const override {                  \
     static const auto s_dependents = GetSystemsHashArray<__VA_ARGS__>();    \
-    return {s_dependents.cbegin(), s_dependents.size() }; }
+    return {s_dependents.data(), s_dependents.size() }; }
 
 
 /**

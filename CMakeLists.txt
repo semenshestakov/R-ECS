@@ -47,13 +47,13 @@ if(TEST_ENABLE)
     FetchContent_Declare(
             googletest
             GIT_REPOSITORY https://github.com/google/googletest.git
-            GIT_TAG v1.14.0
+            GIT_TAG v1.17.0
     )
     FetchContent_MakeAvailable(googletest)
 
     # Target
     add_executable(test_recs
-            test/reg/registrator_factory_tests.cpp
+            test/reg/Registrator.cpp
             test/event/Event.cpp
             test/event/Listener.cpp
             test/event/EventSystem.cpp
@@ -72,8 +72,8 @@ if(TEST_ENABLE)
     )
     target_link_libraries(test_recs
         PRIVATE
-            GTest::gtest_main
-            GTest::gmock_main
+            gtest_main
+            gmock_main
             R-ECS
     )
     include(GoogleTest)
@@ -87,6 +87,7 @@ endif()
 if (BENCHMARK_ENABLE)
     message("= = = = = = = = = R-ECS BENCHMARK enable = = = = = = = = =")
     include(FetchContent)
+    set(BUILD_SHARED_LIBS OFF)
 
     # Google Benchmark
     FetchContent_Declare(
@@ -130,6 +131,11 @@ if (BENCHMARK_ENABLE)
             EnTT::EnTT
             flecs::flecs
     )
+    if(TARGET benchmark)
+        target_compile_options(benchmark PRIVATE -Wno-format-nonliteral)
+    endif()
+
+
 else ()
     message("[R-ECS] BENCHMARK disable")
 endif()

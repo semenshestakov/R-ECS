@@ -20,24 +20,24 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(En
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
-typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::reference
-ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*() const
+typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::value_type ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*() const
 {
     if constexpr(std::is_same_v<std::tuple<ComponentCls&...>, value_type>)
     {
         return std::forward_as_tuple(m_storage->GetComponent<ComponentCls>(m_entityLocation)...);
-    } else if constexpr(std::is_same_v<ArchetypedChunkEntityLocation, value_type>)
+    }
+    else if constexpr(std::is_same_v<ArchetypedChunkEntityLocation, value_type>)
     {
         return m_entityLocation;
-    } else
+    }
+    else
     {
         assert(false);
     }
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
-typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::pointer
-ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator->() const
+typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::value_type  ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator->() const
 {
     return &this->operator*();
 }

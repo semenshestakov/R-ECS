@@ -1,11 +1,13 @@
 #ifndef ENTITIES_ARCHETYPE_STORAGE_HPP
 #define ENTITIES_ARCHETYPE_STORAGE_HPP
 
-#include <vector>
+#include <memory>
 #include <queue>
+#include <unordered_map>
+#include <vector>
+#include "Archetype.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
 #include "ecs/utils/EntitiesUtils.hpp"
-#include "Archetype.hpp"
 
 
 namespace ecs
@@ -182,8 +184,6 @@ namespace ecs
             using iterator_category = std::forward_iterator_tag;
             using value_type = ValueType;
             using difference_type = std::ptrdiff_t;
-            using pointer = const value_type*;
-            using reference = const value_type&;
 
             iterator() = default;
 
@@ -199,13 +199,13 @@ namespace ecs
              * Returns tuple of component references or location based on ValueType.
              * @return Current value (const reference)
              */
-            reference operator*() const;
+            value_type operator*() const;
 
             /**
              * @brief Access member of current value.
              * @return Pointer to current value
              */
-            pointer operator->() const;
+            value_type operator->() const;
 
             /**
              * @brief Pre-increment: advance to next valid entity.

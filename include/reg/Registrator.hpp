@@ -1,7 +1,9 @@
-#pragma once
+#ifndef REGISTRATOR_HPP
+#define REGISTRATOR_HPP
 #include <ranges>
 #include <string>
 #include <vector>
+#include <optional>
 
 
 namespace reg
@@ -254,4 +256,5 @@ namespace reg
 
 } // namespace reg
 
+#endif
 #include "detail/Registrator.ipp"

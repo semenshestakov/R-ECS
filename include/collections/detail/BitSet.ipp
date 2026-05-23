@@ -1,5 +1,6 @@
 #pragma once
-#include <ranges>
+#include <algorithm>
+
 #include "../BitSet.hpp"
 
 // = = = = = = = = = = = = = = = = = = = = = = = = = = const_iterator = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -62,7 +63,8 @@ constexpr collection::BitSet::BitSet(const std::size_t size) :
 
 inline void collection::BitSet::set(const std::size_t pos) noexcept
 {
-    resize(pos);
+    if (pos >= m_size)
+        resize(pos + 1);
     m_data[getIdx(pos)] |= getBit(pos);
 }
 
@@ -75,19 +77,18 @@ inline void collection::BitSet::reset(const std::size_t pos) noexcept
 
 inline void collection::BitSet::resize(const std::size_t pos) noexcept
 {
-    if (const std::size_t newSize = pos + 1; newSize > m_size)
+    m_size = pos;
+    if (const std::size_t requiredBlocks = (m_size + BIT_COUNT - 1) / BIT_COUNT; m_data.size() < requiredBlocks)
     {
-        m_size = newSize;
-
-        if (const std::size_t requiredBlocks = (m_size + BIT_COUNT - 1) / BIT_COUNT; m_data.size() < requiredBlocks)
-        {
-            m_data.resize(requiredBlocks, 0);
-        }
+        m_data.resize(requiredBlocks);
     }
 }
 
 inline bool collection::BitSet::test(const std::size_t pos) const noexcept
 {
+    if (pos >= m_size)
+        return false;
+
     return (m_data[getIdx(pos)] & getBit(pos)) != 0;
 }
 
@@ -176,7 +177,7 @@ inline collection::BitSet collection::BitSet::operator^(const BitSet& other) con
 
 inline collection::BitSet& collection::BitSet::operator&=(const BitSet& other)
 {
-    for (std::size_t i = 0; i < m_data.size(); ++i)
+    for (std::size_t i = 0; i < (m_size < other.m_size? m_data.size() : other.m_data.size()); ++i)
         m_data[i] &= other.m_data[i];
 
     return *this;
@@ -184,7 +185,9 @@ inline collection::BitSet& collection::BitSet::operator&=(const BitSet& other)
 
 inline collection::BitSet& collection::BitSet::operator|=(const BitSet& other)
 {
-    resize(other.m_size);
+    if (m_size < other.m_size)
+        resize(other.m_size);
+
     for (std::size_t i = 0; i < m_data.size(); ++i)
         m_data[i] |= other.m_data[i];
 
@@ -193,7 +196,9 @@ inline collection::BitSet& collection::BitSet::operator|=(const BitSet& other)
 
 inline collection::BitSet& collection::BitSet::operator^=(const BitSet& other)
 {
-    resize(other.m_size);
+    if (m_size < other.m_size)
+        resize(other.m_size);
+
     for (std::size_t i = 0; i < m_data.size(); ++i)
         m_data[i] ^= other.m_data[i];
 

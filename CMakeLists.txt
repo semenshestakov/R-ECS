@@ -17,13 +17,13 @@ add_library(R-ECS
         src/ecs/SystemsManager.cpp
         src/ecs/SystemsSchedule.cpp
         src/ecs/EntitiesManager.cpp
-        src/ecs/EntitiesArchetypeStorage.cpp
 )
 
 target_include_directories(R-ECS
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark = = = = = = = = = = = = = = = = = = = = = = = = =
 
@@ -85,6 +85,10 @@ endif()
 
 # Benchmark executable
 if (BENCHMARK_ENABLE)
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG")
+
     message("= = = = = = = = = R-ECS BENCHMARK enable = = = = = = = = =")
     include(FetchContent)
     set(BUILD_SHARED_LIBS OFF)

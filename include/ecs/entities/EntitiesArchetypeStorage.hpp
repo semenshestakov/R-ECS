@@ -29,8 +29,8 @@ namespace ecs
      */
     struct ArchetypedChunkEntityLocation final
     {
-        archetypeIndex_t archetypeIndex;            ///< Index of the archetype in storage
-        chunkEntityIndex_t chunkEntityIndex;        ///< Global entity index within archetype chunks
+        archetypeIndex_t archetypeIndex {};            ///< Index of the archetype in storage
+        chunkEntityIndex_t chunkEntityIndex {};        ///< Global entity index within archetype chunks
 
         /**
          * @brief Compares two locations for equality.
@@ -123,6 +123,27 @@ namespace ecs
         [[nodiscard]] const byte* GetComponentData(chunkEntityIndex_t chunkEntityIndex, componentId_t componentId) const;
 
         /**
+         * @brief Attempts to get component of specified type.
+         * @tparam ComponentCls Component type to retrieve
+         * @param chunkEntityIndex Local entity index
+         * @return Pointer to component data, or nullptr if entity dead or missing component
+         */
+        template<IsComponent ComponentCls> [[nodiscard]] ComponentCls* TryGetComponent(chunkEntityIndex_t chunkEntityIndex);
+        template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls* TryGetComponent(chunkEntityIndex_t chunkEntityIndex) const;
+
+        /**
+         * @brief Gets component of specified type (asserts existence).
+         * @tparam ComponentCls Component type to retrieve
+         * @param chunkEntityIndex Local entity index
+         * @return Reference to component data
+         * @note Asserts that entity is alive and has the component
+         */
+        template<IsComponent ComponentCls> [[nodiscard]] ComponentCls& GetComponent(chunkEntityIndex_t chunkEntityIndex);
+        template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls& GetComponent(chunkEntityIndex_t chunkEntityIndex) const;
+
+
+
+        /**
          * @brief Gets the highest allocated entity index + 1.
          * Used for iteration bounds checking.
          * @return Number of entity slots allocated (may include dead entities)
@@ -185,14 +206,15 @@ namespace ecs
             using value_type = ValueType;
             using difference_type = std::ptrdiff_t;
 
-            iterator() = default;
+            static inline const Archetype ITER_ARCHETYPE = Archetype::GetArchetype<ComponentCls...>();
+
+            constexpr iterator() = default;
 
             /**
              * @brief Constructs iterator at start or end position.
              * @param storage Storage to iterate over
-             * @param isEnd If true, constructs end iterator
              */
-            explicit iterator(EntitiesArchetypeStorage* storage, bool isEnd = false);
+            explicit iterator(EntitiesArchetypeStorage* storage);
 
             /**
              * @brief Dereferences iterator.
@@ -247,13 +269,11 @@ namespace ecs
 
         private:
             void advance();                                         ///< Move to next entity and validate
-            void advanceToNextValid();                              ///< Find next entity with all required components
 
             EntitiesArchetypeStorage* m_storage = nullptr;          ///< Storage being iterated
-            archetypeIndex_t m_currentArchetype = 0;                ///< Current archetype index
-            ArchetypedChunkEntityLocation m_entityLocation {};      ///< Current entity location
-
-            bool m_isEnded = false;                                 ///< True if reached end of storage
+            std::size_t m_currentArchetypeIndex = 0;                ///< Current archetype index in m_archetypedChunks
+            chunkEntityIndex_t m_chunkEntityIndex {};               ///< Current entity location
+            std::vector<ArchetypedChunks*> m_archetypedChunks;
         };
 
         /**
@@ -264,7 +284,7 @@ namespace ecs
         using iter_value_type = std::conditional_t<
             (sizeof...(ComponentCls) > 0),
             std::tuple<ComponentCls&...>,
-            ArchetypedChunkEntityLocation
+            chunkEntityIndex_t
         >;
 
         /**
@@ -281,7 +301,7 @@ namespace ecs
          * @return End iterator
          */
         template<IsComponent... ComponentCls>
-        [[nodiscard]] auto end();
+        [[nodiscard]] auto end() const;
 
         // ========================================= EntitiesArchetypeStorage =========================================
 

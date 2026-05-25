@@ -68,7 +68,7 @@ TEST_F(EntitiesManagerStressTest, View_100k)
 }
 
 
-TEST_F(EntitiesManagerStressTest, View_100k_ZeroSuitable)
+TEST_F(EntitiesManagerStressTest, View_10k_ZeroSuitable)
 {
     for (size_t i = 0; i < N; ++i)
         manager.Create(CreatePrefab());
@@ -82,7 +82,7 @@ TEST_F(EntitiesManagerStressTest, View_100k_ZeroSuitable)
 }
 
 
-TEST_F(EntitiesManagerStressTest, Destroy_100k)
+TEST_F(EntitiesManagerStressTest, Destroy_10k)
 {
     std::vector<EntityWrapper> entities;
     entities.reserve(N);

@@ -966,9 +966,31 @@ TEST(BitSetTest, IsSubsetOfEmptySet)
     bs.set(5);
     bs.set(10);
 
-    // Пустое множество является подмножеством любого множества
     EXPECT_TRUE(empty.isSubsetOf(bs));
     EXPECT_TRUE(empty.isSubsetOf(empty));
+}
+
+
+TEST(BitSetTest, IsSubsetOfBigSized)
+{
+    BitSet bs1(0);
+    BitSet bs2(0);
+    BitSet bs3(0);
+    bs1.set(5);
+    bs2.set(10);
+    bs3.set(64);
+
+    const std::vector vectorBitSet = {&bs1, &bs2, &bs3};
+    for (std::size_t i = 0 ; i < vectorBitSet.size(); ++i)
+    {
+        for (std::size_t j = 0 ; j < vectorBitSet.size(); ++j)
+        {
+            if (i != j)
+            {
+                EXPECT_FALSE(vectorBitSet[i]->isSubsetOf(*vectorBitSet[j]));
+            }
+        }
+    }
 }
 
 TEST(BitSetTest, IsSubsetOfEqualSets)
@@ -984,7 +1006,6 @@ TEST(BitSetTest, IsSubsetOfEqualSets)
     bs2.set(10);
     bs2.set(42);
 
-    // Множество является подмножеством самого себя
     EXPECT_TRUE(bs1.isSubsetOf(bs2));
     EXPECT_TRUE(bs2.isSubsetOf(bs1));
 }
@@ -1019,11 +1040,9 @@ TEST(BitSetTest, IsSubsetOfWithDifferentSizes)
     large.set(30);
     large.set(100);
 
-    // Подмножество с меньшим размером
     EXPECT_TRUE(small.isSubsetOf(large));
 
-    // НЕ подмножество, если есть биты за пределами размера large
-    large.set(250); // расширяем large
+    large.set(250);
     EXPECT_TRUE(small.isSubsetOf(large));
 }
 
@@ -1050,12 +1069,11 @@ TEST(BitSetTest, IsSubsetOfWithOverlappingBits)
     BitSet bs2(100);
 
     bs1.set(0);
-    bs1.set(63);  // граница блока
-    bs1.set(64);  // следующий блок
+    bs1.set(63);
+    bs1.set(64);
 
     bs2.set(0);
     bs2.set(63);
-    // нет бита 64
 
     EXPECT_FALSE(bs1.isSubsetOf(bs2));
     EXPECT_TRUE(bs2.isSubsetOf(bs1));
@@ -1074,9 +1092,8 @@ TEST(BitSetTest, IsSubsetOfEmptyVsNonEmpty)
 TEST(BitSetTest, MaxOnEmptySet)
 {
     BitSet empty(0);
-    BitSet empty2(100); // размер 100, но ни одного бита не установлено
+    BitSet empty2(100);
 
-    // Для пустого множества возвращает максимальное значение size_t
     EXPECT_EQ(empty.max(), static_cast<std::size_t>(-1));
     EXPECT_EQ(empty2.max(), static_cast<std::size_t>(-1));
 }
@@ -1113,7 +1130,6 @@ TEST(BitSetTest, MaxOnBlockBoundaries)
 {
     BitSet bs(200);
 
-    // Границы 64-битных блоков
     bs.set(63);
     EXPECT_EQ(bs.max(), 63);
 
@@ -1130,8 +1146,7 @@ TEST(BitSetTest, MaxOnBlockBoundaries)
 TEST(BitSetTest, MaxWithLastBitSet)
 {
     BitSet bs(150);
-    bs.set(149); // последний бит
-
+    bs.set(149);
     EXPECT_EQ(bs.max(), 149);
 }
 
@@ -1189,13 +1204,11 @@ TEST(BitSetTest, IsSubsetOfWithMaxMethod)
     bs2.set(30);
     bs2.set(40);
 
-    // Максимальный элемент подмножества не больше максимального элемента надмножества
     if (bs1.isSubsetOf(bs2))
     {
         EXPECT_LE(bs1.max(), bs2.max());
     }
 
-    // Обратное неверно
     bs2.set(100);
     EXPECT_TRUE(bs1.isSubsetOf(bs2));
     EXPECT_LE(bs1.max(), bs2.max());
@@ -1217,7 +1230,6 @@ TEST(BitSetTest, CombinedSubsetAndMaxOperations)
     EXPECT_EQ(subset.max(), 100);
     EXPECT_EQ(base.max(), 150);
 
-    // Добавляем в subset элемент больше, чем max в base
     subset.set(180);
     EXPECT_FALSE(subset.isSubsetOf(base));
     EXPECT_EQ(subset.max(), 180);

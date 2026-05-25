@@ -1,4 +1,5 @@
 #pragma once
+#include "../Archetype.hpp"
 #include "ecs/components/ComponentRegistrator.hpp"
 
 

@@ -16,7 +16,27 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(En
     for (auto& chunks : m_storage->m_storageByArchetypeIndex)
     {
         if(chunks.archetype().isSubsetOf(ITER_ARCHETYPE))
+        {
+            [&]<std::size_t... Is>(std::index_sequence<Is...>)
+            {
+                ([&]
+                    {
+                    using ComponentType = std::tuple_element_t<Is, std::tuple<ComponentCls...>>;
+
+                    auto& componentChunks = chunks.getComponentChunks(ComponentRegistrator::GetСomponentId<ComponentType>());
+                    auto& storageComponentArchetypedChunks = std::get<Is>(m_dataChunks);
+                    storageComponentArchetypedChunks.emplace_back();
+                    auto& chunkPointers = storageComponentArchetypedChunks.back();
+                    chunkPointers.reserve(componentChunks.size());
+                    for (auto& chunk : componentChunks)
+                    {
+                        chunkPointers.push_back(std::bit_cast<ComponentType*>(chunk.get()));
+                    }
+                    }(), ...);
+            }(std::index_sequence_for<ComponentCls...>{});
+
             m_archetypedChunks.push_back(&chunks);
+        }
     }
 
     if (m_archetypedChunks.empty())
@@ -34,9 +54,15 @@ typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::va
 {
     if constexpr(std::is_same_v<std::tuple<ComponentCls&...>, value_type>)
     {
-        return std::forward_as_tuple(m_archetypedChunks[m_currentArchetypeIndex]->template GetComponent<ComponentCls>(m_chunkEntityIndex)...);
+        const std::size_t chunkIndex =ArchetypedChunks::getChunkByEntityIndex(m_chunkEntityIndex);
+        const std::size_t localIndex = ArchetypedChunks::getLocalEntityIndex(m_chunkEntityIndex);
+
+        return std::tuple<ComponentCls&...>(
+            std::get<std::vector<std::vector<ComponentCls*>>>(m_dataChunks)[m_currentArchetypeIndex][chunkIndex][localIndex]...
+        );
+
     }
-    else if constexpr(std::is_same_v<ArchetypedChunkEntityLocation, value_type>)
+    else if constexpr(std::is_same_v<chunkEntityIndex_t, value_type>)
     {
         return m_chunkEntityIndex;
     }
@@ -252,10 +278,7 @@ inline void ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityI
 
 inline bool ecs::ArchetypedChunks::IsAlive(const chunkEntityIndex_t chunkEntityIndex) const
 {
-    if (m_isInWorld.size() <= chunkEntityIndex)
-        return false;
-
-    return m_isInWorld[chunkEntityIndex];
+    return m_isInWorld.test(chunkEntityIndex);
 }
 
 inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId)
@@ -364,6 +387,11 @@ inline std::size_t ecs::ArchetypedChunks::getLocalEntityIndex(const chunkEntityI
 inline const ecs::Archetype& ecs::ArchetypedChunks::archetype() const
 {
     return m_archetype;
+}
+
+inline ecs::ArchetypedChunks::componentChunks_t& ecs::ArchetypedChunks::getComponentChunks(const componentId_t componentId)
+{
+    return m_chunksByComponentId.at(componentId);
 }
 
 // ============================================= EntitiesArchetypeStorage =============================================

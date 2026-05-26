@@ -51,6 +51,8 @@ namespace ecs
     class ArchetypedChunks final
     {
     public:
+        using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;
+
         ArchetypedChunks() = delete;
 
         /**
@@ -168,9 +170,10 @@ namespace ecs
          */
         [[nodiscard]] const Archetype& archetype() const;
 
+        [[nodiscard]] componentChunks_t& getComponentChunks(componentId_t componentId);
+
     private:
         Archetype m_archetype;                                                  ///< Archetype definition
-        using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;
         std::vector<componentChunks_t> m_chunksByComponentId {};                ///< Per-component: vector of chunk pointers
 
         collection::BitSet m_isInWorld;                                          ///< Alive status for each entity slot
@@ -271,6 +274,8 @@ namespace ecs
             EntitiesArchetypeStorage* m_storage = nullptr;          ///< Storage being iterated
             std::size_t m_currentArchetypeIndex = 0;                ///< Current archetype index in m_archetypedChunks
             chunkEntityIndex_t m_chunkEntityIndex {};               ///< Current entity location
+
+            std::tuple<std::vector<std::vector<ComponentCls*>>...> m_dataChunks;
             std::vector<ArchetypedChunks*> m_archetypedChunks;
         };
 

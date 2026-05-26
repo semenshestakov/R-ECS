@@ -17,7 +17,7 @@ namespace ecs
     struct Entity;
 
     using chunkEntityIndex_t = std::uint32_t;
-    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK = 256;
+    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK = 1024;
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_MASK = MAX_ENTITIES_IN_CHUNK - 1;
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNKS = ~0u;
 
@@ -141,8 +141,6 @@ namespace ecs
         template<IsComponent ComponentCls> [[nodiscard]] ComponentCls& GetComponent(chunkEntityIndex_t chunkEntityIndex);
         template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls& GetComponent(chunkEntityIndex_t chunkEntityIndex) const;
 
-
-
         /**
          * @brief Gets the highest allocated entity index + 1.
          * Used for iteration bounds checking.
@@ -175,7 +173,7 @@ namespace ecs
         using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;
         std::vector<componentChunks_t> m_chunksByComponentId {};                ///< Per-component: vector of chunk pointers
 
-        std::vector<bool> m_isInWorld;                                          ///< Alive status for each entity slot
+        collection::BitSet m_isInWorld;                                          ///< Alive status for each entity slot
         chunkEntityIndex_t m_lastChunkEntityIndex = 0;                          ///< Next free slot index (if no freelist entries)
         std::queue<chunkEntityIndex_t> m_freeChunkEntityIndex;                  ///< Reusable entity slots from destroyed entities
     };

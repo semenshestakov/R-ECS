@@ -226,7 +226,7 @@ inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity&
             );
     }
 
-    m_isInWorld[chunkEntityIndex] = true;
+    m_isInWorld.set(chunkEntityIndex);
     return chunkEntityIndex;
 }
 
@@ -246,7 +246,7 @@ inline void ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityI
             );
     }
 
-    m_isInWorld[chunkEntityIndex] = false;
+    m_isInWorld.reset(chunkEntityIndex);
     m_freeChunkEntityIndex.emplace(chunkEntityIndex);
 }
 

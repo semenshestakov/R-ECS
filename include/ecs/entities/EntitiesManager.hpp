@@ -11,6 +11,7 @@
 
 namespace ecs
 {
+    template<typename T> concept ReturnEntityConcept = std::is_same_v<T, EntityWrapper> || std::is_same_v<T, Entity>;
 
     /**
      * @brief Central manager for all entities in the ECS system.
@@ -53,7 +54,8 @@ namespace ecs
          * @param prefabEntity Prefab containing component data to initialize entity
          * @return Wrapper object providing safe access to the created entity
          */
-        EntityWrapper Create(const PrefabEntity& prefabEntity);
+        template<ReturnEntityConcept ReturnType=EntityWrapper>
+        ReturnType Create(const PrefabEntity& prefabEntity);
 
         /**
          * @brief Creates new entity from prefab data (rvalue reference).
@@ -61,7 +63,8 @@ namespace ecs
          * @param prefabEntity Prefab containing component data to initialize entity
          * @return Wrapper object providing safe access to the created entity
          */
-        EntityWrapper Create(PrefabEntity&& prefabEntity);
+        template<ReturnEntityConcept ReturnType=EntityWrapper>
+        ReturnType Create(PrefabEntity&& prefabEntity);
 
         /**
          * @brief Destroys entity if it exists.

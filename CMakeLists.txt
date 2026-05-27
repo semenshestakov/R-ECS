@@ -16,7 +16,6 @@ add_library(R-ECS
         src/ecs/EntityWrapper.cpp
         src/ecs/SystemsManager.cpp
         src/ecs/SystemsSchedule.cpp
-        src/ecs/EntitiesManager.cpp
 )
 
 target_include_directories(R-ECS
@@ -123,10 +122,12 @@ if (BENCHMARK_ENABLE)
             benchmarks/entities/entt.cpp
             benchmarks/entities/flecs.cpp
     )
+
     target_include_directories(recs_bench
          PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/include
     )
+
     target_link_libraries(recs_bench
         PRIVATE
             benchmark::benchmark

@@ -151,9 +151,7 @@ void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanc
 
         m_chunkEntityIndex = 0;
     }
-
 }
-
 
 // ===================================== EntitiesArchetypeStorage::begin | end =====================================
 
@@ -286,27 +284,16 @@ inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex
     if (!IsAlive(chunkEntityIndex))
         return nullptr;
 
-    if (componentId >= m_chunksByComponentId.size())
+    if(!m_archetype.test(componentId))
         return nullptr;
 
     const auto& componentChunks = m_chunksByComponentId[componentId];
-    if (componentChunks.empty())
-        return nullptr;
 
     const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
-    if (chunkIndex >= componentChunks.size())
-        return nullptr;
-
     auto& chunk = componentChunks[chunkIndex];
-    if (!chunk)
-        return nullptr;
-
-    if (localEntityIndex >= MAX_ENTITIES_IN_CHUNK)
-        return nullptr;
-
     return std::launder(&chunk[componentSize * localEntityIndex]);
 }
 
@@ -315,27 +302,16 @@ inline const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntit
     if (!IsAlive(chunkEntityIndex))
         return nullptr;
 
-    if (componentId >= m_chunksByComponentId.size())
+    if(!m_archetype.test(componentId))
         return nullptr;
 
     const auto& componentChunks = m_chunksByComponentId[componentId];
-    if (componentChunks.empty())
-        return nullptr;
 
     const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
-    if (chunkIndex >= componentChunks.size())
-        return nullptr;
-
     auto& chunk = componentChunks[chunkIndex];
-    if (!chunk)
-        return nullptr;
-
-    if (localEntityIndex >= MAX_ENTITIES_IN_CHUNK)
-        return nullptr;
-
     return std::launder(&chunk[componentSize * localEntityIndex]);
 }
 

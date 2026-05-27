@@ -54,7 +54,7 @@ BENCHMARK_F(RECSBenchmark, Access_100k_Components)(benchmark::State& state)
 
         for (size_t i = 0; i < BENCHMARK_N; ++i)
         {
-            entities.emplace_back(manager.Create(prefab).getEntity());
+            entities.emplace_back(manager.Create<Entity>(prefab));
         }
         state.ResumeTiming();
 

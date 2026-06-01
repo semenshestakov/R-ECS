@@ -1,6 +1,6 @@
 #pragma once
 #include <cassert>
-#include "../EntitiesArchetypeStorage.hpp"
+#include "ecs/entities/EntitiesArchetypeStorage.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
 
 // ====================================== EntitiesArchetypeStorage::iterator ======================================
@@ -201,31 +201,35 @@ inline ecs::ArchetypedChunks::ArchetypedChunks(Archetype a_archetype) :
     m_archetype(std::move(a_archetype))
 {
     assert(!m_archetype.empty());
-    m_isInWorld.resize(1);
+    m_localIndexToEntityId.resize(1);
     m_chunksByComponentId.resize(m_archetype.max() + 1);
+
+    m_hasFreeEntityInChunk.set(0);
 }
 
-inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity& entity)
+inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity& entity, const entityId_t entityId)
 {
     // - - - Find Chunk Index, Entity Index - - -
-    chunkEntityIndex_t chunkEntityIndex;
-    if (m_freeChunkEntityIndex.empty())
+    chunkEntityIndex_t chunkIndex;
+    chunkEntityIndex_t localEntityIndex;
+
+    if (const std::size_t minChunkIndexHasFreeEntities = m_hasFreeEntityInChunk.min(); minChunkIndexHasFreeEntities == decltype(m_hasFreeEntityInChunk)::INVALID_INDEX)
     {
-        chunkEntityIndex = m_lastChunkEntityIndex++;
-        if (m_isInWorld.size() <= chunkEntityIndex)
-        {
-            m_isInWorld.resize(m_isInWorld.size() * 2);
-        }
+        chunkIndex = m_hasFreeEntityInChunk.size();
+        m_hasFreeEntityInChunk.set(chunkIndex);
+        localEntityIndex = m_chunksEntityCount[chunkIndex] = 1;
+
+        m_localIndexToEntityId.resize(chunkIndex * 2);
     }
     else
     {
-        chunkEntityIndex = m_freeChunkEntityIndex.front();
-        m_freeChunkEntityIndex.pop();
-    }
-    assert(!m_isInWorld[chunkEntityIndex]);
+        localEntityIndex = m_chunksEntityCount[minChunkIndexHasFreeEntities]++;
+        chunkIndex = minChunkIndexHasFreeEntities;
 
-    const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
-    const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
+        if (m_chunksEntityCount[minChunkIndexHasFreeEntities] == MAX_ENTITIES_IN_CHUNK)
+            m_hasFreeEntityInChunk.reset(minChunkIndexHasFreeEntities);
+    }
+    assert(m_localIndexToEntityId[chunkIndex][localEntityIndex] == INVALID_ENTITY_ID);
 
     // - - - Fill Data For Components - - -
 
@@ -250,14 +254,12 @@ inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity&
             );
     }
 
-    m_isInWorld.set(chunkEntityIndex);
-    return chunkEntityIndex;
+    m_localIndexToEntityId[chunkIndex][localEntityIndex] = entityId;
+    return localEntityIndex + (chunkIndex  << MAX_ENTITIES_IN_CHUNK_BITS);
 }
 
-inline void ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityIndex)
+inline ecs::entityId_t ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityIndex)
 {
-    assert(m_isInWorld[chunkEntityIndex]);
-
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
@@ -270,20 +272,37 @@ inline void ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityI
             );
     }
 
-    m_isInWorld.reset(chunkEntityIndex);
-    m_freeChunkEntityIndex.emplace(chunkEntityIndex);
+    entityId_t migrationEntityId;
+    const chunkEntityIndex_t lastChunkEntityIndex = --m_chunksEntityCount[chunkIndex];
+
+    if (lastChunkEntityIndex != localEntityIndex)
+    {
+        migrationEntityId = m_localIndexToEntityId[chunkIndex][lastChunkEntityIndex];
+        m_localIndexToEntityId[chunkIndex][localEntityIndex] = migrationEntityId;
+        for (const componentId_t componentId : m_archetype)
+        {
+            const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+
+            componentInfo.move(
+                /* to */    &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * localEntityIndex],
+                /* from */  &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * lastChunkEntityIndex]
+                );
+        }
+    }
+    else
+    {
+        migrationEntityId = INVALID_ENTITY_ID;
+    }
+
+    m_localIndexToEntityId[chunkIndex][lastChunkEntityIndex] = INVALID_ENTITY_ID;
+    m_hasFreeEntityInChunk.set(chunkIndex);
+
+    return migrationEntityId;
 }
 
-inline bool ecs::ArchetypedChunks::IsAlive(const chunkEntityIndex_t chunkEntityIndex) const
-{
-    return m_isInWorld.test(chunkEntityIndex);
-}
 
 inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId)
 {
-    if (!IsAlive(chunkEntityIndex))
-        return nullptr;
-
     if(!m_archetype.test(componentId))
         return nullptr;
 
@@ -299,9 +318,6 @@ inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex
 
 inline const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId) const
 {
-    if (!IsAlive(chunkEntityIndex))
-        return nullptr;
-
     if(!m_archetype.test(componentId))
         return nullptr;
 
@@ -343,19 +359,13 @@ const ComponentCls& ecs::ArchetypedChunks::GetComponent(const chunkEntityIndex_t
     return *componentData;
 }
 
-inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::getLastChunkEntityIndex() const
-{
-    return m_lastChunkEntityIndex;
-}
 
-/* static */
-inline std::size_t ecs::ArchetypedChunks::getChunkByEntityIndex(const chunkEntityIndex_t chunkEntityIndex)
+/* static */ inline std::size_t ecs::ArchetypedChunks::getChunkByEntityIndex(const chunkEntityIndex_t chunkEntityIndex)
 {
     return chunkEntityIndex / MAX_ENTITIES_IN_CHUNK;
 }
 
-/* static */
-inline std::size_t ecs::ArchetypedChunks::getLocalEntityIndex(const chunkEntityIndex_t chunkEntityIndex)
+/* static */ inline std::size_t ecs::ArchetypedChunks::getLocalEntityIndex(const chunkEntityIndex_t chunkEntityIndex)
 {
     return chunkEntityIndex & MAX_ENTITIES_IN_CHUNK_MASK;
 }
@@ -372,12 +382,9 @@ inline ecs::ArchetypedChunks::componentChunks_t& ecs::ArchetypedChunks::getCompo
 
 // ============================================= EntitiesArchetypeStorage =============================================
 
-inline ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(const PrefabEntity& prefabEntity)
+inline ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(const PrefabEntity& prefabEntity, const entityId_t entityId)
 {
     // - - - Calculate Archetype - - -
-
-    const PrefabEntity::componentsData_t& componentsData = prefabEntity.GetComponentsData();
-
     const Archetype& archetype = prefabEntity.getArchetype();
 
     // - - - Find Archetype Index - - -
@@ -399,40 +406,25 @@ inline ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(
 
     return {
         .archetypeIndex=archetypeIndex,
-        .chunkEntityIndex=m_storageByArchetypeIndex[archetypeIndex].Create(prefabEntity)
+        .chunkEntityIndex=m_storageByArchetypeIndex[archetypeIndex].Create(prefabEntity, entityId)
     };
 }
 
-inline void ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedChunkEntityLocation& entityLocation)
+inline ecs::entityId_t ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedChunkEntityLocation& entityLocation)
 {
-    assert(IsAlive(entityLocation));
-    m_storageByArchetypeIndex.at(entityLocation.archetypeIndex).Destroy(entityLocation.chunkEntityIndex);
-}
-
-inline bool ecs::EntitiesArchetypeStorage::IsAlive(const ArchetypedChunkEntityLocation& entityLocation) const
-{
-    if (m_storageByArchetypeIndex.size() <= entityLocation.archetypeIndex)
-        return false;
-
-    return m_storageByArchetypeIndex[entityLocation.archetypeIndex].IsAlive(entityLocation.chunkEntityIndex);
+    return m_storageByArchetypeIndex.at(entityLocation.archetypeIndex).Destroy(entityLocation.chunkEntityIndex);
 }
 
 inline ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(
     const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId
     )
 {
-    if (!IsAlive(entityLocation))
-        return nullptr;
-
     return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
 }
 
 inline const ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(
     const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId) const
 {
-    if (!IsAlive(entityLocation))
-        return nullptr;
-
     return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
 }
 

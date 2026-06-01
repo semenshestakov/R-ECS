@@ -113,7 +113,7 @@ inline void collection::BitSet::reset() noexcept
 inline std::size_t collection::BitSet::max() const
 {
     if (empty())
-        return static_cast<std::size_t>(-1);
+        return INVALID_INDEX;
 
     for (std::size_t i = m_data.size(); i > 0; --i)
     {
@@ -125,7 +125,24 @@ inline std::size_t collection::BitSet::max() const
         }
     }
 
-    return static_cast<std::size_t>(-1);
+    return INVALID_INDEX;
+}
+
+inline std::size_t collection::BitSet::min() const
+{
+    if (empty())
+        return INVALID_INDEX;
+
+    for (std::size_t i = 0; i < m_data.size(); ++i)
+    {
+        if (const dataItem_t block = m_data[i]; block != 0)
+        {
+            const std::size_t bitPos = lowestBitPosition(block);
+            return (i * BIT_COUNT) + bitPos;
+        }
+    }
+
+    return INVALID_INDEX;
 }
 
 inline std::size_t collection::BitSet::size() const noexcept
@@ -257,6 +274,21 @@ inline bool collection::BitSet::isSubsetOf(const BitSet& other) const
 
     return pos;
 }
+
+/* static */ constexpr std::size_t collection::BitSet::lowestBitPosition(dataItem_t value)
+{
+    std::size_t pos = 0;
+
+    if ((value & 0x00000000FFFFFFFFULL) == 0) { pos += 32; value >>= 32; }
+    if ((value & 0x000000000000FFFFULL) == 0) { pos += 16; value >>= 16; }
+    if ((value & 0x00000000000000FFULL) == 0) { pos += 8;  value >>= 8;  }
+    if ((value & 0x000000000000000FULL) == 0) { pos += 4;  value >>= 4;  }
+    if ((value & 0x0000000000000003ULL) == 0) { pos += 2;  value >>= 2;  }
+    if ((value & 0x0000000000000001ULL) == 0) { pos += 1;                }
+
+    return pos;
+}
+
 /* static */ constexpr std::size_t collection::BitSet::getIdx(const std::size_t pos) noexcept
 {
     return pos >> 6;  // pos / 64 - faster than division

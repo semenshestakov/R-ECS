@@ -12,7 +12,8 @@ ecs::RegisterComponentInfo ecs::RegisterComponentInfo::Create(const std::string&
             .componentId = INVALID_COMPONENT_ID,
             .constructor = [](byte* ptr) { new(ptr) ComponentCls(); },
             .destructor = [](byte* ptr) { std::bit_cast<ComponentCls*>(ptr)->~ComponentCls(); },
-            .copy = [](byte* to, byte* from) { new(to) ComponentCls(*std::bit_cast<const ComponentCls*>(from)); }
+            .copy = [](byte* to, byte* from) { new(to) ComponentCls(*std::bit_cast<const ComponentCls*>(from)); },
+            .move = [](byte* to, byte* from) { new(to) ComponentCls(std::move(*std::bit_cast<ComponentCls*>(from)));}
     };
 }
 

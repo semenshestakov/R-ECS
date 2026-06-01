@@ -2,9 +2,9 @@
 #define ENTITIES_ARCHETYPE_STORAGE_HPP
 
 #include <memory>
-#include <queue>
 #include <unordered_map>
 #include <vector>
+#include <array>
 #include "Archetype.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
 #include "ecs/utils/EntitiesUtils.hpp"
@@ -17,7 +17,8 @@ namespace ecs
     struct Entity;
 
     using chunkEntityIndex_t = std::uint32_t;
-    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK = 1024;
+    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_BITS = 10;
+    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK = 1 << MAX_ENTITIES_IN_CHUNK_BITS;
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_MASK = MAX_ENTITIES_IN_CHUNK - 1;
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNKS = ~0u;
 
@@ -83,12 +84,13 @@ namespace ecs
          * Copies component data from the prefab entity into the appropriate chunk locations.
          *
          * @param entity PrefabEntity containing all component data to initialize the new entity
+         * @param entityId global entity id
          * @return chunkEntityIndex_t Unique index identifying this entity within the archetype
          *
          * @pre Entity must have all components required by this archetype
          * @post Entity is marked as alive and its component data is stored in the chunk arrays
          */
-        chunkEntityIndex_t Create(const PrefabEntity& entity);
+        chunkEntityIndex_t Create(const PrefabEntity& entity, entityId_t entityId);
 
         /**
          * @brief Destroys an entity and frees its storage slot.
@@ -97,20 +99,12 @@ namespace ecs
          * for future reuse. The memory is not immediately freed but will be reused by subsequent Create calls.
          *
          * @param chunkEntityIndex Index of the entity to destroy
+         * @return global entity in chunk migration
          *
          * @pre Entity must be alive at the given index
          * @post Entity's slot is added to free list and marked as not alive
          */
-        void Destroy(chunkEntityIndex_t chunkEntityIndex);
-
-        /**
-         * @brief Checks if an entity exists and is alive.
-         *
-         * @param chunkEntityIndex Index to check
-         * @return true if the entity exists and has not been destroyed
-         * @return false if the index is out of range or the entity is destroyed
-         */
-        [[nodiscard]] bool IsAlive(chunkEntityIndex_t chunkEntityIndex) const;
+        [[nodiscard]] entityId_t Destroy(chunkEntityIndex_t chunkEntityIndex);
 
         /**
          * @brief Retrieves mutable component data for a specific component type.
@@ -175,10 +169,10 @@ namespace ecs
     private:
         Archetype m_archetype;                                                  ///< Archetype definition
         std::vector<componentChunks_t> m_chunksByComponentId {};                ///< Per-component: vector of chunk pointers
+        std::vector<chunkEntityIndex_t> m_chunksEntityCount {};
+        collection::BitSet m_hasFreeEntityInChunk;
 
-        collection::BitSet m_isInWorld;                                          ///< Alive status for each entity slot
-        chunkEntityIndex_t m_lastChunkEntityIndex = 0;                          ///< Next free slot index (if no freelist entries)
-        std::queue<chunkEntityIndex_t> m_freeChunkEntityIndex;                  ///< Reusable entity slots from destroyed entities
+        std::vector<std::array<entityId_t, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;
     };
 
     // =========================================== EntitiesArchetypeStorage ===========================================
@@ -312,23 +306,18 @@ namespace ecs
          * @brief Creates a new entity from prefab data.
          * Automatically determines or finds appropriate archetype based on prefab's components.
          * @param prefabEntity Prefab containing component data
+         * @param entityId global entity id
          * @return Location descriptor for created entity
          */
-        ArchetypedChunkEntityLocation Create(const PrefabEntity& prefabEntity);
+        ArchetypedChunkEntityLocation Create(const PrefabEntity& prefabEntity, entityId_t entityId);
 
         /**
          * @brief Destroys entity at given location.
          * Calls destructors and marks slot for reuse.
          * @param entityLocation Location of entity to destroy
          */
-        void Destroy(const ArchetypedChunkEntityLocation& entityLocation);
+        entityId_t Destroy(const ArchetypedChunkEntityLocation& entityLocation);
 
-        /**
-         * @brief Checks if entity exists and is alive.
-         * @param entityLocation Location of entity to check
-         * @return true if entity exists
-         */
-        [[nodiscard]] bool IsAlive(const ArchetypedChunkEntityLocation& entityLocation) const;
 
         /**
          * @brief Gets mutable pointer to component data by component ID.

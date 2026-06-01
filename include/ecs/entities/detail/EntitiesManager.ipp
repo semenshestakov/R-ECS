@@ -13,8 +13,8 @@ inline ecs::EntitiesManager::~EntitiesManager()
     }
 }
 
-template<ecs::ReturnEntityConcept ReturnType>
-inline ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
+template<ecs::EntityConcept ReturnType>
+ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
 {
     Entity entity{};
 
@@ -40,7 +40,7 @@ inline ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
     }
 
     assert(entity.id < m_lastEntityId);
-    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(prefabEntity);
+    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(prefabEntity, entity.id);
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 
@@ -50,40 +50,48 @@ inline ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
         return entity;
 }
 
-template<ecs::ReturnEntityConcept ReturnType>
+template<ecs::EntityConcept ReturnType>
 ReturnType ecs::EntitiesManager::Create(PrefabEntity&& prefabEntity)
 {
     return Create<ReturnType>(prefabEntity);
 }
 
-inline void ecs::EntitiesManager::Destroy(const Entity& entity)
+template<ecs::EntityConcept InputEntityType>
+void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
 {
     if(!IsAlive(entity))
         return;
 
-    assert(entity.id < m_lastEntityId);
+    assert(entity.getId() < m_lastEntityId);
     assert(m_versionByEntityIndex.size() == m_entitiesLocationByEntityIndex.size());
 
-    m_storage.Destroy(m_entitiesLocationByEntityIndex[entity.id]);
-    m_versionByEntityIndex[entity.id] = {};
+    if (
+        const entityId_t migratedEntityId = m_storage.Destroy(m_entitiesLocationByEntityIndex[entity.getId()]);
+        migratedEntityId != INVALID_ENTITY_ID
+        )
+    {
+        m_versionByEntityIndex[migratedEntityId] = entity.version;
+        m_entitiesLocationByEntityIndex[migratedEntityId].chunkEntityIndex = m_entitiesLocationByEntityIndex[entity.getId()].chunkEntityIndex;
+    }
+
+    m_versionByEntityIndex[entity.getId()] = {};
     m_freeEntities.emplace(entity);
     --m_isAliveEntitiesCount;
 }
 
-inline void ecs::EntitiesManager::Destroy(const EntityWrapper& entity) { return Destroy(entity.getEntity()); }
 
-inline bool ecs::EntitiesManager::IsAlive(const Entity& entity) const
+template<ecs::EntityConcept InputEntityType>
+bool ecs::EntitiesManager::IsAlive(const InputEntityType& entity) const
 {
-    if(entity.id >= m_versionByEntityIndex.size())
+    if(entity.getId() >= m_versionByEntityIndex.size())
         return false;
 
-    if(m_versionByEntityIndex[entity.id] != entity.version)
+    if(m_versionByEntityIndex[entity.getId()] != entity.getVersion())
         return false;
 
     return true;
 }
 
-inline bool ecs::EntitiesManager::IsAlive(const EntityWrapper& entity) const { return IsAlive(entity.getEntity()); }
 
 template<ecs::IsComponent ComponentCls>
 ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity)

@@ -1234,3 +1234,75 @@ TEST(BitSetTest, CombinedSubsetAndMaxOperations)
     EXPECT_FALSE(subset.isSubsetOf(base));
     EXPECT_EQ(subset.max(), 180);
 }
+
+
+TEST(BitSetTest, MinWithFirstBitSet)
+{
+    BitSet bs(150);
+    bs.set(0);
+    EXPECT_EQ(bs.min(), 0);
+}
+
+TEST(BitSetTest, MinWithMiddleBitSet)
+{
+    BitSet bs(150);
+    bs.set(100);
+    EXPECT_EQ(bs.min(), 100);
+}
+
+TEST(BitSetTest, MinWithMultipleBitsSet)
+{
+    BitSet bs(150);
+    bs.set(50);
+    bs.set(75);
+    bs.set(100);
+    EXPECT_EQ(bs.min(), 50);
+}
+
+TEST(BitSetTest, MinWithLastBitSet)
+{
+    BitSet bs(150);
+    bs.set(149);
+    EXPECT_EQ(bs.min(), 149);
+}
+
+TEST(BitSetTest, MinWithAllBitsSet)
+{
+    BitSet bs(150);
+    for (std::size_t i = 0; i < 150; ++i)
+        bs.set(i);
+    EXPECT_EQ(bs.min(), 0);
+}
+
+TEST(BitSetTest, MinWithEmptySet)
+{
+    const BitSet bs(150);
+    EXPECT_EQ(bs.min(), static_cast<std::size_t>(-1));
+}
+
+TEST(BitSetTest, MinWithSingleBitInDifferentBlocks)
+{
+    BitSet bs(200);
+
+    bs.set(63);
+    EXPECT_EQ(bs.min(), 63);
+    bs.reset(63);
+
+    bs.set(64);
+    EXPECT_EQ(bs.min(), 64);
+
+    bs.set(128);
+    EXPECT_EQ(bs.min(), 128);
+}
+
+TEST(BitSetTest, LowestBitPositionTest)
+{
+    EXPECT_EQ(BitSet::lowestBitPosition(0x0000000000000001ULL), 0);
+    EXPECT_EQ(BitSet::lowestBitPosition(0x0000000000000002ULL), 1);
+    EXPECT_EQ(BitSet::lowestBitPosition(0x0000000000000004ULL), 2);
+    EXPECT_EQ(BitSet::lowestBitPosition(0x0000000000000008ULL), 3);
+    EXPECT_EQ(BitSet::lowestBitPosition(0x0000000000000010ULL), 4);
+    EXPECT_EQ(BitSet::lowestBitPosition(0x0000000080000000ULL), 31);
+    EXPECT_EQ(BitSet::lowestBitPosition(0x0000000100000000ULL), 32);
+    EXPECT_EQ(BitSet::lowestBitPosition(0x8000000000000000ULL), 63);
+}

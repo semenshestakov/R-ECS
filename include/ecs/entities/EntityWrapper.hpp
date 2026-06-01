@@ -110,6 +110,9 @@ namespace ecs
          */
         [[nodiscard]] const Entity& getEntity() const { return m_entity; }
 
+        [[nodiscard]] entityId_t getId() const { return getEntity().id; }
+        [[nodiscard]] entityVersion_t getVersion() const { return getEntity().version; }
+
     private:
         Entity m_entity;                                            ///< Wrapped entity handle (ID + version)
         std::reference_wrapper<EntitiesManager> m_managerRef;       ///< Reference to owning manager

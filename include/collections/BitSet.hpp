@@ -3,6 +3,8 @@
 #include <vector>
 #include <cstdint>
 
+#include "common_recs/utils/ClassUtils.hpp"
+
 
 namespace collection
 {
@@ -36,6 +38,7 @@ namespace collection
         using dataItem_t = std::uint64_t;
         static constexpr std::size_t BYTE_COUNT = sizeof(dataItem_t);
         static constexpr unsigned char BIT_COUNT = BYTE_COUNT * 8;
+        static constexpr std::size_t INVALID_INDEX = static_cast<std::size_t>(-1);
 
         constexpr BitSet() = default;
         constexpr explicit BitSet(std::size_t size);
@@ -60,6 +63,7 @@ namespace collection
         [[nodiscard]] const_iterator end() const noexcept;
 
         [[nodiscard]] std::size_t max() const;
+        [[nodiscard]] std::size_t min() const;
         [[nodiscard]] std::size_t size() const noexcept;
         [[nodiscard]] const data_t& data() const noexcept;
         [[nodiscard]] bool empty() const noexcept;
@@ -80,8 +84,9 @@ namespace collection
 
         [[nodiscard]] bool isSubsetOf(const BitSet& other) const;
 
-    private:
+    DEEP_TEST_PRIVATE_ACCESS:
         static constexpr std::size_t highestBitPosition(dataItem_t value);
+        static constexpr std::size_t lowestBitPosition(dataItem_t value);
         static constexpr std::size_t getIdx(std::size_t pos) noexcept;
         static constexpr dataItem_t getBit(std::size_t pos) noexcept;
     };

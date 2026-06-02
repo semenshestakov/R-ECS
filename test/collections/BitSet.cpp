@@ -1292,7 +1292,7 @@ TEST(BitSetTest, MinWithSingleBitInDifferentBlocks)
     EXPECT_EQ(bs.min(), 64);
 
     bs.set(128);
-    EXPECT_EQ(bs.min(), 128);
+    EXPECT_EQ(bs.min(), 64);
 }
 
 TEST(BitSetTest, LowestBitPositionTest)

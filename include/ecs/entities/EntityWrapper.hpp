@@ -113,6 +113,8 @@ namespace ecs
         [[nodiscard]] entityId_t getId() const { return getEntity().id; }
         [[nodiscard]] entityVersion_t getVersion() const { return getEntity().version; }
 
+        explicit operator Entity() const { return m_entity; }
+
     private:
         Entity m_entity;                                            ///< Wrapped entity handle (ID + version)
         std::reference_wrapper<EntitiesManager> m_managerRef;       ///< Reference to owning manager

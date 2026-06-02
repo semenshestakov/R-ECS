@@ -70,7 +70,7 @@ void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
         migratedEntityId != INVALID_ENTITY_ID
         )
     {
-        m_versionByEntityIndex[migratedEntityId] = entity.version;
+        m_versionByEntityIndex[migratedEntityId] = entity.getVersion();
         m_entitiesLocationByEntityIndex[migratedEntityId].chunkEntityIndex = m_entitiesLocationByEntityIndex[entity.getId()].chunkEntityIndex;
     }
 
@@ -143,7 +143,19 @@ inline const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& ent
 template<ecs::IsComponent... ComponentCls>
 auto ecs::EntitiesManager::view()
 {
-    return m_storage.begin<ComponentCls...>();
+    struct View
+    {
+        View() = delete;
+        explicit View(EntitiesArchetypeStorage* storage) : m_storage(storage) {}
+
+        auto begin() const { return m_storage->begin<ComponentCls...>(); }
+        auto end() const { return m_storage->end<ComponentCls...>(); }
+
+    private:
+        EntitiesArchetypeStorage* m_storage;
+    };
+
+    return View(&m_storage);
 }
 
 inline void ecs::EntitiesManager::resize(const std::size_t size)

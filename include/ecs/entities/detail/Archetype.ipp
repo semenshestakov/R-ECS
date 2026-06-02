@@ -3,6 +3,18 @@
 #include "ecs/components/ComponentRegistrator.hpp"
 
 
+inline ecs::chunkEntityIndex_t ecs::getChunkByEntityIndex(const chunkEntityIndex_t chunkEntityIndex)
+{
+    return chunkEntityIndex / MAX_ENTITIES_IN_CHUNK;
+}
+
+inline ecs::chunkEntityIndex_t ecs::getLocalEntityIndex(const chunkEntityIndex_t chunkEntityIndex)
+{
+    return chunkEntityIndex & MAX_ENTITIES_IN_CHUNK_MASK;
+}
+
+// ===================================================== Archetype =====================================================
+
 inline ecs::archetypeHash_t ecs::Archetype::hash() const
 {
     return m_hash;
@@ -37,4 +49,16 @@ template<ecs::IsComponent... ComponentCls>
     }();
 
     return s_archetype;
+}
+
+// =========================================== ArchetypedChunkEntityLocation ===========================================
+
+inline bool ecs::ArchetypedChunkEntityLocation::operator==(const ArchetypedChunkEntityLocation& other) const
+{
+    return archetypeIndex == other.archetypeIndex && chunkEntityIndex == other.chunkEntityIndex;
+}
+
+inline bool ecs::ArchetypedChunkEntityLocation::operator!=(const ArchetypedChunkEntityLocation& other) const
+{
+    return !this->operator==(other);
 }

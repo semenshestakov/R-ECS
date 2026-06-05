@@ -34,47 +34,116 @@ namespace ecs
         class iterator
         {
         public:
-            using iterator_category = std::forward_iterator_tag;
-            using value_type = ValueType;
-            using difference_type = std::ptrdiff_t;
+            using iterator_category = std::forward_iterator_tag;    ///< Iterator category compatible with forward iterator requirements.
+            using value_type = ValueType;                           ///< Value returned by operator*().
+            using difference_type = std::ptrdiff_t;                 ///< Signed type used for iterator distance calculations.
 
+            /**
+             * @brief Archetype composed from all requested ComponentCls types.
+             *
+             * Used to quickly determine whether a storage archetype contains
+             * all components required by this iterator.
+             */
             static inline const Archetype s_archetype = Archetype::GetArchetype<ComponentCls...>();
 
+            /**
+             * @brief Constructs end iterator.
+             *
+             * Creates iterator in invalid/end state.
+             */
             constexpr iterator() = default;
 
+            /**
+             * @brief Constructs iterator positioned at the first matching entity.
+             *
+             * Searches through archetypes until it finds the first archetype that
+             * contains all requested component types and has at least one entity.
+             *
+             * @param storage Owning storage to iterate over.
+             *
+             * @pre storage != nullptr
+             */
             explicit iterator(EntitiesArchetypeStorage* storage);
 
+            /**
+             * @brief Returns current iterator value.
+             *
+             * If component types were specified, returns a tuple of references to
+             * requested components. Otherwise returns entity location/index value.
+             *
+             * @return Current iterator value.
+             */
             value_type operator*() const;
 
+            /**
+             * @brief Advances iterator to the next matching entity.
+             *
+             * Automatically skips archetypes that do not contain all required
+             * components or contain no entities.
+             *
+             * @return Reference to this iterator.
+             */
             iterator& operator++();
 
+            /**
+             * @brief Post-increment operator.
+             *
+             * @return Copy of iterator before increment.
+             */
             iterator operator++(int);
 
+            /**
+             * @brief Compares two iterators for equality.
+             *
+             * Iterators are equal when they reference the same archetype iterator
+             * position and archetype index.
+             *
+             * @param other Iterator to compare against.
+             * @return true if iterators refer to the same position.
+             */
             bool operator==(const iterator& other) const;
 
+            /**
+             * @brief Compares two iterators for inequality.
+             *
+             * @param other Iterator to compare against.
+             * @return true if iterators refer to different positions.
+             */
             bool operator!=(const iterator& other) const;
 
         private:
+            /**
+             * @brief Internal iterator advancement routine.
+             *
+             * Advances within current archetype and automatically switches to the
+             * next compatible archetype when the current one is exhausted.
+             */
             void advance();
 
-            using archetypedChunksIt_t = ArchetypedChunks::iterator<iter_value_type<ComponentCls...>, ComponentCls...>;
-            archetypedChunksIt_t m_archetypedChunksIt;
-            archetypeIndex_t m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
-            EntitiesArchetypeStorage* m_storage = nullptr;
+            using archetypedChunksIt_t = ArchetypedChunks::iterator<iter_value_type<ComponentCls...>, ComponentCls...>;     ///< Iterator type used for traversal inside a single archetype storage.
+
+            archetypedChunksIt_t m_archetypedChunksIt;                          ///< Current iterator within the active ArchetypedChunks instance.
+            archetypeIndex_t m_archetypeIndex = INVALID_ARCHETYPE_INDEX;        ///< Index of currently traversed archetype.
+            EntitiesArchetypeStorage* m_storage = nullptr;                      ///< Storage being iterated.
         };
 
         /**
-         * @brief Gets begin iterator for entities with specified components.
-         * @tparam ComponentCls Required component types
-         * @return Iterator at first matching entity
+         * @brief Creates iterator over entities containing all specified components.
+         *
+         * Iteration spans all archetypes whose component set is a superset of
+         * ComponentCls....
+         *
+         * @tparam ComponentCls Required component types.
+         * @return Iterator positioned at the first matching entity.
          */
         template<IsComponent... ComponentCls>
         [[nodiscard]] auto begin();
 
         /**
-         * @brief Gets end iterator for entities with specified components.
-         * @tparam ComponentCls Required component types
-         * @return End iterator
+         * @brief Returns iterator representing end of traversal.
+         *
+         * @tparam ComponentCls Component filter type list.
+         * @return End iterator.
          */
         template<IsComponent... ComponentCls>
         [[nodiscard]] auto end() const;
@@ -152,8 +221,20 @@ namespace ecs
         [[nodiscard]] const ComponentCls& GetComponent(const ArchetypedChunkEntityLocation& location) const;
 
     private:
-        std::unordered_map<archetypeHash_t, archetypeIndex_t> m_archetypeIndexByHash;       ///< Hash to archetype index mapping
-        std::vector<ArchetypedChunks> m_storageByArchetypeIndex;                            ///< Storage for each archetype
+        /**
+         * @brief Maps archetype hash to internal storage index.
+         *
+         * Allows constant-time lookup of ArchetypedChunks storage
+         * for a particular archetype.
+         */
+        std::unordered_map<archetypeHash_t, archetypeIndex_t> m_archetypeIndexByHash;
+
+        /**
+         * @brief Storage containers grouped by archetype.
+         *
+         * Indexes correspond to values stored in m_archetypeIndexByHash.
+         */
+        std::vector<ArchetypedChunks> m_storageByArchetypeIndex;
     };
 
 } // namespace ecs

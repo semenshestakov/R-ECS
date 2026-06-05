@@ -29,37 +29,107 @@ namespace ecs
      */
     struct ArchetypedChunks final
     {
+        // ======================================== ArchetypedChunks::iterator =========================================
+
+        /**
+         * @brief Forward iterator over entities stored inside chunked archetype storage.
+         *
+         * Traverses entities sequentially across all chunks belonging to the
+         * archetype and optionally exposes references to selected components.
+         *
+         * @tparam ValueType Type returned by operator*().
+         * @tparam ComponentCls Components exposed by the iterator.
+         */
         template<typename ValueType, IsComponent... ComponentCls>
         class iterator
         {
         public:
-            using iterator_category = std::forward_iterator_tag;
-            using value_type = ValueType;
-            using difference_type = std::ptrdiff_t;
+            using iterator_category = std::forward_iterator_tag;        ///< Iterator category compatible with standard forward iterators.
+            using value_type = ValueType;                               ///< Value returned by operator*().
+            using difference_type = std::ptrdiff_t;                     ///< Signed type used for iterator distance calculations.
 
+            /**
+             * @brief Constructs end iterator.
+             *
+             * Creates iterator in invalid/end state.
+             */
             constexpr iterator() = default;
 
+            /**
+             * @brief Constructs iterator positioned at the first entity.
+             *
+             * Initializes component array pointers and locates the first valid
+             * entity in chunk storage.
+             *
+             * @param archetypedChunks Storage to iterate.
+             *
+             * @pre archetypedChunks != nullptr
+             */
             explicit iterator(ArchetypedChunks* archetypedChunks);
 
+            /**
+             * @brief Returns current iterator value.
+             *
+             * Returns either:
+             * - tuple of references to requested components;
+             * - chunkEntityIndex_t when no component types were specified.
+             *
+             * @return Current iterator value.
+             */
             value_type operator*() const;
 
+            /**
+             * @brief Advances iterator to the next entity.
+             *
+             * Automatically switches chunks when the current chunk is exhausted.
+             *
+             * @return Reference to this iterator.
+             */
             iterator& operator++();
 
+            /**
+             * @brief Post-increment operator.
+             *
+             * @return Copy of iterator before increment.
+             */
             iterator operator++(int);
 
+            /**
+             * @brief Compares iterators for equality.
+             *
+             * @param other Iterator to compare against.
+             * @return true if both iterators reference the same entity position.
+             */
             bool operator==(const iterator& other) const;
 
+            /**
+             * @brief Compares iterators for inequality.
+             *
+             * @param other Iterator to compare against.
+             * @return true if iterators reference different positions.
+             */
             bool operator!=(const iterator& other) const;
 
+            /**
+             * @brief Checks whether iterator is valid.
+             *
+             * @return true if iterator points to an entity, false if it is in end state.
+             */
             explicit operator bool() const;
 
         private:
+            /**
+             * @brief Advances iterator to the next entity.
+             *
+             * Skips exhausted chunks and enters end state when all chunks
+             * have been traversed.
+             */
             void advance();
 
-            chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;
-            chunkEntityIndex_t m_entityIndex = INVALID_CHUNK_ENTITY_INDEX;
-            std::tuple<ComponentCls*...> m_componentArrays;
-            ArchetypedChunks* m_archetypedChunks {};
+            chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;       ///< Current chunk index.
+            chunkEntityIndex_t m_entityIndex = INVALID_CHUNK_ENTITY_INDEX;      ///< Current entity index within the chunk.
+            std::tuple<ComponentCls*...> m_componentArrays;                     ///< Component array pointers for the current chunk.
+            ArchetypedChunks* m_archetypedChunks = nullptr;                     ///< Chunk storage being iterated.
         };
 
         ArchetypedChunks() = delete;
@@ -151,21 +221,37 @@ namespace ecs
          */
         [[nodiscard]] const Archetype& archetype() const;
 
+        /**
+         * @brief Returns iterator positioned at the first entity.
+         *
+         * @tparam ValueType Iterator value type.
+         * @tparam ComponentCls Components exposed through iteration.
+         *
+         * @return Begin iterator.
+         */
         template<typename ValueType, IsComponent... ComponentCls>
         auto begin();
 
+        /**
+         * @brief Returns iterator representing end of traversal.
+         *
+         * @tparam ValueType Iterator value type.
+         * @tparam ComponentCls Components exposed through iteration.
+         *
+         * @return End iterator.
+         */
         template<typename ValueType, IsComponent... ComponentCls>
         auto end();
 
     private:
-        using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;
+        using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;                             ///< Collection of memory chunks storing one component type.
 
-        Archetype m_archetype;                                                  ///< Archetype definition
-        std::vector<componentChunks_t> m_chunksByComponentId {};                ///< Per-component: vector of chunk pointers
-        std::vector<chunkEntityIndex_t> m_chunksEntityCount {};
-        collection::BitSet m_hasFreeEntityInChunk;
+        Archetype m_archetype;                                                                      ///< Archetype shared by all entities stored in this container.
+        std::vector<componentChunks_t> m_chunksByComponentId {};                                    ///< Indexed by component ID. Each entry stores memory chunks for that component.
+        std::vector<chunkEntityIndex_t> m_chunksEntityCount {};                                     ///< Number of alive entities stored in each chunk.
+        collection::BitSet m_hasFreeEntityInChunk;                                                  ///< Tracks chunks that still have free capacity for new entities.
 
-        std::vector<std::array<entityId_t, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;
+        std::vector<std::array<entityId_t, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;          ///< Maps [chunkIndex][localEntityIndex] to global entity ID.
     };
 
 } // namespace ecs

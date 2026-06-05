@@ -11,10 +11,13 @@ namespace ecs
     using archetypeIndex_t = std::uint16_t;
     using chunkEntityIndex_t = std::uint32_t;
 
+    constexpr archetypeIndex_t INVALID_ARCHETYPE_INDEX = ~0u;
+
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_BITS = 10;
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK = 1 << MAX_ENTITIES_IN_CHUNK_BITS;
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_MASK = MAX_ENTITIES_IN_CHUNK - 1;
     constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNKS = ~0u;
+    constexpr chunkEntityIndex_t INVALID_CHUNK_ENTITY_INDEX = ~0u;
 
     /**
      * @brief Converts global entity index to chunk index.

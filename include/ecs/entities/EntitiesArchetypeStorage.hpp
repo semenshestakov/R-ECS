@@ -38,7 +38,7 @@ namespace ecs
             using value_type = ValueType;
             using difference_type = std::ptrdiff_t;
 
-            static inline const Archetype ITER_ARCHETYPE = Archetype::GetArchetype<ComponentCls...>();
+            static inline const Archetype s_archetype = Archetype::GetArchetype<ComponentCls...>();
 
             constexpr iterator() = default;
 
@@ -58,20 +58,10 @@ namespace ecs
             void advance();
 
             using archetypedChunksIt_t = ArchetypedChunks::iterator<iter_value_type<ComponentCls...>, ComponentCls...>;
-            std::size_t m_archetypedChunksIndex = 0;
-            std::vector<archetypedChunksIt_t> m_archetypedChunks;
+            archetypedChunksIt_t m_archetypedChunksIt;
+            archetypeIndex_t m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+            EntitiesArchetypeStorage* m_storage = nullptr;
         };
-
-        /**
-         * @brief Value type returned by iterator when components are requested.
-         * Tuple of references to requested components.
-         */
-        template<IsComponent... ComponentCls>
-        using iter_value_type = std::conditional_t<
-            (sizeof...(ComponentCls) > 0),
-            std::tuple<ComponentCls&...>,
-            chunkEntityIndex_t
-        >;
 
         /**
          * @brief Gets begin iterator for entities with specified components.

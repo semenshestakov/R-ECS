@@ -7,34 +7,40 @@
 
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
-ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(EntitiesArchetypeStorage* storage)
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(EntitiesArchetypeStorage* storage) :
+    m_storage(storage),
+    m_archetypeIndex(0)
 {
     assert(storage != nullptr);
 
-    for (auto& chunks : storage->m_storageByArchetypeIndex)
-    {
-        if(ITER_ARCHETYPE.isSubsetOf(chunks.archetype()))
-            m_archetypedChunks.emplace_back(chunks.begin<ValueType, ComponentCls...>());
-    }
+    if (storage->m_storageByArchetypeIndex.empty())
+        return;
+
+    if (
+        !s_archetype.isSubsetOf(storage->m_storageByArchetypeIndex[m_archetypeIndex].archetype()) or
+        !storage->m_storageByArchetypeIndex[m_archetypeIndex].template begin<ValueType, ComponentCls...>()
+        )
+        advance();
+    else
+        m_archetypedChunksIt = m_storage->m_storageByArchetypeIndex[m_archetypeIndex].template begin<ValueType, ComponentCls...>();
+
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
 typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::value_type ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*() const
 {
-    return *m_archetypedChunks[m_archetypedChunksIndex];
+    return *m_archetypedChunksIt;
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
-ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>&
-ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++()
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>& ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++()
 {
     advance();
     return *this;
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
-ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>
-ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(int)
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...> ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(int)
 {
     iterator copy = *this;
     advance();
@@ -44,21 +50,7 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(
 template<typename ValueType, ecs::IsComponent... ComponentCls>
 bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator==(const iterator& other) const
 {
-    const bool thisEnd =
-        m_archetypedChunksIndex >= m_archetypedChunks.size();
-
-    const bool otherEnd =
-        other.m_archetypedChunksIndex >= other.m_archetypedChunks.size();
-
-    if (thisEnd && otherEnd)
-        return true;
-
-    if (thisEnd != otherEnd)
-        return false;
-
-    return m_archetypedChunksIndex == other.m_archetypedChunksIndex &&
-           m_archetypedChunks[m_archetypedChunksIndex] ==
-           other.m_archetypedChunks[other.m_archetypedChunksIndex];
+    return m_archetypedChunksIt == other.m_archetypedChunksIt && m_archetypeIndex == other.m_archetypeIndex;
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
@@ -71,17 +63,30 @@ bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operat
 template<typename ValueType, ecs::IsComponent... ComponentCls>
 void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advance()
 {
-    if (m_archetypedChunksIndex >= m_archetypedChunks.size())
-        return;
+    assert(m_storage != nullptr);
+    assert(m_archetypeIndex != INVALID_ARCHETYPE_INDEX);
 
-    ++m_archetypedChunks[m_archetypedChunksIndex];
+    if (m_archetypedChunksIt)
+        ++m_archetypedChunksIt;
 
-    while (m_archetypedChunksIndex < m_archetypedChunks.size())
+    if (!m_archetypedChunksIt)
     {
-        if (m_archetypedChunks[m_archetypedChunksIndex])
-            return;
+        while (++m_archetypeIndex < m_storage->m_storageByArchetypeIndex.size())
+        {
+            if (
+                auto& chunks = m_storage->m_storageByArchetypeIndex[m_archetypeIndex];
+                s_archetype.isSubsetOf(chunks.archetype())
+                )
+            {
+                m_archetypedChunksIt = chunks.template begin<ValueType, ComponentCls...>();
+                if (m_archetypedChunksIt)
+                    return;
+            }
+        }
 
-        ++m_archetypedChunksIndex;
+        // end state
+        m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+        m_archetypedChunksIt = {};
     }
 }
 
@@ -147,11 +152,13 @@ inline ecs::entityId_t ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedCh
 
 inline ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId)
 {
+    assert(entityLocation.archetypeIndex < m_storageByArchetypeIndex.size());
     return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
 }
 
 inline const ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId) const
 {
+    assert(entityLocation.archetypeIndex < m_storageByArchetypeIndex.size());
     return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
 }
 

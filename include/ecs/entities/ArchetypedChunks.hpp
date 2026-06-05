@@ -37,14 +37,11 @@ namespace ecs
             using value_type = ValueType;
             using difference_type = std::ptrdiff_t;
 
-            constexpr iterator() = delete;
+            constexpr iterator() = default;
 
             explicit iterator(ArchetypedChunks* archetypedChunks);
-            explicit iterator(ArchetypedChunks* archetypedChunks, bool isEnd);
 
             value_type operator*() const;
-
-            value_type operator->() const;
 
             iterator& operator++();
 
@@ -59,10 +56,10 @@ namespace ecs
         private:
             void advance();
 
-            std::size_t m_chunkIndex {};
-            std::size_t m_localIndex {};
+            chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;
+            chunkEntityIndex_t m_entityIndex = INVALID_CHUNK_ENTITY_INDEX;
+            std::tuple<ComponentCls*...> m_componentArrays;
             ArchetypedChunks* m_archetypedChunks {};
-            std::vector<std::tuple<ComponentCls*...>> m_chunksComponents;
         };
 
         ArchetypedChunks() = delete;

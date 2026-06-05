@@ -19,6 +19,7 @@ namespace ecs
         void(*constructor)(byte*) = nullptr;                        ///< Placement new constructor function
         void(*destructor)(byte*) = nullptr;                         ///< Destructor function
         void(*copy)(byte* to, byte* from) = nullptr;                ///< Copy function
+        void(*move)(byte* to, byte* from) = nullptr;                ///< Copy function
 
         template <typename ComponentCls>
         static RegisterComponentInfo Create(const std::string& name);

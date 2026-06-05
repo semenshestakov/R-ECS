@@ -5,6 +5,13 @@
 namespace ecs
 {
 
+    template<typename T> concept EntityConcept = requires(T entity)
+    {
+        { entity.getId()     } -> std::same_as<entityId_t>;
+        { entity.getVersion()} -> std::same_as<entityVersion_t>;
+    };
+
+
     struct Entity
     {
         entityId_t id = INVALID_ENTITY_ID;                  ///< Unique identifier for the entity across the entire system
@@ -22,5 +29,9 @@ namespace ecs
          * @return auto The result of comparing the entity IDs (strong ordering)
          */
         auto operator<=>(const Entity& other) const  { return std::tie(id, version) <=> std::tie(other.id, other.version); }
+
+        [[nodiscard]] entityId_t getId() const { return id; }
+        [[nodiscard]] entityVersion_t getVersion() const { return version; }
     };
+
 }

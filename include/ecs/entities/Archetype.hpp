@@ -1,6 +1,5 @@
 #ifndef ARCHETYPE_HPP
 #define ARCHETYPE_HPP
-#include <vector>
 #include "ecs/utils/ComponentUtils.hpp"
 #include "collections/BitSet.hpp"
 
@@ -10,7 +9,30 @@ namespace ecs
 
     using archetypeHash_t = std::size_t;
     using archetypeIndex_t = std::uint16_t;
-    
+    using chunkEntityIndex_t = std::uint32_t;
+
+    constexpr archetypeIndex_t INVALID_ARCHETYPE_INDEX = ~0u;
+
+    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_BITS = 10;
+    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK = 1 << MAX_ENTITIES_IN_CHUNK_BITS;
+    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_MASK = MAX_ENTITIES_IN_CHUNK - 1;
+    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNKS = ~0u;
+    constexpr chunkEntityIndex_t INVALID_CHUNK_ENTITY_INDEX = ~0u;
+
+    /**
+     * @brief Converts global entity index to chunk index.
+     * @param chunkEntityIndex Global entity index
+     * @return Index of chunk containing the entity
+     */
+    [[nodiscard]] chunkEntityIndex_t getChunkByEntityIndex(chunkEntityIndex_t chunkEntityIndex);
+
+    /**
+     * @brief Converts global entity index to position within chunk.
+     * @param chunkEntityIndex Global entity index
+     * @return Local entity index (0 to MAX_ENTITIES_IN_CHUNK-1)
+     */
+    [[nodiscard]] chunkEntityIndex_t getLocalEntityIndex(chunkEntityIndex_t chunkEntityIndex);
+
     /**
      * @brief Defines a composition of component types.
      * Archetype represents a unique combination of components and serves as a template
@@ -50,6 +72,26 @@ namespace ecs
         archetypeHash_t m_hash {};                            ///< Hash value uniquely identifying this component combination
 
     };
+
+
+    /**
+     * @brief Location descriptor for an entity within archetype storage.
+     * Combines archetype index and chunk-local entity index to uniquely identify an entity.
+     */
+    struct ArchetypedChunkEntityLocation final
+    {
+        archetypeIndex_t archetypeIndex {};            ///< Index of the archetype in storage
+        chunkEntityIndex_t chunkEntityIndex {};        ///< Global entity index within archetype chunks
+
+        /**
+         * @brief Compares two locations for equality.
+         * @param other Location to compare with
+         * @return true if both archetype index and chunk entity index match
+         */
+        [[nodiscard]] bool operator==(const ArchetypedChunkEntityLocation& other) const;
+        [[nodiscard]] bool operator!=(const ArchetypedChunkEntityLocation& other) const;
+    };
+
 }
 
 #endif

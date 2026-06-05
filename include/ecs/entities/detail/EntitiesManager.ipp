@@ -13,8 +13,8 @@ inline ecs::EntitiesManager::~EntitiesManager()
     }
 }
 
-template<ecs::ReturnEntityConcept ReturnType>
-inline ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
+template<ecs::EntityConcept ReturnType>
+ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
 {
     Entity entity{};
 
@@ -40,7 +40,7 @@ inline ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
     }
 
     assert(entity.id < m_lastEntityId);
-    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(prefabEntity);
+    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(prefabEntity, entity.id);
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 
@@ -50,70 +50,46 @@ inline ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
         return entity;
 }
 
-template<ecs::ReturnEntityConcept ReturnType>
+template<ecs::EntityConcept ReturnType>
 ReturnType ecs::EntitiesManager::Create(PrefabEntity&& prefabEntity)
 {
     return Create<ReturnType>(prefabEntity);
 }
 
-inline void ecs::EntitiesManager::Destroy(const Entity& entity)
+template<ecs::EntityConcept InputEntityType>
+void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
 {
     if(!IsAlive(entity))
         return;
 
-    assert(entity.id < m_lastEntityId);
+    assert(entity.getId() < m_lastEntityId);
     assert(m_versionByEntityIndex.size() == m_entitiesLocationByEntityIndex.size());
 
-    m_storage.Destroy(m_entitiesLocationByEntityIndex[entity.id]);
-    m_versionByEntityIndex[entity.id] = {};
+    if (
+        const entityId_t migratedEntityId = m_storage.Destroy(m_entitiesLocationByEntityIndex[entity.getId()]);
+        migratedEntityId != INVALID_ENTITY_ID
+        )
+    {
+        m_versionByEntityIndex[migratedEntityId] = entity.getVersion();
+        m_entitiesLocationByEntityIndex[migratedEntityId].chunkEntityIndex = m_entitiesLocationByEntityIndex[entity.getId()].chunkEntityIndex;
+    }
+
+    m_versionByEntityIndex[entity.getId()] = {};
     m_freeEntities.emplace(entity);
     --m_isAliveEntitiesCount;
 }
 
-inline void ecs::EntitiesManager::Destroy(const EntityWrapper& entity) { return Destroy(entity.getEntity()); }
 
-inline bool ecs::EntitiesManager::IsAlive(const Entity& entity) const
+template<ecs::EntityConcept InputEntityType>
+bool ecs::EntitiesManager::IsAlive(const InputEntityType& entity) const
 {
-    if(entity.id >= m_versionByEntityIndex.size())
+    if(entity.getId() >= m_versionByEntityIndex.size())
         return false;
 
-    if(m_versionByEntityIndex[entity.id] != entity.version)
+    if(m_versionByEntityIndex[entity.getId()] != entity.getVersion())
         return false;
 
     return true;
-}
-
-inline bool ecs::EntitiesManager::IsAlive(const EntityWrapper& entity) const { return IsAlive(entity.getEntity()); }
-
-template<ecs::IsComponent ComponentCls>
-ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity)
-{
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
-}
-
-template<ecs::IsComponent ComponentCls>
-const ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity) const
-{
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
-}
-
-template<ecs::IsComponent ComponentCls>
-ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
-{
-    return reinterpret_cast<ComponentCls*>(
-            GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
-}
-
-template<ecs::IsComponent ComponentCls>
-const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) const
-{
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
 }
 
 inline ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& entity, const componentId_t componentId)
@@ -132,10 +108,50 @@ inline const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& ent
     return m_storage.GetComponentData(m_entitiesLocationByEntityIndex[entity.id], componentId);
 }
 
+template<ecs::IsComponent ComponentCls>
+ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
+{
+    return std::bit_cast<ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+}
+
+template<ecs::IsComponent ComponentCls>
+const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) const
+{
+    return std::bit_cast<const ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+}
+
+template<ecs::IsComponent ComponentCls>
+ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity)
+{
+    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
+    assert(component != nullptr);
+    return *component;
+}
+
+template<ecs::IsComponent ComponentCls>
+const ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity) const
+{
+    const ComponentCls* component = TryGetComponent<ComponentCls>(entity);
+    assert(component != nullptr);
+    return *component;
+}
+
 template<ecs::IsComponent... ComponentCls>
 auto ecs::EntitiesManager::view()
 {
-    return m_storage.begin<ComponentCls...>();
+    struct View
+    {
+        View() = delete;
+        explicit View(EntitiesArchetypeStorage* storage) : m_storage(storage) {}
+
+        auto begin() const { return m_storage->begin<ComponentCls...>(); }
+        auto end() const { return m_storage->end<ComponentCls...>(); }
+
+    private:
+        EntitiesArchetypeStorage* m_storage;
+    };
+
+    return View(&m_storage);
 }
 
 inline void ecs::EntitiesManager::resize(const std::size_t size)

@@ -1,187 +1,18 @@
 #ifndef ENTITIES_ARCHETYPE_STORAGE_HPP
 #define ENTITIES_ARCHETYPE_STORAGE_HPP
 
+#include <array>
 #include <memory>
-#include <queue>
 #include <unordered_map>
 #include <vector>
 #include "Archetype.hpp"
+#include "ArchetypedChunks.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
 #include "ecs/utils/EntitiesUtils.hpp"
 
 
 namespace ecs
 {
-
-    struct PrefabEntity;
-    struct Entity;
-
-    using chunkEntityIndex_t = std::uint32_t;
-    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK = 1024;
-    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNK_MASK = MAX_ENTITIES_IN_CHUNK - 1;
-    constexpr chunkEntityIndex_t MAX_ENTITIES_IN_CHUNKS = ~0u;
-
-    // ========================================= ArchetypedChunkEntityLocation =========================================
-
-    /**
-     * @brief Location descriptor for an entity within archetype storage.
-     * Combines archetype index and chunk-local entity index to uniquely identify an entity.
-     */
-    struct ArchetypedChunkEntityLocation final
-    {
-        archetypeIndex_t archetypeIndex {};            ///< Index of the archetype in storage
-        chunkEntityIndex_t chunkEntityIndex {};        ///< Global entity index within archetype chunks
-
-        /**
-         * @brief Compares two locations for equality.
-         * @param other Location to compare with
-         * @return true if both archetype index and chunk entity index match
-         */
-        [[nodiscard]] bool operator==(const ArchetypedChunkEntityLocation& other) const;
-        [[nodiscard]] bool operator!=(const ArchetypedChunkEntityLocation& other) const;
-    };
-
-
-    // =============================================== ArchetypedChunks ===============================================
-
-    /**
-     * @brief Manages chunked storage for entities sharing the same archetype.
-     * Organizes component data in fixed-size chunks (MAX_ENTITIES_IN_CHUNK) for cache efficiency.
-     */
-    class ArchetypedChunks final
-    {
-    public:
-        using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;
-
-        ArchetypedChunks() = delete;
-
-        /**
-         * @brief Constructs chunk storage for a specific archetype.
-         *
-         * Initializes the storage structures for entities belonging to this archetype.
-         * The storage is organized by component ID with chunked memory layout for cache efficiency.
-         *
-         * @param a_archetype The archetype definition for entities to be stored
-         *
-         * @pre The archetype must have at least one component ID
-         * @post Component chunks vector is sized to accommodate the largest component ID
-         */
-        explicit ArchetypedChunks(Archetype a_archetype);
-
-        // Delete Copy
-        ArchetypedChunks(const ArchetypedChunks& other) = delete;
-        ArchetypedChunks& operator=(const ArchetypedChunks& other) = delete;
-
-        // Use default Move
-        ArchetypedChunks(ArchetypedChunks&&) noexcept = default;
-        ArchetypedChunks& operator=(ArchetypedChunks&&) noexcept = default;
-
-        /**
-         * @brief Creates a new entity in this archetype's storage.
-         *
-         * Allocates a new entity slot, either reusing a freed index or expanding the storage.
-         * Copies component data from the prefab entity into the appropriate chunk locations.
-         *
-         * @param entity PrefabEntity containing all component data to initialize the new entity
-         * @return chunkEntityIndex_t Unique index identifying this entity within the archetype
-         *
-         * @pre Entity must have all components required by this archetype
-         * @post Entity is marked as alive and its component data is stored in the chunk arrays
-         */
-        chunkEntityIndex_t Create(const PrefabEntity& entity);
-
-        /**
-         * @brief Destroys an entity and frees its storage slot.
-         *
-         * Calls component destructors for all components of the entity and marks the slot as free
-         * for future reuse. The memory is not immediately freed but will be reused by subsequent Create calls.
-         *
-         * @param chunkEntityIndex Index of the entity to destroy
-         *
-         * @pre Entity must be alive at the given index
-         * @post Entity's slot is added to free list and marked as not alive
-         */
-        void Destroy(chunkEntityIndex_t chunkEntityIndex);
-
-        /**
-         * @brief Checks if an entity exists and is alive.
-         *
-         * @param chunkEntityIndex Index to check
-         * @return true if the entity exists and has not been destroyed
-         * @return false if the index is out of range or the entity is destroyed
-         */
-        [[nodiscard]] bool IsAlive(chunkEntityIndex_t chunkEntityIndex) const;
-
-        /**
-         * @brief Retrieves mutable component data for a specific component type.
-         *
-         * @param chunkEntityIndex Index of the entity
-         * @param componentId ID of the component to retrieve
-         * @return byte* Pointer to component data, or nullptr if entity is dead
-         *
-         * @pre Entity must have the requested component type (asserted by caller)
-         */
-        [[nodiscard]] byte* GetComponentData(chunkEntityIndex_t chunkEntityIndex, componentId_t componentId);
-        [[nodiscard]] const byte* GetComponentData(chunkEntityIndex_t chunkEntityIndex, componentId_t componentId) const;
-
-        /**
-         * @brief Attempts to get component of specified type.
-         * @tparam ComponentCls Component type to retrieve
-         * @param chunkEntityIndex Local entity index
-         * @return Pointer to component data, or nullptr if entity dead or missing component
-         */
-        template<IsComponent ComponentCls> [[nodiscard]] ComponentCls* TryGetComponent(chunkEntityIndex_t chunkEntityIndex);
-        template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls* TryGetComponent(chunkEntityIndex_t chunkEntityIndex) const;
-
-        /**
-         * @brief Gets component of specified type (asserts existence).
-         * @tparam ComponentCls Component type to retrieve
-         * @param chunkEntityIndex Local entity index
-         * @return Reference to component data
-         * @note Asserts that entity is alive and has the component
-         */
-        template<IsComponent ComponentCls> [[nodiscard]] ComponentCls& GetComponent(chunkEntityIndex_t chunkEntityIndex);
-        template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls& GetComponent(chunkEntityIndex_t chunkEntityIndex) const;
-
-        /**
-         * @brief Gets the highest allocated entity index + 1.
-         * Used for iteration bounds checking.
-         * @return Number of entity slots allocated (may include dead entities)
-         */
-        [[nodiscard]] chunkEntityIndex_t getLastChunkEntityIndex() const;
-
-        /**
-         * @brief Converts global entity index to chunk index.
-         * @param chunkEntityIndex Global entity index
-         * @return Index of chunk containing the entity
-         */
-        [[nodiscard]] static std::size_t getChunkByEntityIndex(chunkEntityIndex_t chunkEntityIndex);
-
-        /**
-        * @brief Converts global entity index to position within chunk.
-        * @param chunkEntityIndex Global entity index
-        * @return Local entity index (0 to MAX_ENTITIES_IN_CHUNK-1)
-        */
-        [[nodiscard]] static std::size_t getLocalEntityIndex(chunkEntityIndex_t chunkEntityIndex);
-
-        /**
-         * @brief Gets the archetype definition for stored entities.
-         * @return Const reference to archetype
-         */
-        [[nodiscard]] const Archetype& archetype() const;
-
-        [[nodiscard]] componentChunks_t& getComponentChunks(componentId_t componentId);
-
-    private:
-        Archetype m_archetype;                                                  ///< Archetype definition
-        std::vector<componentChunks_t> m_chunksByComponentId {};                ///< Per-component: vector of chunk pointers
-
-        collection::BitSet m_isInWorld;                                          ///< Alive status for each entity slot
-        chunkEntityIndex_t m_lastChunkEntityIndex = 0;                          ///< Next free slot index (if no freelist entries)
-        std::queue<chunkEntityIndex_t> m_freeChunkEntityIndex;                  ///< Reusable entity slots from destroyed entities
-    };
-
-    // =========================================== EntitiesArchetypeStorage ===========================================
 
     /**
      * @brief Main storage for all entities across all archetypes.
@@ -203,105 +34,116 @@ namespace ecs
         class iterator
         {
         public:
-            using iterator_category = std::forward_iterator_tag;
-            using value_type = ValueType;
-            using difference_type = std::ptrdiff_t;
+            using iterator_category = std::forward_iterator_tag;    ///< Iterator category compatible with forward iterator requirements.
+            using value_type = ValueType;                           ///< Value returned by operator*().
+            using difference_type = std::ptrdiff_t;                 ///< Signed type used for iterator distance calculations.
 
-            static inline const Archetype ITER_ARCHETYPE = Archetype::GetArchetype<ComponentCls...>();
+            /**
+             * @brief Archetype composed from all requested ComponentCls types.
+             *
+             * Used to quickly determine whether a storage archetype contains
+             * all components required by this iterator.
+             */
+            static inline const Archetype s_archetype = Archetype::GetArchetype<ComponentCls...>();
 
+            /**
+             * @brief Constructs end iterator.
+             *
+             * Creates iterator in invalid/end state.
+             */
             constexpr iterator() = default;
 
             /**
-             * @brief Constructs iterator at start or end position.
-             * @param storage Storage to iterate over
+             * @brief Constructs iterator positioned at the first matching entity.
+             *
+             * Searches through archetypes until it finds the first archetype that
+             * contains all requested component types and has at least one entity.
+             *
+             * @param storage Owning storage to iterate over.
+             *
+             * @pre storage != nullptr
              */
             explicit iterator(EntitiesArchetypeStorage* storage);
 
             /**
-             * @brief Dereferences iterator.
-             * Returns tuple of component references or location based on ValueType.
-             * @return Current value (const reference)
+             * @brief Returns current iterator value.
+             *
+             * If component types were specified, returns a tuple of references to
+             * requested components. Otherwise returns entity location/index value.
+             *
+             * @return Current iterator value.
              */
             value_type operator*() const;
 
             /**
-             * @brief Access member of current value.
-             * @return Pointer to current value
-             */
-            value_type operator->() const;
-
-            /**
-             * @brief Pre-increment: advance to next valid entity.
-             * @return Reference to this iterator
+             * @brief Advances iterator to the next matching entity.
+             *
+             * Automatically skips archetypes that do not contain all required
+             * components or contain no entities.
+             *
+             * @return Reference to this iterator.
              */
             iterator& operator++();
 
             /**
-             * @brief Post-increment: advance to next valid entity.
-             * @return Iterator before increment
+             * @brief Post-increment operator.
+             *
+             * @return Copy of iterator before increment.
              */
             iterator operator++(int);
 
             /**
-             * @brief Equality comparison.
-             * @param other Iterator to compare with
-             * @return true if iterators point to same entity or both at end
+             * @brief Compares two iterators for equality.
+             *
+             * Iterators are equal when they reference the same archetype iterator
+             * position and archetype index.
+             *
+             * @param other Iterator to compare against.
+             * @return true if iterators refer to the same position.
              */
             bool operator==(const iterator& other) const;
 
             /**
-             * @brief Inequality comparison.
-             * @param other Iterator to compare with
-             * @return true if iterators differ
+             * @brief Compares two iterators for inequality.
+             *
+             * @param other Iterator to compare against.
+             * @return true if iterators refer to different positions.
              */
             bool operator!=(const iterator& other) const;
 
-            /**
-             * @brief Gets begin iterator for this iterator's storage.
-             * @return New iterator at first valid entity
-             */
-            iterator begin() const;
-
-            /**
-             * @brief Gets end iterator for this iterator's storage.
-             * @return End iterator
-             */
-            iterator end() const;
-
         private:
-            void advance();                                         ///< Move to next entity and validate
+            /**
+             * @brief Internal iterator advancement routine.
+             *
+             * Advances within current archetype and automatically switches to the
+             * next compatible archetype when the current one is exhausted.
+             */
+            void advance();
 
-            EntitiesArchetypeStorage* m_storage = nullptr;          ///< Storage being iterated
-            std::size_t m_currentArchetypeIndex = 0;                ///< Current archetype index in m_archetypedChunks
-            chunkEntityIndex_t m_chunkEntityIndex {};               ///< Current entity location
+            using archetypedChunksIt_t = ArchetypedChunks::iterator<iter_value_type<ComponentCls...>, ComponentCls...>;     ///< Iterator type used for traversal inside a single archetype storage.
 
-            std::tuple<std::vector<std::vector<ComponentCls*>>...> m_dataChunks;
-            std::vector<ArchetypedChunks*> m_archetypedChunks;
+            archetypedChunksIt_t m_archetypedChunksIt;                          ///< Current iterator within the active ArchetypedChunks instance.
+            archetypeIndex_t m_archetypeIndex = INVALID_ARCHETYPE_INDEX;        ///< Index of currently traversed archetype.
+            EntitiesArchetypeStorage* m_storage = nullptr;                      ///< Storage being iterated.
         };
 
         /**
-         * @brief Value type returned by iterator when components are requested.
-         * Tuple of references to requested components.
-         */
-        template<IsComponent... ComponentCls>
-        using iter_value_type = std::conditional_t<
-            (sizeof...(ComponentCls) > 0),
-            std::tuple<ComponentCls&...>,
-            chunkEntityIndex_t
-        >;
-
-        /**
-         * @brief Gets begin iterator for entities with specified components.
-         * @tparam ComponentCls Required component types
-         * @return Iterator at first matching entity
+         * @brief Creates iterator over entities containing all specified components.
+         *
+         * Iteration spans all archetypes whose component set is a superset of
+         * ComponentCls....
+         *
+         * @tparam ComponentCls Required component types.
+         * @return Iterator positioned at the first matching entity.
          */
         template<IsComponent... ComponentCls>
         [[nodiscard]] auto begin();
 
         /**
-         * @brief Gets end iterator for entities with specified components.
-         * @tparam ComponentCls Required component types
-         * @return End iterator
+         * @brief Returns iterator representing end of traversal.
+         *
+         * @tparam ComponentCls Component filter type list.
+         * @return End iterator.
          */
         template<IsComponent... ComponentCls>
         [[nodiscard]] auto end() const;
@@ -312,23 +154,17 @@ namespace ecs
          * @brief Creates a new entity from prefab data.
          * Automatically determines or finds appropriate archetype based on prefab's components.
          * @param prefabEntity Prefab containing component data
+         * @param entityId global entity id
          * @return Location descriptor for created entity
          */
-        ArchetypedChunkEntityLocation Create(const PrefabEntity& prefabEntity);
+        ArchetypedChunkEntityLocation Create(const PrefabEntity& prefabEntity, entityId_t entityId);
 
         /**
          * @brief Destroys entity at given location.
          * Calls destructors and marks slot for reuse.
          * @param entityLocation Location of entity to destroy
          */
-        void Destroy(const ArchetypedChunkEntityLocation& entityLocation);
-
-        /**
-         * @brief Checks if entity exists and is alive.
-         * @param entityLocation Location of entity to check
-         * @return true if entity exists
-         */
-        [[nodiscard]] bool IsAlive(const ArchetypedChunkEntityLocation& entityLocation) const;
+        entityId_t Destroy(const ArchetypedChunkEntityLocation& entityLocation);
 
         /**
          * @brief Gets mutable pointer to component data by component ID.
@@ -385,8 +221,20 @@ namespace ecs
         [[nodiscard]] const ComponentCls& GetComponent(const ArchetypedChunkEntityLocation& location) const;
 
     private:
-        std::unordered_map<archetypeHash_t, archetypeIndex_t> m_archetypeIndexByHash;       ///< Hash to archetype index mapping
-        std::vector<ArchetypedChunks> m_storageByArchetypeIndex;                            ///< Storage for each archetype
+        /**
+         * @brief Maps archetype hash to internal storage index.
+         *
+         * Allows constant-time lookup of ArchetypedChunks storage
+         * for a particular archetype.
+         */
+        std::unordered_map<archetypeHash_t, archetypeIndex_t> m_archetypeIndexByHash;
+
+        /**
+         * @brief Storage containers grouped by archetype.
+         *
+         * Indexes correspond to values stored in m_archetypeIndexByHash.
+         */
+        std::vector<ArchetypedChunks> m_storageByArchetypeIndex;
     };
 
 } // namespace ecs

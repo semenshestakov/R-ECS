@@ -92,38 +92,6 @@ bool ecs::EntitiesManager::IsAlive(const InputEntityType& entity) const
     return true;
 }
 
-
-template<ecs::IsComponent ComponentCls>
-ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity)
-{
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
-}
-
-template<ecs::IsComponent ComponentCls>
-const ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity) const
-{
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
-}
-
-template<ecs::IsComponent ComponentCls>
-ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
-{
-    return reinterpret_cast<ComponentCls*>(
-            GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
-}
-
-template<ecs::IsComponent ComponentCls>
-const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) const
-{
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
-}
-
 inline ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& entity, const componentId_t componentId)
 {
     if(!IsAlive(entity))
@@ -138,6 +106,34 @@ inline const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& ent
         return nullptr;
 
     return m_storage.GetComponentData(m_entitiesLocationByEntityIndex[entity.id], componentId);
+}
+
+template<ecs::IsComponent ComponentCls>
+ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
+{
+    return std::bit_cast<ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+}
+
+template<ecs::IsComponent ComponentCls>
+const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) const
+{
+    return std::bit_cast<const ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+}
+
+template<ecs::IsComponent ComponentCls>
+ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity)
+{
+    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
+    assert(component != nullptr);
+    return *component;
+}
+
+template<ecs::IsComponent ComponentCls>
+const ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity) const
+{
+    const ComponentCls* component = TryGetComponent<ComponentCls>(entity);
+    assert(component != nullptr);
+    return *component;
 }
 
 template<ecs::IsComponent... ComponentCls>

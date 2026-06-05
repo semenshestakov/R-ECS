@@ -46,8 +46,6 @@ namespace ecs
 
             value_type operator*() const;
 
-            value_type operator->() const;
-
             iterator& operator++();
 
             iterator operator++(int);
@@ -108,7 +106,6 @@ namespace ecs
          * @param entityLocation Location of entity to destroy
          */
         entityId_t Destroy(const ArchetypedChunkEntityLocation& entityLocation);
-
 
         /**
          * @brief Gets mutable pointer to component data by component ID.

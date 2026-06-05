@@ -59,8 +59,10 @@ namespace ecs
         private:
             void advance();
 
-            chunkEntityIndex_t m_chunkEntityIndex {};               ///< Current chunk entity location
+            std::size_t m_chunkIndex {};
+            std::size_t m_localIndex {};
             ArchetypedChunks* m_archetypedChunks {};
+            std::vector<std::tuple<ComponentCls*...>> m_chunksComponents;
         };
 
         ArchetypedChunks() = delete;

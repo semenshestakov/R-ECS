@@ -25,12 +25,6 @@ typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::va
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
-typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::value_type  ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator->() const
-{
-    return &this->operator*();
-}
-
-template<typename ValueType, ecs::IsComponent... ComponentCls>
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>&
 ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++()
 {
@@ -105,18 +99,16 @@ auto ecs::EntitiesArchetypeStorage::end() const
     return iterator<iter_value_type<ComponentCls...>, ComponentCls...>();
 }
 
-// ======================================= EntitiesArchetypeStorage::methods =======================================
-
 template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location)
 {
-    return std::launder(reinterpret_cast<ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>())));
+    return std::bit_cast<ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location) const
 {
-    return std::launder(reinterpret_cast<const ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>())));
+    return std::bit_cast<const ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }
 
 
@@ -153,19 +145,15 @@ inline ecs::entityId_t ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedCh
     return m_storageByArchetypeIndex.at(entityLocation.archetypeIndex).Destroy(entityLocation.chunkEntityIndex);
 }
 
-inline ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(
-    const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId
-    )
+inline ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId)
 {
     return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
 }
 
-inline const ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(
-    const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId) const
+inline const ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId) const
 {
     return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
 }
-
 
 template<ecs::IsComponent ComponentCls>
 ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location)

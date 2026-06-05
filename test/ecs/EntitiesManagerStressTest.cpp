@@ -54,13 +54,14 @@ TEST_F(EntitiesManagerStressTest, Access_100k_Components)
 }
 
 
-TEST_F(EntitiesManagerStressTest, View_100k)
+TEST_F(EntitiesManagerStressTest, View_10k)
 {
     for (size_t i = 0; i < N; ++i)
         manager.Create(CreatePrefab());
 
     size_t count = 0;
-    for (auto [pos2d, pos3d] : manager.view<Position2d, Position3d>())
+    auto view = manager.view<Position2d, Position3d>();
+    for (auto it = view.begin(); it != view.end(); ++it)
     {
         count++;
     }

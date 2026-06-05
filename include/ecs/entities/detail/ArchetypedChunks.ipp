@@ -1,5 +1,6 @@
 #pragma once
 #include <cassert>
+
 #include "../ArchetypedChunks.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
 
@@ -12,8 +13,19 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::iterator(Archetyped
 {
     assert(m_archetypedChunks != nullptr);
 
-    if (m_archetypedChunks->m_chunksEntityCount.empty() || m_archetypedChunks->m_chunksEntityCount[0] == 0)
-        advance();
+    for (std::size_t chunkIndex = 0;  chunkIndex < m_archetypedChunks->m_chunksEntityCount.size(); ++chunkIndex)
+    {
+        if (m_archetypedChunks->m_chunksEntityCount[chunkIndex] > 0)
+        {
+            m_chunksComponents.emplace_back(std::tuple{
+                std::bit_cast<ComponentCls*>(
+                    m_archetypedChunks->GetComponentData(
+                        0,
+                        ComponentRegistrator::GetСomponentId<ComponentCls>())
+                )...
+            });
+        }
+    }
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
@@ -21,22 +33,23 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::iterator(Archetyped
     m_archetypedChunks(archetypedChunks)
 {
     assert(m_archetypedChunks != nullptr);
-    m_chunkEntityIndex = m_archetypedChunks->m_chunksEntityCount.size();
+    m_chunkIndex = m_archetypedChunks->m_chunksEntityCount.size();
 }
 
-template<typename ValueType, ecs::IsComponent... ComponentCls> ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::value_type
-ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator*() const
+template<typename ValueType, ecs::IsComponent... ComponentCls> ValueType ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator*() const
 {
     assert(m_archetypedChunks);
 
     if constexpr (sizeof...(ComponentCls) == 0)
-        return m_chunkEntityIndex;
+        return m_localIndex | m_chunkIndex;
     else
-        return value_type{ m_archetypedChunks->template GetComponent<ComponentCls>(m_chunkEntityIndex)... };
+        return value_type{
+            std::get<ComponentCls*>(m_chunksComponents[m_chunkIndex])[m_localIndex]...
+        };
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
-ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::value_type ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator->() const
+ValueType ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator->() const
 {
     return **this;
 }
@@ -59,7 +72,7 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...> ecs::ArchetypedChunk
 template<typename ValueType, ecs::IsComponent... ComponentCls>
 bool ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator==(const iterator& other) const
 {
-    return m_chunkEntityIndex == other.m_chunkEntityIndex;
+    return m_chunkIndex == other.m_chunkIndex && m_localIndex == other.m_localIndex;
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
@@ -71,27 +84,29 @@ bool ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator!=(con
 template<typename ValueType, ecs::IsComponent... ComponentCls>
 ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator bool() const
 {
-    return getChunkByEntityIndex(m_chunkEntityIndex) < m_archetypedChunks->m_chunksEntityCount.size();
+    return m_chunkIndex < m_archetypedChunks->m_chunksEntityCount.size();
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
 void ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::advance()
 {
     assert(m_archetypedChunks != nullptr);
-    ++m_chunkEntityIndex;
+    ++m_localIndex;
 
-    while (true)
+    while (m_chunkIndex < m_archetypedChunks->m_chunksEntityCount.size())
     {
-        const std::size_t chunkIndex = getChunkByEntityIndex(m_chunkEntityIndex);
-
-        if (chunkIndex >= m_archetypedChunks->m_chunksEntityCount.size())
+        if (m_localIndex < m_archetypedChunks->m_chunksEntityCount[m_chunkIndex])
             return;
 
-        if (const std::size_t localIndex = getLocalEntityIndex(m_chunkEntityIndex);
-           localIndex < m_archetypedChunks->m_chunksEntityCount[chunkIndex])
+        ++m_chunkIndex;
+
+        if (m_chunkIndex >= m_archetypedChunks->m_chunksEntityCount.size())
             return;
 
-        m_chunkEntityIndex = (chunkIndex + 1) << MAX_ENTITIES_IN_CHUNK_BITS;
+        m_localIndex = 0;
+
+        if (m_archetypedChunks->m_chunksEntityCount[m_chunkIndex] > 0)
+            return;
     }
 }
 
@@ -103,6 +118,7 @@ inline ecs::ArchetypedChunks::ArchetypedChunks(Archetype a_archetype) :
     assert(!m_archetype.empty());
     m_localIndexToEntityId.resize(1);
     m_chunksByComponentId.resize(m_archetype.max() + 1);
+    m_chunksEntityCount.resize(1);
 
     m_hasFreeEntityInChunk.set(0);
 }
@@ -111,15 +127,15 @@ inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(const PrefabEntity&
 {
     // - - - Find Chunk Index, Entity Index - - -
     chunkEntityIndex_t chunkIndex;
-    chunkEntityIndex_t localEntityIndex;
+    chunkEntityIndex_t localEntityIndex = 0;
 
     if (const std::size_t minChunkIndexHasFreeEntities = m_hasFreeEntityInChunk.min(); minChunkIndexHasFreeEntities == decltype(m_hasFreeEntityInChunk)::INVALID_INDEX)
     {
         chunkIndex = m_hasFreeEntityInChunk.size();
-        m_hasFreeEntityInChunk.set(chunkIndex);
-        localEntityIndex = m_chunksEntityCount[chunkIndex] = 1;
 
-        m_localIndexToEntityId.resize(chunkIndex * 2);
+        m_localIndexToEntityId.push_back({});
+        m_chunksEntityCount.push_back(1);
+        m_hasFreeEntityInChunk.set(chunkIndex);
     }
     else
     {
@@ -213,7 +229,7 @@ inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
     auto& chunk = componentChunks[chunkIndex];
-    return std::launder(&chunk[componentSize * localEntityIndex]);
+    return &chunk[componentSize * localEntityIndex];
 }
 
 inline const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId) const
@@ -228,19 +244,19 @@ inline const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntit
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
     auto& chunk = componentChunks[chunkIndex];
-    return std::launder(&chunk[componentSize * localEntityIndex]);
+    return &chunk[componentSize * localEntityIndex];
 }
 
 template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::ArchetypedChunks::TryGetComponent(const chunkEntityIndex_t chunkEntityIndex)
 {
-    return std::launder(reinterpret_cast<ComponentCls*>(GetComponentData(chunkEntityIndex, ComponentRegistrator::GetСomponentId<ComponentCls>())));
+    return std::bit_cast<ComponentCls*>(GetComponentData(chunkEntityIndex, ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::ArchetypedChunks::TryGetComponent(const chunkEntityIndex_t chunkEntityIndex) const
 {
-    return std::launder(reinterpret_cast<const ComponentCls*>(GetComponentData(chunkEntityIndex, ComponentRegistrator::GetСomponentId<ComponentCls>())));
+    return std::bit_cast<const ComponentCls*>(GetComponentData(chunkEntityIndex, ComponentRegistrator::GetСomponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>

@@ -1,7 +1,5 @@
-#pragma once
-#include <map>
-#include <any>
-
+#ifndef EVENT_T_HPP
+#define EVENT_T_HPP
 #include "AbstractEvent.hpp"
 #include "EventUtils.hpp"
 
@@ -12,7 +10,7 @@ namespace event
     /**
      * Typed event implementation supporting variadic arguments.
      *
-     * @tparam Args... Event argument types
+     * @tparam Args Event argument types
      *
      * @note Final class - not intended for further derivation
      * @note Non-copyable, non-movable
@@ -22,9 +20,16 @@ namespace event
     {
         /// Callback signature type
         using Callback = eventCallback_t<Args...>;
+        struct Entry
+        {
+            callbackId_t id = INVALID_CALLBACK_ID;
+            priority_t priority = DEFAULT_PRIORITY;
+            Callback callback;
+            bool removed = false;
+        };
 
         Event() = default;
-        ~Event() = default;
+        ~Event() override = default;
 
         // Non-copyable, non-movable
         Event(const Event&) = delete;
@@ -35,20 +40,10 @@ namespace event
         /**
          * Register a callback for this event.
          * @param callback Function to call when event is triggered
+         * @param priority Priority
          * @return Unique callback ID for later removal
          */
-        callbackId_t add(const Callback& callback);
-
-        /**
-         * @brief Adds a type-erased callback stored in std::any
-         * @param callback The callback wrapped in std::any
-         * @return Unique callback ID, or INVALID_CALLBACK_ID if cast fails
-         *
-         * Attempts to cast the std::any to the expected Callback type.
-         * If the cast succeeds, the callback is added normally.
-         * If the cast fails, returns INVALID_CALLBACK_ID and does nothing.
-         */
-        callbackId_t addAny(const std::any& callback) override;
+        callbackId_t add(const Callback& callback, priority_t priority = DEFAULT_PRIORITY);
 
         /**
          * @brief Factory method to create concrete event instance.
@@ -59,7 +54,7 @@ namespace event
          * Remove callback by ID.
          * @param callbackId ID returned by add()
          */
-        void remove(const callbackId_t& callbackId) override;
+        void remove(callbackId_t callbackId) override;
 
         /**
          * Trigger the event, calling all registered callbacks.
@@ -67,12 +62,13 @@ namespace event
          */
         void operator()(Args... args);
     
-    protected:
-        std::map<callbackId_t, Callback> m_callbacksMap;                              ///< Callback storage (sorted by ID)
-        callbackId_t m_lastCallbackId = INVALID_CALLBACK_ID + 1;                      ///< Next callback ID
-        
+    private:
+        std::vector<Entry> m_callbacks;                                                 ///< Callback storage (sorted by ID)
+        callbackId_t m_lastCallbackId = INVALID_CALLBACK_ID + 1;                        ///< Next callback ID
+        bool m_dispatching = false;
+
     };
 
 }
-
+#endif
 #include "detail/Event.ipp"

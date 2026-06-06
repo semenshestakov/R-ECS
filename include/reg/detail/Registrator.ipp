@@ -52,9 +52,9 @@ namespace reg
     }
 
     template<typename FactoryCls, RegistrationStrategy Strategy>
-    std::size_t Registrator<FactoryCls, Strategy>::getIndex(const Registrator &registrator)
+    std::size_t Registrator<FactoryCls, Strategy>::getIndex() const
     {
-        return registrator.m_index;
+        return m_index;
     }
 
     template<typename FactoryCls, RegistrationStrategy Strategy>
@@ -135,7 +135,12 @@ namespace reg
     template<typename FactoryCls, RegistrationStrategy Strategy>
     /* static */ FactoryCls* Registrator<FactoryCls, Strategy>::get(const std::string& name)
     {
-        const std::size_t key = getIndex(name);
+        return get(getIndex(name));
+    }
+
+    template<typename FactoryCls, RegistrationStrategy Strategy>
+    FactoryCls* Registrator<FactoryCls, Strategy>::get(const std::size_t key)
+    {
         if (key == INVALID_INDEX)
             return nullptr;
 

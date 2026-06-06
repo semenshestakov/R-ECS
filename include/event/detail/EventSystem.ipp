@@ -40,21 +40,77 @@ namespace event
 
     template<typename K>
     template<typename... Args>
-    void EventSystem<K>::on(const K& key, Args&&... args)
+    void EventSystem<K>::OnEvent(const K& key, Args&&... args)
     {
-        if(auto* event = get<Args...>(key))
+        if(auto* event = TryGet<Args...>(key))
             (*event)(std::forward<Args>(args)...);
     }
 
     template<typename K>
     template<class... Args>
-    Event<Args...>* EventSystem<K>::get(const K& key)
+    void EventSystem<K>::PushEvent(const K& key, Args&&... args)
+    {
+        m_eventQueue.emplace_back(
+            [this, key, argsTuple = std::make_tuple(std::forward<Args>(args)...)]() mutable
+            {
+                std::apply(
+                    [this, &key]<typename... T0>(T0&&... unpackedArgs)
+                    {
+                        this->OnEvent(key, std::forward<T0>(unpackedArgs)...);
+                    },
+                    std::move(argsTuple)
+                );
+            });
+    }
+
+    template<typename K>
+    void EventSystem<K>::FlushEvents()
+    {
+        std::vector<std::function<void()>> processing;
+        processing.swap(m_eventQueue);
+
+        for (auto& event : processing)
+            event();
+    }
+
+    template<typename K>
+    template<class... Args>
+    Event<Args...>* EventSystem<K>::TryGet(const K& key)
     {
         const auto it = m_eventsMap.find(key);
         if(it == m_eventsMap.end())
             return nullptr;
 
         return dynamic_cast<Event<Args...>*>(it->second.get());
+    }
+
+    template<typename K>
+    template<class... Args>
+    const Event<Args...>* EventSystem<K>::TryGet(const K& key) const
+    {
+        const auto it = m_eventsMap.find(key);
+        if(it == m_eventsMap.end())
+            return nullptr;
+
+        return dynamic_cast<Event<Args...>*>(it->second.get());
+    }
+
+    template<typename K>
+    template<class... Args>
+    Event<Args...>& EventSystem<K>::Get(const K& key)
+    {
+        Event<Args...>* event = TryGet<Args...>(key);
+        assert(event != nullptr);
+        return *event;
+    }
+
+    template<typename K>
+    template<class... Args>
+    const Event<Args...>& EventSystem<K>::Get(const K& key) const
+    {
+        const Event<Args...>* event = TryGet<Args...>(key);
+        assert(event != nullptr);
+        return *event;
     }
 
     template<typename K>

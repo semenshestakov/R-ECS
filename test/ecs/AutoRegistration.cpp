@@ -1,43 +1,23 @@
-#include "../../include/ecs/systems/SystemRegistrator.hpp"
-#include "ComponentsClass.hpp"
+#include "ecs/systems/SystemRegistrator.hpp"
 #include "SystemsClass.hpp"
 #include "ecs/Registry.hpp"
 #include "gtest/gtest.h"
 
+
 using namespace ecs;
-
-
-TEST(AutoRegistrationTest, RegistryRegistratorSize)
-{
-    EXPECT_EQ(SystemRegistrator::Registrator::size(), 4);
-}
-
-
-TEST(AutoRegistrationTest, SystemsIsRegistered)
-{
-    EXPECT_EQ(SystemTestUpdate::IsRegistered, false);
-    EXPECT_EQ(SystemTestId::IsRegistered, false);
-    EXPECT_EQ(AutoSystem1::IsRegistered, true);
-}
 
 
 TEST(AutoRegistrationTest, SystemsCount)
 {
-    {
-        SystemsManager* systemsManager = SystemRegistrator::GetSystemsManager("test1");
-        EXPECT_EQ(systemsManager->size(), 2);
-    }
-
-    {
-        SystemsManager* systemsManager = SystemRegistrator::GetSystemsManager("test2");
-        EXPECT_EQ(systemsManager->size(), 1);
-    }
+    EXPECT_EQ(RegistryRegistrator::Get("test1").systemRegIndexes.size(), 2);
+    EXPECT_EQ(RegistryRegistrator::Get("test2").systemRegIndexes.size(), 1);
 }
 
 TEST(AutoRegistrationTest, SimpleSystems)
 {
 
-    auto registry = Registry(*SystemRegistrator::GetSystemsManager("test1"));
+    const SystemsManager systemManager = SystemsManager::Create(RegistryRegistrator::Get("test1").systemRegIndexes);
+    auto registry = Registry(systemManager); // copy
     registry.Init();
 
     EXPECT_EQ(AutoSystem1::IsUpdated, false);

@@ -1,5 +1,7 @@
 #pragma once
+#include <stdexcept>
 #include "../AbstractListener.hpp"
+
 
 namespace event
 {
@@ -101,15 +103,6 @@ namespace event
         {
             m_callbackId.insert(callbackId);
         }
-    }
-
-    template<ValidCallbackIdType T>
-    void AbstractListener<T>::addCallbackAny(const std::any& callback) const
-    {
-        if (m_event == nullptr)
-            return;
-
-        m_event->addAny(callback);
     }
 
     template<ValidCallbackIdType T>

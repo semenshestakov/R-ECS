@@ -1,8 +1,8 @@
-#pragma once
+#ifndef EVENT_SYSTEM_HPP
+#define EVENT_SYSTEM_HPP
 #include <unordered_map>
 #include "event/Event.hpp"
 #include "event/ListenerSystem.hpp"
-
 
 
 namespace event
@@ -16,7 +16,7 @@ namespace event
      * @tparam K The key type used as event key (e.g., std::string, enum class, int)
      */
     template<typename K /* key */>
-    class EventSystem final
+    class EventSystem
     {
     public:
         EventSystem();
@@ -60,10 +60,82 @@ namespace event
          * @note If the event doesn't exist or has wrong signature, this function does nothing
          */
         template<class... Args>
-        void on(const K& key, Args&&... args);
+        void OnEvent(const K& key, Args&&... args);
+
+        /**
+         * @brief Enqueue an event for deferred processing within the current frame
+         *
+         * Schedules an event invocation to be executed later during the event
+         * processing phase (typically at a well-defined point in the frame).
+         * This allows systems to emit events without immediately affecting
+         * execution flow, ensuring deterministic behavior across systems.
+         *
+         * @tparam Args Event argument types
+         * @param key Identifier of the event to enqueue
+         * @param args Arguments forwarded to event listeners
+         *
+         * @note Events are stored in a FIFO queue and processed in insertion order
+         * @note Arguments are captured using perfect forwarding and may be moved
+         * @note If the event is not registered or has incompatible signature,
+         *       it will be safely ignored during processing
+         *
+         * @warning Deferred execution means listeners will not observe the event
+         *          until FlushEvents() is called
+         */
+        template<class... Args>
+        void PushEvent(const K& key, Args&&... args);
+
+        /**
+         * @brief Process all queued events
+         *
+         * Executes all events accumulated via PushEvent() in a deterministic,
+         * FIFO order. This function represents the event dispatch phase of the
+         * frame and should typically be called once per frame at a controlled
+         * synchronization point.
+         *
+         * Ensures that:
+         * - All systems observe events in the same order
+         * - No mid-update side effects occur from immediate event dispatch
+         * - Event-driven logic remains deterministic and frame-consistent
+         *
+         * After execution, the internal event queue is cleared.
+         *
+         * @note Safe to call multiple times; has no effect if the queue is empty
+         * @warning Events generated during FlushEvents() are not processed
+         */
+        void FlushEvents();
+
+        /**
+         * @brief Retrieve an event by key if it exists
+         *
+         * @tparam Args Event argument types
+         * @param key Key of the event to retrieve
+         * @return Pointer to the event if found, otherwise nullptr
+         *
+         * @note Safe lookup — returns nullptr if event is not registered
+         */
+        template<class... Args>
+        Event<Args...>* TryGet(const K& key);
 
         template<class... Args>
-        Event<Args...>* get(const K& key);
+        const Event<Args...>* TryGet(const K& key) const;
+
+        /**
+         * @brief Retrieve a reference to an event by key
+         *
+         * @tparam Args Event argument types
+         * @param key Key of the event to retrieve
+         * @return Reference to the event
+         *
+         * @throws assert if event with given key does not exist
+         *
+         * @note Use when the event is guaranteed to exist
+         */
+        template<class... Args>
+        Event<Args...>& Get(const K& key);
+
+        template<class... Args>
+        const Event<Args...>& Get(const K& key) const;
 
         /**
          * @brief Check if an event with the given key exists
@@ -78,12 +150,36 @@ namespace event
          */
         [[nodiscard]] size_t size() const;
 
-    private:
+    protected:
         using absEventPtr_t = std::unique_ptr<AbstractEvent>;
-        using eventMap_t = std::unordered_map<K, absEventPtr_t>;
+        using queueEventFunc_t = std::function<void()>;
 
-        eventMap_t m_eventsMap;
+        /**
+         * @brief Registry of all event channels
+         *
+         * Maps event keys to their corresponding event instances.
+         * Each entry defines a unique event type and its associated listeners.
+         *
+         * This container represents the persistent event infrastructure
+         * shared across systems.
+         */
+        std::unordered_map<K, absEventPtr_t> m_eventsMap;
+
+        /**
+         * @brief Deferred event execution queue
+         *
+         * Stores callable units representing scheduled event invocations.
+         * Each entry encapsulates:
+         * - Event key
+         * - Bound arguments
+         * - Dispatch logic
+         *
+         * The queue is processed sequentially during FlushEvents(),
+         * guaranteeing deterministic event ordering across the frame.
+         */
+        std::vector<queueEventFunc_t> m_eventQueue;
     };
 
 } // namespace event
+#endif
 #include "detail/EventSystem.ipp"

@@ -147,6 +147,7 @@ TEST_F(EntitiesManagerTest, Destructor_IsCalled)
     EXPECT_TRUE(DestructorTest::testValue);
 }
 
+
 TEST_F(EntitiesManagerTest, View_SingleComponent)
 {
     manager.Create(Create2DPrefab());
@@ -244,4 +245,149 @@ TEST_F(EntitiesManagerTest, UniqueTestId)
     }
 
     EXPECT_TRUE(ids.empty());
+}
+
+
+TEST_F(EntitiesManagerTest, DestroyEntityInMiddle_ComponentsRemainValid)
+{
+    std::vector<EntityWrapper> entities;
+
+    for (int i = 0; i < 100; ++i)
+    {
+        auto prefab = Create2DPrefab(static_cast<float>(i), static_cast<float>(i));
+        entities.emplace_back(manager.Create(prefab));
+    }
+
+    manager.Destroy(entities[50]);
+
+    EXPECT_EQ(manager.size(), 99);
+
+    for (int i = 0; i < 100; ++i)
+    {
+        if (i == 50)
+            continue;
+
+        EXPECT_TRUE(manager.IsAlive(entities[i]));
+
+        const auto& pos = entities[i].GetComponent<Position2d>();
+        EXPECT_FLOAT_EQ(pos.x, static_cast<float>(i));
+        EXPECT_FLOAT_EQ(pos.y, static_cast<float>(i));
+    }
+}
+
+
+TEST_F(EntitiesManagerTest, MassiveMiddleDeletion)
+{
+    std::vector<EntityWrapper> entities;
+
+    for (int i = 0; i < 1000; ++i)
+    {
+        auto prefab = Create2DPrefab(static_cast<float>(i), 0.f);
+        entities.emplace_back(manager.Create(prefab));
+    }
+
+    for (int i = 300; i < 700; ++i)
+    {
+        manager.Destroy(entities[i]);
+    }
+
+    EXPECT_EQ(manager.size(), 600);
+
+    for (int i = 0; i < 1000; ++i)
+    {
+        if (i >= 300 && i < 700)
+        {
+            EXPECT_FALSE(manager.IsAlive(entities[i]));
+        }
+        else
+        {
+            EXPECT_TRUE(manager.IsAlive(entities[i]));
+
+            const auto& pos = entities[i].GetComponent<Position2d>();
+            EXPECT_FLOAT_EQ(pos.x, static_cast<float>(i));
+        }
+    }
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveEverySecondEntity)
+{
+    std::vector<EntityWrapper> entities;
+
+    for (int i = 0; i < 500; ++i)
+    {
+        entities.emplace_back(manager.Create(Create2DPrefab(static_cast<float>(i), 0.f)));
+    }
+
+    for (size_t i = 0; i < entities.size(); i += 2)
+    {
+        manager.Destroy(entities[i]);
+    }
+
+    EXPECT_EQ(manager.size(), 250);
+
+    for (size_t i = 1; i < entities.size(); i += 2)
+    {
+        EXPECT_TRUE(manager.IsAlive(entities[i]));
+
+        const auto& pos = entities[i].GetComponent<Position2d>();
+        EXPECT_FLOAT_EQ(pos.x, static_cast<float>(i));
+    }
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveMiddleThenInsertAgain)
+{
+    std::vector<EntityWrapper> entities;
+
+    for (int i = 0; i < 100; ++i)
+    {
+        entities.emplace_back(manager.Create(Create2DPrefab()));
+    }
+
+    Entity removed = entities[50].getEntity();
+
+    manager.Destroy(entities[50]);
+
+    auto newEntity = manager.Create(Create2DPrefab(999.f, 999.f));
+
+    EXPECT_EQ(newEntity.getEntity().id, removed.id);
+    EXPECT_EQ(newEntity.getEntity().version,
+              removed.version + 1);
+
+    const auto& pos = newEntity.GetComponent<Position2d>();
+
+    EXPECT_FLOAT_EQ(pos.x, 999.f);
+    EXPECT_FLOAT_EQ(pos.y, 999.f);
+}
+
+
+TEST_F(EntitiesManagerTest, ViewAfterManyRemovalsAndInsertions)
+{
+    std::vector<Entity> entities;
+
+    for (int i = 0; i < 200; ++i)
+    {
+        entities.emplace_back(manager.Create(Create2DPrefab(static_cast<float>(i), 0.f)));
+    }
+
+    for (int i = 50; i < 150; ++i)
+    {
+        manager.Destroy(entities[i]);
+    }
+
+    for (int i = 0; i < 100; ++i)
+    {
+        manager.Create(Create2DPrefab(1000.f + i, 0.f));
+    }
+
+    size_t count = 0;
+
+    for (auto [pos] : manager.view<Position2d>())
+    {
+        (void)pos;
+        ++count;
+    }
+
+    EXPECT_EQ(count, manager.size());
 }

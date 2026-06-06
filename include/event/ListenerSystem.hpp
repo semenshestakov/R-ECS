@@ -1,4 +1,6 @@
-#pragma once
+#ifndef LISTENER_SYSTEM_HPP
+#define LISTENER_SYSTEM_HPP
+#include <memory>
 #include "AbstractListener.hpp"
 #include "Listener.hpp"
 
@@ -99,23 +101,12 @@ namespace event
          * @param key Unique identifier for this subscription
          * @param event Pointer to the event to subscribe to
          * @param callback The callback function to register
+         * @param priority The callback priority
          *
          * @note The system takes ownership of the created listener
          */
         template<typename... Args>
-        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback);
-
-        /**
-         * @brief Type-erased subscription method for use with CallbackCollector.
-         * @param key The key identifying the subscription
-         * @param event Pointer to the abstract event
-         * @param callback The callback stored in std::any
-         * @return true if subscription succeeded, false otherwise
-         *
-         * @note This method attempts to cast the std::any to the correct callback type
-         *       based on the event's type information.
-         */
-        bool subscribeAny(const K& key, AbstractEvent*, const std::any& callback);
+        bool subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, priority_t priority = DEFAULT_PRIORITY);
 
         /**
          * @brief Unsubscribes and removes a listener by its key.
@@ -158,6 +149,6 @@ namespace event
     };
 
 }
-
+#endif
 #include "detail/ListenerSystem.ipp"
 

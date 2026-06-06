@@ -350,11 +350,16 @@ struct TestNameRegistration
 };
 
 using g_TestDefaultRegister = Registrator<TestNameRegistration, RegistrationStrategy::DEFAULT>;
-auto g_A0 = g_TestDefaultRegister::Create<int>("A0");
+void funcInitGlobalValue()
+{
+    static auto g_A0 = g_TestDefaultRegister::Create<int>("A0");
+}
 
 
 TEST(RegistratorTest, DefaultRegisterRegisterSize)
 {
+    funcInitGlobalValue();
+
     // Test 9
     using TestDefaultRegister = g_TestDefaultRegister;
     {

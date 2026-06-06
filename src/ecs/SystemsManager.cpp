@@ -1,5 +1,7 @@
-#include "ecs/systems/SystemsManager.hpp"
 #include <ranges>
+#include "event/EventUtils.hpp"
+#include "ecs/systems/SystemsManager.hpp"
+#include "ecs/systems/SystemRegistrator.hpp"
 
 
 ecs::SystemsManager::SystemsManager() = default;
@@ -22,7 +24,7 @@ void ecs::SystemsManager::copy(const SystemsManager& other)
     m_schedule = other.m_schedule;
     for(auto const& [hash, systemPtr]: other.m_systemsMap)
     {
-        m_systemsMap[hash] = systemPtr_t(systemPtr->New());
+        m_systemsMap[hash] = baseSystemPtr_t(systemPtr->New());
     }
 }
 
@@ -51,6 +53,23 @@ bool ecs::SystemsManager::Init(const InitState& state)
     return true;
 }
 
+bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
+{
+    event::priority_t priority = event::MAX_PRIORITY;
+    for(const auto& stageSystems: m_schedule)
+    {
+        for(auto& systemHash: stageSystems)
+        {
+            SubscribeState localState = state;
+            localState.priority = priority;
+
+            m_systemsMap[systemHash]->Subscribe(localState);
+        }
+        --priority;
+    }
+    return true;
+}
+
 void ecs::SystemsManager::Update(Registry& registry)
 {
     const UpdateState state{};
@@ -63,4 +82,29 @@ void ecs::SystemsManager::Update(Registry& registry)
     }
 }
 
-std::size_t ecs::SystemsManager::size() const { return m_systemsMap.size(); }
+bool ecs::SystemsManager::Register(const std::size_t systemRegIndex)
+{
+    const auto& systemInfo = SystemRegistrator::Get(systemRegIndex);
+    if(m_systemsMap.contains(systemInfo.hash))
+        return false;
+
+    m_systemsMap[systemInfo.hash] = systemInfo.makeNew();
+    m_schedule.Add(*m_systemsMap[systemInfo.hash].get(), systemInfo.hash);
+    return true;
+}
+
+std::size_t ecs::SystemsManager::size() const
+{
+    return m_systemsMap.size();
+}
+
+ecs::SystemsManager ecs::SystemsManager::Create(const std::span<const std::size_t> systemRegIndexes)
+{
+    SystemsManager systemsManager;
+    for (const size_t systemIndex: systemRegIndexes)
+    {
+        systemsManager.Register(systemIndex);
+    }
+
+    return systemsManager;
+}

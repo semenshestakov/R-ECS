@@ -1,41 +1,33 @@
 #pragma once
 #include "../SystemRegistrator.hpp"
+#include "ecs/registry/RegistryRegistrator.hpp"
 
 
 template<typename T>
-ecs::RegisterSystemInfo ecs::RegisterSystemInfo::Create(const std::string& name)
+ecs::SystemRegistrator::RegisterSystemInfo ecs::SystemRegistrator::RegisterSystemInfo::Create(const std::string& name)
 {
-    return RegisterSystemInfo(name, SystemsManager());
+    return {
+        .name = name,
+        .hash = getSystemHash<T>(),
+        .makeNew = [](){ return baseSystemPtr_t (new T()); }
+    };
 }
 
-/* static */ inline void ecs::SystemRegistrator::RegisterRegistry(const std::string& name)
+template<typename SystemCls>
+/* static */ ecs::SystemRegistrator::Registrator ecs::SystemRegistrator::Register()
 {
-    Registrator::Register<void>(name);
-}
-
-/* static */ inline ecs::SystemsManager* ecs::SystemRegistrator::GetSystemsManager(const std::string& name) noexcept
-{
-    if(RegisterSystemInfo* result = Registrator::get(name))
-        return &result->systemManager;
-    return nullptr;
-}
-
-
-template<typename System, std::size_t N>
-/* static */ bool ecs::SystemRegistrator::Register(const std::array<std::string_view, N>& names)
-{
-    if constexpr(N == 0)
-        return false;
-
-    for(std::string_view nameView: names)
+    Registrator reg = Registrator::Create<SystemCls>(typeid(SystemCls).name());
+    for(const std::string& nameView: SystemCls::GetRegistryNames())
     {
-        std::string name = {nameView.begin(), nameView.end()};
-        if(!Registrator::contains(name))
-            RegisterRegistry(name);
-
-        auto manager = GetSystemsManager(name);
-        manager->Register<System>();
+        RegistryRegistrator::RegisterSystem(nameView, reg.getIndex());
     }
 
-    return true;
+    return reg;
+}
+
+/* static */ inline const ecs::SystemRegistrator::RegisterSystemInfo& ecs::SystemRegistrator::Get(const std::size_t index)
+{
+    const RegisterSystemInfo* info = Registrator::get(index);
+    assert(info != nullptr);
+    return *info;
 }

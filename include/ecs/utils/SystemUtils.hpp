@@ -1,4 +1,5 @@
 #pragma once
+#include "event/EventUtils.hpp"
 
 
 namespace event
@@ -37,23 +38,22 @@ namespace ecs
      * @par Example:
      * @code
      * struct PlayerDiedEvent {};
-     * auto key = getEventKey<PlayerDiedEvent>(); // Unique identifier
+     * auto key = TryGetKey<PlayerDiedEvent>(); // Unique identifier
      * @endcode
      */
     template<class Event>
-    constexpr std::size_t getEventKey()
+    constexpr std::size_t GetEventKey()
     {
         return typeid(Event).hash_code();
     }
 
     /**
-     * @brief ECS-specific event system type alias
+     * @brief ECS-specific event system class
      *
      * Specializes the generic EventSystem to use eventKey_t (std::size_t)
      * as the key type for event identification within the ECS.
      */
-    using EventSystem = event::EventSystem<eventKey_t>;
-
+    class EventSystem;
 
     /**
      * @brief Structure containing initialization parameters for system startup.
@@ -67,7 +67,19 @@ namespace ecs
     {
         const char* nameFactory;            ///< Identifier for the systemsManager or creator of this system
         void* args;                         ///< Pointer to system-specific initialization arguments
-        EventSystem& eventSystem;           ///< Ref local Event System for ECS
+    };
+
+    /**
+     * @brief Initialization state for system event subscription.
+     *
+     * Contains required context for subscribing a system to the ECS event system,
+     * including a reference to the event dispatcher and optional priority for
+     * ordering event processing.
+     */
+    struct SubscribeState
+    {
+        std::reference_wrapper<EventSystem> eventSystem;       ///< Reference to the ECS event system used for subscriptions
+        event::priority_t priority = event::DEFAULT_PRIORITY;  ///< Priority of the system in event processing order (higher = earlier execution)
     };
 
     /**

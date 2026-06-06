@@ -1,7 +1,9 @@
-#pragma once
+#ifndef REGISTRATOR_HPP
+#define REGISTRATOR_HPP
 #include <ranges>
 #include <string>
 #include <vector>
+#include <optional>
 
 
 namespace reg
@@ -117,6 +119,7 @@ namespace reg
          */
         static void setIndex(Registrator& registrator, std::size_t index);
 
+    public:
         /**
          * @brief Get the registration index for a given name.
          *
@@ -128,10 +131,9 @@ namespace reg
         /**
          * @brief Get the index of a Registrator object.
          *
-         * @param registrator Registrator object to query
          * @return The object's index (may be INVALID_INDEX)
          */
-        [[nodiscard]] static std::size_t getIndex(const Registrator& registrator);
+        [[nodiscard]] std::size_t getIndex() const;
 
     private:
         /**
@@ -213,11 +215,46 @@ namespace reg
          */
         [[nodiscard]] static FactoryCls* get(const std::string& name);
 
-        /// @brief Checks for registration by name
+        /**
+         * @brief Look up a registration by index
+         * @param key The index of the registration to retrieve
+         * @return Pointer to the FactoryCls object, or nullptr if index is invalid or registration is inactive
+         *
+         * Provides direct index-based access to registrations. This is faster than
+         * name-based lookup but requires knowing the index in advance.
+         *
+         * @pre key must be a valid index returned from getIndex()
+         * @note Returns nullptr if the registration at that index has been destroyed
+         *
+         * @see getIndex()
+         * @see get(const std::string&)
+         */
+        [[nodiscard]] static FactoryCls* get(std::size_t key);
+
+        /**
+         * @brief Checks whether a registration with the given name exists
+         * @param name Name to check for
+         * @return true if a registration with the specified name exists, false otherwise
+         *
+         * Performs a lookup to determine if a registration has been created with
+         * the given name. This is useful for conditional registration logic.
+         *
+         * @note Complexity: O(n) where n is number of registrations
+         * @see getIndex()
+         * @see get()
+         *
+         * @par Example:
+         * @code
+         * if (!Registrator<>::contains("MyComponent")) {
+         *     auto reg = Registrator<>::Create<MyComponent>("MyComponent");
+         * }
+         * @endcode
+         */
         [[nodiscard]] static bool contains(const std::string& name);
 
     };
 
 } // namespace reg
 
+#endif
 #include "detail/Registrator.ipp"

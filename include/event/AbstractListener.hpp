@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ABSTRACT_LISTENER_HPP
+#define ABSTRACT_LISTENER_HPP
 #include "EventUtils.hpp"
 #include "AbstractEvent.hpp"
 
@@ -102,15 +103,6 @@ namespace event
         void addCallbackId(callbackId_t callbackId);
 
         /**
-         * @brief Adds a callback stored in std::any to the listener.
-         * @param callback The callback wrapped in std::any to add
-         *
-         * @note This is a type-erased version of addCallback. The actual callback type
-         *       must match the event signature expected by the associated event.
-         */
-        void addCallbackAny(const std::any& callback) const;
-
-        /**
          * @brief Unsubscribes all callbacks managed by this listener from the associated event.
          *
          * Removes all callback IDs stored in this listener from the associated event,
@@ -143,4 +135,5 @@ namespace event
     };
 
 }
+#endif
 #include "detail/AbstractListener.ipp"

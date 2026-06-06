@@ -53,7 +53,8 @@ namespace ecs
          * @param prefabEntity Prefab containing component data to initialize entity
          * @return Wrapper object providing safe access to the created entity
          */
-        EntityWrapper Create(PrefabEntity& prefabEntity);
+        template<EntityConcept ReturnType=EntityWrapper>
+        ReturnType Create(const PrefabEntity& prefabEntity);
 
         /**
          * @brief Creates new entity from prefab data (rvalue reference).
@@ -61,7 +62,8 @@ namespace ecs
          * @param prefabEntity Prefab containing component data to initialize entity
          * @return Wrapper object providing safe access to the created entity
          */
-        EntityWrapper Create(PrefabEntity&& prefabEntity);
+        template<EntityConcept ReturnType=EntityWrapper>
+        ReturnType Create(PrefabEntity&& prefabEntity);
 
         /**
          * @brief Destroys entity if it exists.
@@ -69,14 +71,8 @@ namespace ecs
          * entity ID to free list for reuse with incremented version.
          * @param entity Entity to destroy (by value)
          */
-        void Destroy(const Entity& entity);
-
-        /**
-         * @brief Destroys entity using wrapper.
-         * Convenience overload for EntityWrapper.
-         * @param entity Wrapper containing entity to destroy
-         */
-        void Destroy(const EntityWrapper& entity);
+        template<EntityConcept InputEntityType>
+        void Destroy(const InputEntityType& entity);
 
         /**
          * @brief Checks if entity is alive and version matches.
@@ -84,15 +80,8 @@ namespace ecs
          * @param entity Entity to check
          * @return true if entity exists and version matches
          */
-        [[nodiscard]] bool IsAlive(const Entity& entity) const;
-
-        /**
-         * @brief Checks if wrapped entity is alive.
-         * Convenience overload for EntityWrapper.
-         * @param entity Wrapper containing entity to check
-         * @return true if entity exists and version matches
-         */
-        [[nodiscard]] bool IsAlive(const EntityWrapper& entity) const;
+        template<EntityConcept InputEntityType>
+        [[nodiscard]] bool IsAlive(const InputEntityType& entity) const;
 
         /**
          * @brief Gets component of specified type (asserts existence).

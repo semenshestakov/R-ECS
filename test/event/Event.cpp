@@ -141,21 +141,6 @@ TEST_F(EventTest, TriggerWithTwoIntArguments)
 }
 
 
-TEST_F(EventTest, AddAny)
-{
-    Event<int> event;
-    EventMockCallback mock;
-
-    EXPECT_CALL(mock, callWithInt(10)).Times(1);
-
-    {
-        AbstractEvent& abstractEvent = event;
-        abstractEvent.addAny(std::make_any<decltype(event)::Callback>( [&mock](int a) { mock.callWithInt(a); }));
-    }
-    event(10);
-}
-
-
 TEST_F(EventTest, TriggerWithMixedArguments)
 {
     Event<int, std::string, double> event;
@@ -339,4 +324,78 @@ TEST_F(EventTest, MultipleEventsWithDifferentTypes)
 
     intEvent(42);
     stringEvent("test");
+}
+
+
+TEST_F(EventTest, HigherPriorityCallbackRunsFirst)
+{
+    Event<> event;
+    std::vector<int> order;
+
+    event.add([&]() { order.push_back(1); }, 0);
+    event.add([&]() { order.push_back(2); }, 10);
+    event.add([&]() { order.push_back(3); }, 5);
+
+    event();
+
+    ASSERT_EQ(order.size(), 3);
+    EXPECT_EQ(order[0], 2); // priority 10
+    EXPECT_EQ(order[1], 3); // priority 5
+    EXPECT_EQ(order[2], 1); // priority 0
+}
+
+
+TEST_F(EventTest, SamePriorityPreservesInsertionOrder)
+{
+    Event<> event;
+    std::vector<int> order;
+
+    event.add([&]() { order.push_back(1); }, 5);
+    event.add([&]() { order.push_back(2); }, 5);
+    event.add([&]() { order.push_back(3); }, 5);
+
+    event();
+
+    ASSERT_EQ(order.size(), 3);
+    EXPECT_EQ(order[0], 1);
+    EXPECT_EQ(order[1], 2);
+    EXPECT_EQ(order[2], 3);
+}
+
+
+TEST_F(EventTest, MixedPrioritiesExecutionOrderIsCorrect)
+{
+    Event<> event;
+    std::vector<int> order;
+
+    event.add([&]() { order.push_back(1); }, 1);
+    event.add([&]() { order.push_back(2); }, 100);
+    event.add([&]() { order.push_back(3); }, 50);
+    event.add([&]() { order.push_back(4); }, 50);
+    event.add([&]() { order.push_back(5); }, -1);
+
+    event();
+
+    ASSERT_EQ(order.size(), 5);
+
+    EXPECT_EQ(order[0], 2); // 100
+    EXPECT_TRUE(order[1] == 3 || order[1] == 4); // 50 group
+    EXPECT_TRUE(order[2] == 3 || order[2] == 4); // 50 group
+    EXPECT_EQ(order[3], 1); // 1
+    EXPECT_EQ(order[4], 5); // 0
+}
+
+
+TEST_F(EventTest, PriorityDoesNotBreakRemoveBehavior)
+{
+    Event<> event;
+    EventMockCallback mock;
+
+    EXPECT_CALL(mock, call()).Times(1);
+
+    auto id1 = event.add([&]() { mock.call(); }, 0);
+    event.add([&]() { event.remove(id1); }, 100);
+    event.add([&]() { mock.call(); }, 50);
+
+    event();
 }

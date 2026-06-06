@@ -50,7 +50,9 @@ namespace event
     }
 
     template<typename K, typename T> template<typename... Args>
-    bool ListenerSystem<K, T>::subscribe(const K& key, Event<Args...>* event, eventCallback_t<Args...> callback)
+    bool ListenerSystem<K, T>::subscribe(
+        const K& key, Event<Args...>* event, eventCallback_t<Args...> callback, priority_t priority /* = DEFAULT_PRIORITY */
+        )
     {
         if (callback == nullptr)
             return false;
@@ -74,22 +76,7 @@ namespace event
         if (!listener)
             throw std::runtime_error("!smartEvent");
 
-        listener->subscribe(callback);
-        return true;
-    }
-
-    template<typename K, typename T>
-    bool ListenerSystem<K, T>::subscribeAny(const K& key, AbstractEvent* event, const std::any& callback)
-    {
-        const auto [isReg, it] = isRegistered(key, event);
-        if (!isReg)
-            return false;
-
-        AbstractSmartListener_t* absListener = it->second.get();
-        if (absListener->eventId() != event->id)
-            throw std::runtime_error("eventId != newEventId");
-
-        absListener->addCallbackAny(callback);
+        listener->subscribe(callback, priority);
         return true;
     }
 

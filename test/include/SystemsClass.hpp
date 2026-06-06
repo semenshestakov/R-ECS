@@ -110,7 +110,14 @@ struct SystemEventHandler2 final : ecs::ISystem<SystemEventHandler2>
 
 // ================================ Schedule Systems ================================
 
+
 inline std::vector<std::string> g_systemCallOrder;
+inline std::vector<ecs::systemHash_t> g_systemEventCallOrder;
+
+struct EventCallOrder
+{
+    int value = 0;
+};
 
 
 struct ResourceSystem final : ecs::ISystem<ResourceSystem>
@@ -121,6 +128,12 @@ struct ResourceSystem final : ecs::ISystem<ResourceSystem>
     {
         g_systemCallOrder.emplace_back("ResourceSystem");
     }
+
+    void OnEventCallOrder(ecs::Registry& registry, const EventCallOrder& event)
+    {
+        g_systemEventCallOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+    ECS_EVENT(OnEventCallOrder, EventCallOrder)
 };
 
 
@@ -132,6 +145,12 @@ struct InputSystem final : ecs::ISystem<InputSystem>
     {
         g_systemCallOrder.emplace_back("InputSystem");
     }
+
+    void OnEventCallOrder(ecs::Registry& registry, const EventCallOrder& event)
+    {
+        g_systemEventCallOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+    ECS_EVENT(OnEventCallOrder, EventCallOrder)
 };
 
 
@@ -143,6 +162,12 @@ struct PhysicsSystem final : ecs::ISystem<PhysicsSystem>
     {
         g_systemCallOrder.emplace_back("PhysicsSystem");
     }
+
+    void OnEventCallOrder(ecs::Registry& registry, const EventCallOrder& event)
+    {
+        g_systemEventCallOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+    ECS_EVENT(OnEventCallOrder, EventCallOrder)
 };
 
 
@@ -155,6 +180,30 @@ struct RenderSystem final : ecs::ISystem<RenderSystem>
     {
         g_systemCallOrder.emplace_back("RenderSystem");
     }
+
+    void OnEventCallOrder(ecs::Registry& registry, const EventCallOrder& event)
+    {
+        g_systemEventCallOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+    ECS_EVENT(OnEventCallOrder, EventCallOrder)
+};
+
+
+struct PostRenderSystem final : ecs::ISystem<PostRenderSystem>
+{
+    ECS_REGISTRY("test_schedule")
+    ECS_DEPENDENT_SYSTEMS(RenderSystem)
+
+    void Update(ecs::Registry & registry, const ecs::UpdateState & state) override
+    {
+        g_systemCallOrder.emplace_back("PostRenderSystem");
+    }
+
+    void OnEventCallOrder(ecs::Registry& registry, const EventCallOrder& event)
+    {
+        g_systemEventCallOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+    ECS_EVENT(OnEventCallOrder, EventCallOrder)
 };
 
 
@@ -166,4 +215,54 @@ struct AISystem final : ecs::ISystem<AISystem>
     {
         g_systemCallOrder.emplace_back("AISystem");
     }
+};
+
+
+// ================================ Event Systems ================================
+
+
+inline std::vector<ecs::systemHash_t> g_eventExecutionOrder;
+
+
+struct FirstEventSystem final : ecs::ISystem<FirstEventSystem>
+{
+    ECS_REGISTRY("test_ecs_event_system")
+
+
+    void OnTestEvent(ecs::Registry& registry, const EventCallOrder& event)
+    {
+        g_eventExecutionOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+    ECS_EVENT(OnTestEvent, EventCallOrder)
+};
+
+
+struct SecondEventSystem final : ecs::ISystem<SecondEventSystem>
+{
+    ECS_REGISTRY("test_ecs_event_system")
+
+    void Update(ecs::Registry&, const ecs::UpdateState&) override {}
+
+    void OnTestEvent(ecs::Registry&, const EventCallOrder&)
+    {
+        g_eventExecutionOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+
+    ECS_EVENT(OnTestEvent, EventCallOrder)
+};
+
+
+struct ThirdEventSystem final : ecs::ISystem<ThirdEventSystem>
+{
+    ECS_REGISTRY("test_ecs_event_system")
+    ECS_DEPENDENT_SYSTEMS(FirstEventSystem, SecondEventSystem)
+
+    void Update(ecs::Registry&, const ecs::UpdateState&) override {}
+
+    void OnTestEvent(ecs::Registry&, const EventCallOrder&)
+    {
+        g_eventExecutionOrder.push_back(ecs::getSystemHash<SelfSystemCls>());
+    }
+
+    ECS_EVENT(OnTestEvent, EventCallOrder)
 };

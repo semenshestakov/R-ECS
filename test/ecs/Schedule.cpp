@@ -1,7 +1,6 @@
+#include "gtest/gtest.h"
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
-#include "ecs/systems/SystemsManager.hpp"
-#include "gtest/gtest.h"
 #include "SystemsClass.hpp"
 
 
@@ -15,7 +14,7 @@ protected:
     {
         g_systemCallOrder.clear();
 
-        registry = Registry(*SystemRegistrator::GetSystemsManager("test_schedule"));
+        registry = Registry::Create("test_schedule");
         registry.Init();
     }
 
@@ -60,7 +59,7 @@ TEST_F(ScheduleSystemTest, FullCallSequence)
     registry.Update();
 
     const std::vector<std::string> expectedSystems = {
-        "ResourceSystem", "InputSystem", "PhysicsSystem", "RenderSystem", "AISystem"
+        "ResourceSystem", "InputSystem", "PhysicsSystem", "RenderSystem", "PostRenderSystem", "AISystem",
     };
 
     for (auto& sys : expectedSystems)

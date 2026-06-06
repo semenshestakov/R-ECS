@@ -6,19 +6,22 @@ namespace event
 {
 
     template<typename... Args>
-    callbackId_t Event<Args...>::add(const Callback& callback)
+    callbackId_t Event<Args...>::add(const Callback& callback, const priority_t priority /* = DEFAULT_PRIORITY */)
     {
-        callbackId_t callbackId = m_lastCallbackId++;
-        m_callbacksMap[callbackId] = callback;
-        return callbackId;
-    }
+        callbackId_t id = m_lastCallbackId++;
 
-    template<typename... Args>
-    callbackId_t Event<Args...>::addAny(const std::any& callback)
-    {
-        if (callback.type() != typeid(Callback))
-            return INVALID_CALLBACK_ID;
-        return add(std::any_cast<Callback>(callback));
+        auto it = std::upper_bound(
+            m_callbacks.begin(),
+            m_callbacks.end(),
+            priority,
+            [](int p, const Entry& e)
+            {
+                return p > e.priority;
+            });
+
+        m_callbacks.insert(it, { id, priority, callback });
+
+        return id;
     }
 
     template<typename... Args>
@@ -28,27 +31,63 @@ namespace event
     }
 
     template<typename... Args>
-    void Event<Args...>::remove(const callbackId_t& callbackId)
+    void Event<Args...>::remove(const callbackId_t callbackId)
     {
-        if (callbackId == INVALID_EVENT_ID)
+        if (callbackId == INVALID_CALLBACK_ID)
             return;
-            
-        auto it = m_callbacksMap.find(callbackId);
-        if (it != m_callbacksMap.end())
+
+        if (m_dispatching)
         {
-            m_callbacksMap.erase(it);
+            for (auto& e : m_callbacks)
+            {
+                if (e.id == callbackId)
+                {
+                    e.removed = true;
+                    return;
+                }
+            }
+        }
+        else
+        {
+            auto it = std::remove_if(
+                m_callbacks.begin(),
+                m_callbacks.end(),
+                [callbackId](const Entry& e)
+                {
+                    return e.id == callbackId;
+                });
+
+            if (it != m_callbacks.end())
+                m_callbacks.erase(it, m_callbacks.end());
         }
     }
 
     template<typename... Args>
     void Event<Args...>::operator()(Args... args)
     {
-        for (auto& [callbackId, callback] : m_callbacksMap)
+        m_dispatching = true;
+        bool hasRemoved = false;
+
+        for (auto& e : m_callbacks)
         {
-            if (callback)
+            if (e.removed)
             {
-                callback(std::forward<Args>(args)...);
+                hasRemoved = true;
+                continue;
             }
+
+            e.callback(std::forward<Args>(args)...);
+        }
+
+        m_dispatching = false;
+
+        if (hasRemoved)
+        {
+            std::erase_if(m_callbacks,
+               [](const Entry& e)
+               {
+                   return e.removed;
+               });
         }
     }
 

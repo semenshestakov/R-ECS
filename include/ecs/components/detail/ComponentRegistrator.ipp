@@ -1,5 +1,8 @@
 #pragma once
+#include <bit>
+#include <stdexcept>
 #include "../ComponentRegistrator.hpp"
+#include "ecs/utils/ComponentError.hpp"
 
 
 template<typename ComponentCls>
@@ -9,8 +12,9 @@ ecs::RegisterComponentInfo ecs::RegisterComponentInfo::Create(const std::string&
             .componentSize = sizeof(ComponentCls),
             .componentId = INVALID_COMPONENT_ID,
             .constructor = [](byte* ptr) { new(ptr) ComponentCls(); },
-            .destructor = [](byte* ptr) { reinterpret_cast<ComponentCls*>(ptr)->~ComponentCls(); },
-            .copy = [](byte* to, byte* from) { new(to) ComponentCls(reinterpret_cast<const ComponentCls&>(*from)); }
+            .destructor = [](byte* ptr) { std::bit_cast<ComponentCls*>(ptr)->~ComponentCls(); },
+            .copy = [](byte* to, byte* from) { new(to) ComponentCls(*std::bit_cast<const ComponentCls*>(from)); },
+            .move = [](byte* to, byte* from) { new(to) ComponentCls(std::move(*std::bit_cast<ComponentCls*>(from)));}
     };
 }
 
@@ -19,7 +23,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
 {
     Super registrator = Super::Create<ComponentCls>(typeid(ComponentCls).name());
 
-    const std::size_t& index = Super::getIndex(registrator);
+    const std::size_t& index = registrator.getIndex();
     Super::setIndex(registrator, Super::INVALID_INDEX);
 
     const auto componentId = static_cast<componentId_t>(index + 1);
@@ -27,11 +31,10 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
     return componentId;
 }
 
-/* static */ inline const ecs::RegisterComponentInfo&
-ecs::ComponentRegistrator::GetInfo(const componentId_t componentId)
+/* static */ inline const ecs::RegisterComponentInfo& ecs::ComponentRegistrator::GetInfo(const componentId_t componentId)
 {
     if(componentId == INVALID_COMPONENT_ID)
-        throw std::out_of_range("Invalid component id");
+        throw error::InvalidComponentId("ComponentRegistrator::GetInfo; componentId == INVALID_COMPONENT_ID");
     return Super::s_collection.at(static_cast<std::size_t>(componentId - 1)).second.value();
 }
 

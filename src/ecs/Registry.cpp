@@ -1,20 +1,32 @@
-#include "ecs/Registry.hpp"
-
 #include <utility>
-#include "ecs/utils/RegistryError.hpp"
+#include "ecs/Registry.hpp"
+#include "ecs/registry/RegistryRegistrator.hpp"
 
 
 ecs::Registry::Registry(SystemsManager systemManager) :
-    m_systemManager(std::move(systemManager))
-{
-}
+    m_systemManager(std::move(systemManager)),
+    m_eventSystem(*this)
+{}
+
+ecs::Registry::Registry() :
+     m_eventSystem(*this)
+{}
 
 bool ecs::Registry::Init(void* args /* = nullptr */)
 {
-    return m_systemManager.Init({"", args, m_eventSystem});
+    const bool result = m_systemManager.Init({"", args});
+    if (result)
+        return result&m_systemManager.Subscribe({m_eventSystem});
+    return result;
 }
 
 void ecs::Registry::Update()
 {
     m_systemManager.Update(*this);
+    m_eventSystem.FlushEvents({});
+}
+
+ecs::Registry ecs::Registry::Create(const std::string& name)
+{
+    return Registry{SystemsManager::Create(RegistryRegistrator::Get(name).systemRegIndexes)};
 }

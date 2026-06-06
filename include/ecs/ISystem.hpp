@@ -1,4 +1,5 @@
-#pragma once
+#ifndef I_SYSTEM_HPP
+#define I_SYSTEM_HPP
 
 /**
  * @file ISystem.hpp
@@ -8,9 +9,9 @@
  * It provides automatic registration capabilities and event handling infrastructure.
  */
 
+#include <array>
 #include "common_recs/utils/ClassUtils.hpp"
 #include "event/EventSystem.hpp"
-#include "event/Listener.hpp"
 #include "systems/IBaseSystem.hpp"
 #include "systems/SystemRegistrator.hpp"
 
@@ -50,10 +51,11 @@ namespace ecs
     template <typename SystemCls>
     struct ISystem : IBaseSystem
     {
-    protected:
+    DEEP_TEST_PROTECTED_ACCESS:
         friend class SystemsManager;
         using Super = ISystem<SystemCls>;                   ///< @brief Alias for the base class (ISystem<SystemCls>)
         using SelfSystemCls = SystemCls;                    ///< @brief Alias for the concrete system class
+
                                                             ///  @brief Event listener type alias for a specific event
                                                             ///  @tparam Event The event type to listen for
         template <class Event> using EventListener = event::Listener<event::callbackId_t, Registry&, const Event&>;
@@ -88,6 +90,27 @@ namespace ecs
          */
         void Init(const InitState& state) override;
 
+        /**
+         * @brief Subscribes the system's event registrations to the provided EventSystem.
+         *
+         * Executes all previously registered event-binding functions stored in the system
+         * and attaches them to the given EventSystem instance. Each function typically
+         * binds the system's handlers to specific events.
+         *
+         * After successful subscription, the internal list of registration functions
+         * is cleared to prevent duplicate subscriptions.
+         *
+         * @tparam SystemCls Concrete system class type used for CRTP-based system design.
+         *
+         * @param state Subscription state containing a reference to the EventSystem
+         *              and additional subscription parameters such as priority.
+         *
+         * @note This method is typically called once during system initialization.
+         * @note After execution, m_registerEventFunctions is cleared and cannot be reused
+         *       unless re-populated explicitly.
+         */
+        void Subscribe(const SubscribeState& state) override;
+
     DEEP_TEST_PROTECTED_ACCESS:
         /**
          * @brief Registers an event handler for a specific event type
@@ -105,6 +128,15 @@ namespace ecs
          */
         template <class Event>
         auto RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<EventListener<Event>>;
+
+    DEEP_TEST_PRIVATE_ACCESS:
+        /**
+         * @brief Collection of event registration functions
+         *
+         * Stores lambdas that will register event listeners when the event system
+         * becomes available during system initialization.
+         */
+        std::vector<std::function<void(EventSystem&, event::priority_t)>> m_registerEventFunctions;
 
         /**
          * @brief Creates a array of system hashes for the specified system types.
@@ -147,14 +179,33 @@ namespace ecs
         template <typename... SystemsArgs>
         static constexpr std::array<systemHash_t, sizeof...(SystemsArgs)> GetSystemsHashArray();
 
-    DEEP_TEST_PRIVATE_ACCESS:
+    public:
         /**
-         * @brief Static array of registry names for system registration
+         * @brief Returns the factory registration names for this component/system
+         * @return constexpr std::array<std::string, 0> Empty array (no registration names)
          *
-         * Can be overridden in derived classes to specify custom registry names.
-         * Defaults to empty array.
+         * This function should be overridden in derived classes to provide one or more
+         * factory names under which the component/system can be instantiated.
+         *
+         * @note By default returns an empty array, meaning no factory registration
+         * @note Override this function in derived classes using ECS_REGISTRY macro
+         * @note Must be static constexpr to allow compile-time registration
+         *
+         * @see ECS_REGISTRY macro for convenient override
+         *
+         * @example
+         * @code
+         * struct MySystem : ISystem<MySystem> {
+         *     static constexpr auto GetRegistryNames() {
+         *         return std::array<std::string_view, 2>{"my_system", "alt_name"};
+         *     }
+         * };
+         * @endcode
          */
-        static constexpr std::array<std::string_view, 0> ECS_REGISTRY_NAMES = {};
+        static constexpr auto GetRegistryNames()
+        {
+            return std::array<std::string, 0>();
+        }
 
         /**
          * @brief Static flag that triggers automatic system registration
@@ -162,15 +213,7 @@ namespace ecs
          * This static member's initialization causes the system type to be
          * automatically registered with the SystemRegistrator.
          */
-        [[maybe_unused]] static inline const bool IsRegistered = SystemRegistrator::Register<SystemCls>(SystemCls::ECS_REGISTRY_NAMES);
-
-        /**
-         * @brief Collection of event registration functions
-         *
-         * Stores lambdas that will register event listeners when the event system
-         * becomes available during system initialization.
-         */
-        std::vector<std::function<void(EventSystem&)>> m_registerEventFunctions;
+        [[maybe_unused]] static inline const auto RegisterInfo = SystemRegistrator::Register<SystemCls>();
     };
 
 } // namespace ecs
@@ -229,7 +272,8 @@ namespace ecs
 #define ECS_DEPENDENT_SYSTEMS(...)                                          \
     ecs::DependentSystems GetDependents() const override {                  \
     static const auto s_dependents = GetSystemsHashArray<__VA_ARGS__>();    \
-    return {s_dependents.cbegin(), s_dependents.size() }; }
+    return {s_dependents.data(), s_dependents.size() }; }
+
 
 /**
  * @brief Macro to define factory registration names for an ECS component
@@ -241,20 +285,26 @@ namespace ecs
  * @param ... One or more string literals representing factory names
  *
  * @note The macro:
- *       1. Defines ECS_REGISTRY_NAMES as a private static constexpr array
- *       2. Restores original access specifier (public) after definition
+ *       1. Defines GetRegistryNames() as a public static constexpr function
+ *       2. Returns a std::array<std::string, N> with the specified names
  *
  * @warning Must be used inside a component class derived from IComponent<T>
  * @warning Names must be string literals (compile-time constants)
  *
  * @see IComponent
  * @see SystemRegistrator::Register
+ *
+ * @example
+ * @code
+ * class MyComponent : public IComponent<MyComponent> {
+ *     ECS_REGISTRY("my_component", "alt_name")
+ * };
+ * @endcode
  */
 #define ECS_REGISTRY(...)                                                                                   \
-friend struct ISystem;                                                                                      \
-private:                                                                                                    \
-static constexpr std::array<std::string_view, sizeof((const char*[]){__VA_ARGS__}) / sizeof(const char*)>   \
-ECS_REGISTRY_NAMES = {__VA_ARGS__};                                                                         \
-public:
+public:                                                                                                     \
+static constexpr auto GetRegistryNames() {                                                                  \
+return std::array<std::string, sizeof((const char*[]){__VA_ARGS__}) / sizeof(const char*)>{__VA_ARGS__};}
 
+#endif
 #include "systems/detail/ISystem.ipp"

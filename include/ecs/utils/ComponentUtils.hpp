@@ -6,9 +6,9 @@
 namespace ecs
 {
     // Basic type aliases for memory management and component identification
-    using byte = unsigned char;           ///< Fundamental byte type for raw memory operations
+    using byte = std::byte;               ///< Fundamental byte type for raw memory operations
     using bufferSize_t = unsigned int;    ///< Type for representing buffer sizes and memory capacities
-    using componentId_t = byte;           ///< Type for unique component type identifiers
+    using componentId_t = std::uint32_t;  ///< Type for unique component type identifiers
 
     // Special value indicating an invalid or uninitialized component ID
     constexpr componentId_t INVALID_COMPONENT_ID = 0;

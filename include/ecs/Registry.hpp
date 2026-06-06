@@ -2,7 +2,7 @@
 #include "collections/Context.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 #include "entities/EntitiesManager.hpp"
-#include "event/EventSystem.hpp"
+#include "systems/EventSystem.hpp"
 #include "systems/SystemsManager.hpp"
 
 
@@ -52,7 +52,7 @@ namespace ecs
          */
         explicit Registry(SystemsManager systemManager);
 
-        Registry() = default;                                           ///< Default construction
+        Registry();                                                     ///< Default construction
         ~Registry() = default;                                          ///< Default destructor
         Registry(Registry&&) noexcept = default;                        ///< Move constructible
         Registry& operator=(Registry&&) noexcept = default;             ///< Move assignable
@@ -142,6 +142,37 @@ namespace ecs
          *       have executed, or immediately based on event system configuration.
          */
         void Update();
+
+        /**
+         * @brief Creates a fully configured registry by name
+         * @param name The registry name used to look up system configurations
+         * @return Registry A new registry instance with pre-registered systems
+         *
+         * Factory method that creates a Registry with systems automatically registered
+         * based on the named configuration. This is the preferred way to create a
+         * registry when using declarative system registration.
+         *
+         * The method:
+         * 1. Looks up registry information by name from RegistryRegistrator
+         * 2. Creates a SystemsManager with all systems registered to this registry
+         * 3. Returns a Registry instance owning that SystemsManager
+         *
+         * @pre Registry with given name must have been registered with RegistryRegistrator
+         * @throws assert if registry name not found
+         *
+         * @par Example:
+         * @code
+         * auto registry = Registry::Create("game_world");
+         * registry.Init();
+         * while (running) {
+         *     registry.Update();
+         * }
+         * @endcode
+         *
+         * @see RegistryRegistrator
+         * @see SystemsManager::Create
+         */
+        static Registry Create(const std::string& name);
     };
 
 } // namespace ecs

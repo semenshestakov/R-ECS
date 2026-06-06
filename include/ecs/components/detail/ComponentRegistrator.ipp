@@ -1,7 +1,8 @@
 #pragma once
-#include <stdexcept>
 #include <bit>
+#include <stdexcept>
 #include "../ComponentRegistrator.hpp"
+#include "ecs/utils/ComponentError.hpp"
 
 
 template<typename ComponentCls>
@@ -33,7 +34,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
 /* static */ inline const ecs::RegisterComponentInfo& ecs::ComponentRegistrator::GetInfo(const componentId_t componentId)
 {
     if(componentId == INVALID_COMPONENT_ID)
-        throw std::out_of_range("Invalid component id");
+        throw error::InvalidComponentId("ComponentRegistrator::GetInfo; componentId == INVALID_COMPONENT_ID");
     return Super::s_collection.at(static_cast<std::size_t>(componentId - 1)).second.value();
 }
 

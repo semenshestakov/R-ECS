@@ -115,6 +115,7 @@ namespace ecs
         if (m_isDirtyArchetype)
         {
             m_archetype.updateHash();
+            m_isDirtyArchetype = false;
         }
 
         return m_archetype;

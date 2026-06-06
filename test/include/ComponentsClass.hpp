@@ -1,4 +1,6 @@
 #pragma once
+#include "ecs/entities/EntityWrapper.hpp"
+#include "ecs/entities/PrefabEntity.hpp"
 
 
 struct Position2d final
@@ -83,3 +85,72 @@ struct TestId
 {
     unsigned int id {0};
 };
+
+
+
+template<std::size_t N>
+struct TestComponent
+{
+    std::size_t n = N;
+};
+
+
+template<size_t... Is>
+void ValidateEntity(const ecs::EntityWrapper& entity, std::index_sequence<Is...>)
+{
+    auto checker = [&]<size_t I>()
+    {
+    EXPECT_EQ(entity.GetComponent<TestComponent<I>>().n, I);
+    };
+
+    (checker.template operator()<Is>(), ...);
+}
+
+template<size_t Count, size_t... Is>
+void BuildPrefab(ecs::PrefabEntity& prefab, std::index_sequence<Is...>)
+{
+    ((Is < Count
+        ? (void)prefab.AddComponent<TestComponent<Is>>()
+        : (void)0), ...);
+}
+
+template<size_t ArchetypeSize>
+ecs::PrefabEntity CreateArchetype()
+{
+    ecs::PrefabEntity prefab;
+
+    [&]<size_t... Is>(std::index_sequence<Is...>)
+    {
+    ((Is < ArchetypeSize
+        ? (void)prefab.AddComponent<TestComponent<Is>>()
+        : (void)0), ...);
+    }
+    (std::make_index_sequence<1000>{});
+
+    return prefab;
+}
+
+
+template<size_t Id, size_t Begin, size_t End>
+void ValidateOne(const ecs::EntityWrapper& entity)
+{
+    auto* component =
+        entity.TryGetComponent<TestComponent<Id>>();
+
+    if constexpr (Id >= Begin && Id < End)
+    {
+        ASSERT_NE(component, nullptr);
+        EXPECT_EQ(component->n, Id);
+    }
+    else
+    {
+        EXPECT_EQ(component, nullptr);
+    }
+}
+
+
+template<size_t Begin, size_t End, size_t... Is>
+void ValidateRange(const ecs::EntityWrapper& entity, std::index_sequence<Is...>)
+{
+    (ValidateOne<Is, Begin, End>(entity), ...);
+}

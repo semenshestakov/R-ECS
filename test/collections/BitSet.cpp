@@ -1295,6 +1295,77 @@ TEST(BitSetTest, MinWithSingleBitInDifferentBlocks)
     EXPECT_EQ(bs.min(), 64);
 }
 
+
+TEST(BitSetTest, ResizeDownDoesNotClearStaleBits_RegrowRevealsGarbage)
+{
+    BitSet bs(200);
+    bs.setAll();
+
+    for (size_t i = 0; i < 200; ++i)
+        EXPECT_TRUE(bs.test(i));
+
+    bs.resize(10);
+
+    for (size_t i = 10; i < 200; ++i)
+        EXPECT_FALSE(bs.test(i)) << "bit " << i << " should be hidden after shrink";
+
+    bs.resize(200);
+
+    bool hasStaleBit = false;
+    for (size_t i = 64; i < 200; ++i)
+    {
+        if (bs.test(i))
+        {
+            hasStaleBit = true;
+            break;
+        }
+    }
+    EXPECT_FALSE(hasStaleBit)
+        << "Stale bits reappeared after resize down then regrow — "
+           "resize() should zero freed words";
+}
+
+
+TEST(BitSetTest, AndAssignmentLeavesHighBitsIntact_ShouldBeZero)
+{
+    BitSet a(128);
+    const BitSet b(64);
+
+    a.set(0);
+    a.set(63);
+    a.set(64);
+    a.set(127);
+
+    a &= b;
+
+    EXPECT_FALSE(a.test(64))
+        << "operator&= left high bits of larger operand intact — "
+           "should zero bits beyond other's size";
+
+    EXPECT_FALSE(a.test(127))
+        << "operator&= left high bits of larger operand intact";
+}
+
+
+TEST(BitSetTest, AndOperatorLeavesHighBitsIntact_ShouldBeZero)
+{
+    BitSet a(128), b(64);
+
+    a.set(0);
+    a.set(63);
+    a.set(64);
+    a.set(127);
+
+    const BitSet result = a & b;
+
+    EXPECT_FALSE(result.test(64))
+        << "operator& left high bits set — should zero bits beyond other's size";
+
+    EXPECT_FALSE(result.test(127))
+        << "operator& left high bits set";
+}
+
+
 TEST(BitSetTest, LowestBitPositionTest)
 {
     EXPECT_EQ(BitSet::lowestBitPosition(0x0000000000000001ULL), 0);

@@ -60,6 +60,7 @@ if(TEST_ENABLE)
             test/event/EventSystem.cpp
             test/collections/BitSet.cpp
             test/collections/Context.cpp
+            test/collections/CommandQueue.cpp
             test/collections/DirectedAcyclicGraph.cpp
             test/ecs/AutoRegistration.cpp
             test/ecs/EntitiesManager.cpp

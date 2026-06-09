@@ -50,7 +50,7 @@ namespace event
     template<class... Args>
     void EventSystem<K>::PushEvent(const K& key, Args&&... args)
     {
-        m_eventQueue.emplace_back(
+        m_commandQueue.Push(
             [this, key, argsTuple = std::make_tuple(std::forward<Args>(args)...)]() mutable
             {
                 std::apply(
@@ -66,11 +66,7 @@ namespace event
     template<typename K>
     void EventSystem<K>::FlushEvents()
     {
-        std::vector<std::function<void()>> processing;
-        processing.swap(m_eventQueue);
-
-        for (auto& event : processing)
-            event();
+        m_commandQueue.Flush();
     }
 
     template<typename K>

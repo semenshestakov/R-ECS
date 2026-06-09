@@ -1,6 +1,7 @@
 #ifndef EVENT_SYSTEM_HPP
 #define EVENT_SYSTEM_HPP
 #include <unordered_map>
+#include "collections/CommandQueue.hpp"
 #include "event/Event.hpp"
 #include "event/ListenerSystem.hpp"
 
@@ -152,7 +153,6 @@ namespace event
 
     protected:
         using absEventPtr_t = std::unique_ptr<AbstractEvent>;
-        using queueEventFunc_t = std::function<void()>;
 
         /**
          * @brief Registry of all event channels
@@ -177,7 +177,7 @@ namespace event
          * The queue is processed sequentially during FlushEvents(),
          * guaranteeing deterministic event ordering across the frame.
          */
-        std::vector<queueEventFunc_t> m_eventQueue;
+        collections::CommandQueue m_commandQueue;
     };
 
 } // namespace event

@@ -23,7 +23,9 @@ bool ecs::Registry::Init(void* args /* = nullptr */)
 void ecs::Registry::Update()
 {
     m_commandQueue.Flush({});
+
     m_systemManager.Update(*this);
+
     m_eventSystem.FlushEvents({});
     m_commandQueue.Flush({});
 }

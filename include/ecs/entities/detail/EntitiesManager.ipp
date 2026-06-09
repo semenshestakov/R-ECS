@@ -83,6 +83,9 @@ void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
 template<ecs::EntityConcept InputEntityType>
 bool ecs::EntitiesManager::IsAlive(const InputEntityType& entity) const
 {
+    if (entity.getId() == INVALID_ENTITY_ID || entity.getVersion() == INVALID_ENTITY_VERSION)
+        return false;
+
     if(entity.getId() >= m_versionByEntityIndex.size())
         return false;
 

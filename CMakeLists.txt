@@ -18,6 +18,7 @@ add_library(R-ECS
         src/ecs/EntityWrapper.cpp
         src/ecs/SystemsManager.cpp
         src/ecs/SystemsSchedule.cpp
+        src/ecs/Commands.cpp
 )
 
 target_include_directories(R-ECS
@@ -67,6 +68,7 @@ if(TEST_ENABLE)
             test/ecs/SystemsEvent.cpp
             test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
+            test/ecs/EntityCommands.cpp
     )
     target_include_directories(test_recs
         PRIVATE

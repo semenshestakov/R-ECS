@@ -1,7 +1,9 @@
 #pragma once
+#include "collections/CommandQueue.hpp"
 #include "collections/Context.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 #include "entities/EntitiesManager.hpp"
+#include "registry/CommandQueue.hpp"
 #include "systems/EventSystem.hpp"
 #include "systems/SystemsManager.hpp"
 
@@ -64,6 +66,7 @@ namespace ecs
         EventSystem m_eventSystem;                  ///< Local Event System
         SystemsManager m_systemManager;             ///< Underlying entity storage
         collections::Context m_context;             ///< Context (Data storage)
+        CommandQueue m_commandQueue;   ///< Deferred command queue (flushed each frame)
 
     public:
         /**
@@ -113,6 +116,18 @@ namespace ecs
          * @return Const reference to Context for read-only shared data access
          */
         [[nodiscard]] const collections::Context& ctx() const { return m_context; }
+
+        /**
+         * @brief Gets mutable reference to the deferred command queue.
+         * @return Reference to CommandQueue for scheduling deferred work
+         */
+        [[nodiscard]] CommandQueue& Commands() { return m_commandQueue; }
+
+        /**
+         * @brief Gets const reference to the deferred command queue.
+         * @return Const reference to CommandQueue
+         */
+        [[nodiscard]] const CommandQueue& Commands() const { return m_commandQueue; }
 
         /**
          * @brief Initializes all registered systems.

@@ -59,8 +59,8 @@ namespace collection
             [[nodiscard]] bool operator!=(const const_iterator& other) const noexcept;
 
         private:
-            const BitSet* m_bs; ///< Owning BitSet being iterated.
-            std::size_t m_pos;  ///< Current bit position.
+            const BitSet* m_bs = nullptr;   ///< Owning BitSet being iterated.
+            std::size_t m_pos = 0;          ///< Current bit position within the BitSet.
 
             /**
              * @brief Skips forward to the next set bit.

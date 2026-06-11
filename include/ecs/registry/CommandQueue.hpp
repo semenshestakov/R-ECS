@@ -37,7 +37,7 @@ namespace ecs
         /**
          * @brief Execute all deferred commands.
          * @param _ Authorization token (only Registry can construct)
-         * @param registry
+         * @param registry Reference to the ECS Registry forwarded to each command
          */
         void Flush(CommandsToken _, Registry& registry) { Super::Flush(registry) ; }
     };

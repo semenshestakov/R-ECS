@@ -110,9 +110,22 @@ namespace ecs
          * direct entity reference is needed.
          * @return Const reference to stored entity
          */
+        /**
+         * @brief Gets the underlying entity handle.
+         * @return Const reference to stored entity
+         */
         [[nodiscard]] const Entity& getEntity() const { return m_entity; }
 
+        /**
+         * @brief Returns the entity's unique ID.
+         * @return entityId_t Unique numeric identifier
+         */
         [[nodiscard]] entityId_t getId() const { return getEntity().id; }
+
+        /**
+         * @brief Returns the entity's version (for stale-handle detection).
+         * @return entityVersion_t Version counter
+         */
         [[nodiscard]] entityVersion_t getVersion() const { return getEntity().version; }
 
         explicit operator Entity() const { return m_entity; }

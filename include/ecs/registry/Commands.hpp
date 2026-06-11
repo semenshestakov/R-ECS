@@ -75,6 +75,13 @@ namespace ecs
     concept Recipe = requires(T t, PrefabEntity& p) { { t.apply(p) }; };
 
 
+    /**
+     * @brief Flags controlling event emission for CookCmd execution.
+     *
+     * NONE          — no events emitted
+     * PRE_EVT_CALL  — emit PrefabEvt before entity creation
+     * POST_EVT_CALL — emit CreatedEntityEvt after entity creation
+     */
     enum class CookFeedback : std::uint8_t
     {
         NONE = 0,
@@ -83,17 +90,20 @@ namespace ecs
     };
 
     /**
-     * @brief Deferred command that applies a Recipe, creates the entity,
-     *        and optionally fires PrefabEvt / CreatedEntityEvt.
+     * @brief Deferred command that applies a Recipe and creates an entity.
      *
      * @tparam E Entity type to create (Entity or EntityWrapper-derived)
      * @tparam R Recipe type (deduced)
+     *
+     * When executed, the recipe is applied to populate a PrefabEntity,
+     * then the entity is created. Optionally fires PrefabEvt / CreatedEntityEvt
+     * based on feedback flags.
      */
     template<typename E, Recipe R>
     struct CookCmd
     {
-        R recipe;
-        CookFeedback feedback = CookFeedback::NONE;
+        R recipe;                                       ///< Recipe to apply for populating entity data
+        CookFeedback feedback = CookFeedback::NONE;     ///< Controls pre/post event emission
 
         void operator()(Registry& registry) const;
     };

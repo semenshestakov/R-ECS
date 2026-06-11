@@ -59,6 +59,21 @@ namespace recs::error
 
     };
 
+    /**
+     * @brief Base exception class with a compile-time prefix name.
+     *
+     * Prepends a static name (e.g. "ComponentError: ") to every error message,
+     * making it easy to identify which subsystem generated the error.
+     *
+     * @tparam NAME Compile-time string constant used as the error prefix
+     *
+     * @par Example:
+     * @code
+     * inline constexpr char g_name[] = "MyError: ";
+     * using BaseMyError = BaseNamedError<g_name>;
+     * struct SpecificError final : BaseMyError { using BaseMyError::BaseMyError; };
+     * @endcode
+     */
     template<const char NAME[]>
     class BaseNamedError : public BaseError
     {

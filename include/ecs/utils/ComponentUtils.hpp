@@ -15,6 +15,13 @@ namespace ecs
     constexpr componentId_t MAX_COMPONENT_ID = ~0;
     constexpr unsigned int OVERFLOW_MAX_COMPONENT_ID = static_cast<unsigned int>(MAX_COMPONENT_ID) + 1;
 
+    /**
+     * @brief Concept accepting any type as a component.
+     *
+     * Currently a universal acceptor — any type qualifies as a component.
+     * In the future this may be constrained to require specific traits
+     * (e.g. trivially copyable, default-constructible, etc.).
+     */
     template<typename T> concept IsComponent = requires { true; };
 
 }

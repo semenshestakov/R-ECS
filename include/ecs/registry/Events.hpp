@@ -22,6 +22,14 @@ namespace ecs
         PrefabEntity& prefab;
     };
 
+    /**
+     * @brief Event payload fired after an entity has been created.
+     *
+     * @tparam E The EntityWrapper-derived type that was created
+     *
+     * Carries a reference to the newly created entity for post-creation
+     * processing (e.g. attaching additional components, logging).
+     */
     template<EntityWrapperLike E>
     struct CreatedEntityEvt
     {

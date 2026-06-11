@@ -251,7 +251,9 @@ namespace ecs
         std::vector<chunkEntityIndex_t> m_chunksEntityCount {};                                     ///< Number of alive entities stored in each chunk.
         collection::BitSet m_hasFreeEntityInChunk;                                                  ///< Tracks chunks that still have free capacity for new entities.
 
-        std::vector<std::array<entityId_t, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;          ///< Maps [chunkIndex][localEntityIndex] to global entity ID.
+        /// @brief Maps [chunkIndex][localEntityIndex] to global entity ID
+        /// Used during entity destruction to retrieve the global ID of the entity being removed.
+        std::vector<std::array<entityId_t, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;
     };
 
 } // namespace ecs

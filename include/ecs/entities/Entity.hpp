@@ -1,3 +1,8 @@
+/**
+ * @file Entity.hpp
+ * @brief Core entity handle and entity concept definition
+ */
+
 #pragma once
 #include "ecs/utils/EntitiesUtils.hpp"
 
@@ -5,6 +10,15 @@
 namespace ecs
 {
 
+    /**
+     * @brief Concept for types that behave as entity handles.
+     *
+     * A type satisfies EntityConcept if it provides:
+     * - getId() returning entityId_t
+     * - getVersion() returning entityVersion_t
+     *
+     * @note Entity, EntityWrapper, and any wrapper-derived types satisfy this concept.
+     */
     template<typename T> concept EntityConcept = requires(T entity)
     {
         { entity.getId()     } -> std::same_as<entityId_t>;

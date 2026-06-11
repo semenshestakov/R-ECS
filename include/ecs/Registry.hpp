@@ -54,7 +54,14 @@ namespace ecs
          */
         explicit Registry(SystemsManager systemManager);
 
-        Registry();                                                     ///< Default construction
+        /**
+         * @brief Default constructor.
+         *
+         * Creates a Registry with an empty SystemsManager.
+         * Systems must be added manually, or use Registry::Create(name) for
+         * a pre-configured setup via RegistryRegistrator.
+         */
+        Registry();
         ~Registry() = default;                                          ///< Default destructor
         Registry(Registry&&) noexcept = default;                        ///< Move constructible
         Registry& operator=(Registry&&) noexcept = default;             ///< Move assignable

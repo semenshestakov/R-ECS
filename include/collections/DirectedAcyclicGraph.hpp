@@ -118,7 +118,6 @@ namespace collections
          * This operation is idempotent and safe to call multiple times.
          *
          * @param nodeData The identifier of the node to add.
-         * @throws std::invalid_argument if nodeData is null (for pointer types) or invalid.
          *
          * @example
          * @code

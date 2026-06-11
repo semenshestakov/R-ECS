@@ -20,7 +20,7 @@ cache locality and runtime performance while maintaining a clean, intuitive API.
 | Refactor: Entity / EntitiesManager <br/> New: PrefabEntity, EntityWrapper, Archetype, EntitiesArchetypeStorage                                                                  | v0.8.0 ✅  |   ✅   |
 | Event System: PushEvent / FlushEvents /  priority                                                                                                                               | v0.9.0 ✅  |   ✅   |
 | Benchmark / optimization: add Google Benchmark & entt & Flecs, add benchmark for create entities / view / delete                                                                | v0.10.0 ✅ |   ✅   |
-| Cooking: Cooker, Recipe (hierarchy PrefabEntity)                                                                                                                                | v0.11.0 ❌ |   ❌   |
+| Cooking: Cooker, Recipe (hierarchy PrefabEntity)                                                                                                                                | v0.11.0 ✅ |   ✅   |
 | Multithreading: <br/> ThreadPool, Thread queue, Priority jobs, JobManager, Safety systems update, lock changes in multithreading, <br/> Safety jobs, frame/join/background jobs | v0.12.0 ❌ |   ❌   |
 
 

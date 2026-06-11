@@ -1,4 +1,6 @@
-#pragma once
+#ifndef ECS_COMMANDS_HPP
+#define ECS_COMMANDS_HPP
+
 #include <functional>
 #include <memory>
 #include "ecs/entities/Entity.hpp"
@@ -18,7 +20,7 @@ namespace ecs
      * The entity is created from the prefab, then onCreated is called
      * with the resulting Entity handle.
      */
-    struct CreateEntityCommand
+    struct CreateEntityCmd
     {
         std::shared_ptr<PrefabEntity> prefab;
         std::function<void(Entity)> onCreated = nullptr;
@@ -28,7 +30,7 @@ namespace ecs
          * @tparam P std::shared_ptr<PrefabEntity> or PrefabEntity
          */
         template<typename P>
-        explicit CreateEntityCommand(P&& p, std::function<void(Entity)> cb = nullptr) :
+        explicit CreateEntityCmd(P&& p, std::function<void(Entity)> cb = nullptr) :
             prefab(prefabFrom(std::forward<P>(p))),
             onCreated(std::move(cb))
         {}
@@ -53,7 +55,7 @@ namespace ecs
      * If the entity is alive, onDeleted is called first, then the entity
      * is destroyed. If already dead, the command is silently skipped.
      */
-    struct DeleteEntityCommand
+    struct DeleteEntityCmd
     {
         Entity entity;
         std::function<void(Entity)> onDeleted = nullptr;
@@ -65,4 +67,41 @@ namespace ecs
         void operator()(Registry& registry) const;
     };
 
-} // namespace ecs
+
+    /**
+     * @brief Concept for a Recipe — anything with apply(PrefabEntity&).
+     */
+    template<typename T>
+    concept Recipe = requires(T t, PrefabEntity& p) { { t.apply(p) }; };
+
+
+    enum class CookFeedback : std::uint8_t
+    {
+        NONE = 0,
+        PRE_EVT_CALL  = 1 << 0,
+        POST_EVT_CALL = 1 << 1,
+    };
+
+    /**
+     * @brief Deferred command that applies a Recipe, creates the entity,
+     *        and optionally fires PrefabEvt / CreatedEntityEvt.
+     *
+     * @tparam E Entity type to create (Entity or EntityWrapper-derived)
+     * @tparam R Recipe type (deduced)
+     */
+    template<typename E, Recipe R>
+    struct CookCmd
+    {
+        R recipe;
+        CookFeedback feedback = CookFeedback::NONE;
+
+        void operator()(Registry& registry) const;
+    };
+
+}
+
+ecs::CookFeedback operator|(ecs::CookFeedback v1, ecs::CookFeedback v2);
+ecs::CookFeedback operator&(ecs::CookFeedback v1, ecs::CookFeedback v2);
+
+#endif
+#include "detail/Commands.ipp"

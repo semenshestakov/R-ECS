@@ -86,7 +86,100 @@ struct TestId
     unsigned int id {0};
 };
 
+struct Health
+{
+    float value = 100.f;
+};
 
+struct Damage
+{
+    float value = 10.f;
+};
+
+struct Speed
+{
+    float value = 1.f;
+};
+
+struct Player final : ecs::EntityWrapper
+{
+    using EntityWrapper::EntityWrapper;
+
+    [[nodiscard]] float GetHealth() const { return GetComponent<Health>().value; }
+    void SetHealth(const float v) { GetComponent<Health>().value = v; }
+    [[nodiscard]] Position2d& GetPosition() { return GetComponent<Position2d>(); }
+    [[nodiscard]] const Position2d& GetPosition() const { return GetComponent<Position2d>(); }
+};
+
+struct Enemy final : ecs::EntityWrapper
+{
+    using EntityWrapper::EntityWrapper;
+
+    [[nodiscard]] float GetHealth() const { return GetComponent<Health>().value; }
+    [[nodiscard]] float GetDamage() const { return GetComponent<Damage>().value; }
+    [[nodiscard]] Position2d& GetPosition() { return GetComponent<Position2d>(); }
+    [[nodiscard]] const Position2d& GetPosition() const { return GetComponent<Position2d>(); }
+};
+
+struct Projectile final : ecs::EntityWrapper
+{
+    using EntityWrapper::EntityWrapper;
+
+    [[nodiscard]] Position3d& GetPosition() { return GetComponent<Position3d>(); }
+    [[nodiscard]] const Position3d& GetPosition() const { return GetComponent<Position3d>(); }
+    [[nodiscard]] float GetSpeed() const { return GetComponent<Speed>().value; }
+};
+
+struct PlayerRecipe
+{
+    static void apply(ecs::PrefabEntity& p)
+    {
+        p.AddComponent<Health>(100.f);
+        p.AddComponent<Position2d>(0.f, 0.f);
+    }
+};
+
+struct EnemyRecipe
+{
+    static void apply(ecs::PrefabEntity& p)
+    {
+        p.AddComponent<Health>(50.f);
+        p.AddComponent<Damage>(15.f);
+        p.AddComponent<Position2d>(10.f, 10.f);
+    }
+};
+
+struct ProjectileRecipe
+{
+    static void apply(ecs::PrefabEntity& p)
+    {
+        p.AddComponent<Position3d>(1.f, 2.f, 3.f);
+        p.AddComponent<Speed>(100.f);
+    }
+};
+
+struct FullscreenConfig
+{
+    bool enabled = true;
+};
+
+struct Camera final : ecs::EntityWrapper
+{
+    using EntityWrapper::EntityWrapper;
+
+    [[nodiscard]] Position3d& GetPosition() { return GetComponent<Position3d>(); }
+    [[nodiscard]] const Position3d& GetPosition() const { return GetComponent<Position3d>(); }
+    [[nodiscard]] bool IsFullscreen() const { return GetComponent<FullscreenConfig>().enabled; }
+};
+
+struct CameraRecipe
+{
+    static void apply(ecs::PrefabEntity& p)
+    {
+        p.AddComponent<Position3d>(0.f, 0.f, 0.f);
+        p.AddComponent<FullscreenConfig>();
+    }
+};
 
 template<std::size_t N>
 struct TestComponent

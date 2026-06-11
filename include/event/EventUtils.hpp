@@ -22,6 +22,17 @@ namespace event
     #define MAKE_METHOD_CALLBACK(pInstance, method) \
         [pInstance](auto&&... args) { (pInstance)->method(std::forward<decltype(args)>(args)...); }
 
+    /**
+     * @brief Creates a callback from a member function pointer.
+     *
+     * @tparam T Class type of the instance
+     * @tparam Args Callback argument types
+     * @param pInstance Pointer to the object whose member function will be called
+     * @param method Member function pointer to bind
+     * @return eventCallback_t<Args...> Callable that invokes method on pInstance
+     *
+     * @note The caller must ensure pInstance outlives the returned callback.
+     */
     template<typename T, typename... Args>
     eventCallback_t<Args...> makeMethodCallback(T* pInstance, void (T::*method)(Args...))
     {

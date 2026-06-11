@@ -2,6 +2,7 @@
 #include <gmock/gmock.h>
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
+#include "ecs/registry/Events.hpp"
 #include "ComponentsClass.hpp"
 
 
@@ -265,4 +266,64 @@ struct ThirdEventSystem final : ecs::ISystem<ThirdEventSystem>
     }
 
     ECS_EVENT(OnTestEvent, EventCallOrder)
+};
+
+// ================================ Prefab Event Systems ================================
+
+inline int g_prefabPlayerCallCount = 0;
+inline int g_prefabCameraCallCount = 0;
+inline int g_createdPlayerCallCount = 0;
+inline int g_createdCameraCallCount = 0;
+
+struct PrefabPlayerEnricher final : ecs::ISystem<PrefabPlayerEnricher>
+{
+    ECS_REGISTRY("test_prefab_events")
+
+    void OnPrefabEvt(ecs::Registry& registry, const ecs::PrefabEvt<Player>& event)
+    {
+        event.prefab.AddComponent<TestId>(99);
+        ++g_prefabPlayerCallCount;
+    }
+    ECS_EVENT(OnPrefabEvt, ecs::PrefabEvt<Player>)
+};
+
+struct CreatedPlayerVerifier final : ecs::ISystem<CreatedPlayerVerifier>
+{
+    ECS_REGISTRY("test_prefab_events")
+
+    void OnCreatedEvt(ecs::Registry& registry, const ecs::CreatedEntityEvt<Player>& event)
+    {
+        EXPECT_TRUE(event.entity.IsAlive());
+        EXPECT_FLOAT_EQ(event.entity.GetPosition().x, 0.f);
+        ++g_createdPlayerCallCount;
+    }
+
+    ECS_EVENT(OnCreatedEvt, ecs::CreatedEntityEvt<Player>)
+};
+
+struct PrefabCameraEnricher final : ecs::ISystem<PrefabCameraEnricher>
+{
+    ECS_REGISTRY("test_prefab_events")
+
+    void OnPrefabEvt(ecs::Registry& registry, const ecs::PrefabEvt<Camera>& event)
+    {
+        event.prefab.AddComponent<TestId>(100);
+        ++g_prefabCameraCallCount;
+    }
+
+    ECS_EVENT(OnPrefabEvt, ecs::PrefabEvt<Camera>)
+};
+
+struct CreatedCameraVerifier final : ecs::ISystem<CreatedCameraVerifier>
+{
+    ECS_REGISTRY("test_prefab_events")
+
+    void OnCreatedEvt(ecs::Registry& registry, const ecs::CreatedEntityEvt<Camera>& event)
+    {
+        EXPECT_TRUE(event.entity.IsAlive());
+        EXPECT_TRUE(event.entity.IsFullscreen());
+        ++g_createdCameraCallCount;
+    }
+
+    ECS_EVENT(OnCreatedEvt, ecs::CreatedEntityEvt<Camera>)
 };

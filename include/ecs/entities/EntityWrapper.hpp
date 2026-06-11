@@ -1,5 +1,6 @@
 #ifndef ECS_ENTITY_WRAPPER_HPP
 #define ECS_ENTITY_WRAPPER_HPP
+#include <concepts>
 #include <functional>
 #include "Entity.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
@@ -14,7 +15,8 @@ namespace ecs
      * @brief RAII-style wrapper providing safe and convenient entity access.
      * EntityWrapper combines an Entity (ID + version) with a reference to the
      * owning EntitiesManager, enabling method chaining and automatic context
-     * passing. It serves as the primary interface for entity operations,     * ensuring that entity handles are always used with the correct manager.
+     * passing. It serves as the primary interface for entity operations,
+     * ensuring that entity handles are always used with the correct manager.
      *
      * The wrapper is lightweight (stores entity and manager reference) and
      * is intended to be passed by value. All methods forward operations to
@@ -108,9 +110,22 @@ namespace ecs
          * direct entity reference is needed.
          * @return Const reference to stored entity
          */
+        /**
+         * @brief Gets the underlying entity handle.
+         * @return Const reference to stored entity
+         */
         [[nodiscard]] const Entity& getEntity() const { return m_entity; }
 
+        /**
+         * @brief Returns the entity's unique ID.
+         * @return entityId_t Unique numeric identifier
+         */
         [[nodiscard]] entityId_t getId() const { return getEntity().id; }
+
+        /**
+         * @brief Returns the entity's version (for stale-handle detection).
+         * @return entityVersion_t Version counter
+         */
         [[nodiscard]] entityVersion_t getVersion() const { return getEntity().version; }
 
         explicit operator Entity() const { return m_entity; }
@@ -119,6 +134,19 @@ namespace ecs
         Entity m_entity;                                            ///< Wrapped entity handle (ID + version)
         std::reference_wrapper<EntitiesManager> m_managerRef;       ///< Reference to owning manager
     };
+
+
+    /**
+     * @brief Concept for EntityWrapper-derived types that don't add data members.
+     *
+     * Ensures that a type:
+     *  - inherits from EntityWrapper
+     *  - does NOT add data members (virtual functions are OK — vtable pointer is accounted for)
+     *
+     * All entity state must live in Components, not in the wrapper.
+     */
+    template<typename T>
+    concept EntityWrapperLike = std::derived_from<T, EntityWrapper> && sizeof(T) == sizeof(EntityWrapper);
 
 } // namespace ecs
 #endif

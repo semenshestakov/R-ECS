@@ -130,7 +130,7 @@ namespace ecs
     void EventSystem::PushEvent(Event&& event)
     {
         using Decayed = std::decay_t<Event>;
-        m_eventQueue.emplace_back(
+        m_commandQueue.Push(
             [this, ev = std::forward<Event>(event)]() mutable
             {
                 EventSystem::OnEvent<Decayed>(ev);

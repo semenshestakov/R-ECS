@@ -30,7 +30,7 @@ namespace event
          * Ensures proper polymorphic ownership via AbstractEvent* interface.
          *
          * @return New concrete event instance (ownership transferred to caller)
-         * @nodiscard Ensures factory result is not ignored
+         * @note Ensures factory result is not ignored
          */
         [[nodiscard]] virtual AbstractEvent* New() const = 0;
 

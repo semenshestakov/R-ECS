@@ -8,7 +8,7 @@ namespace ecs::error
     inline constexpr char g_systemsErrorName[] = "SystemsError: ";
     using BaseSystemsError = recs::error::BaseNamedError<g_systemsErrorName>;
 
-    /// @brief Thrown when an invalid component ID is encountered.
+    /// @brief Thrown when a system is initialized more than once.
     struct DoubleInitialization final : BaseSystemsError { using BaseSystemsError::BaseSystemsError;};
 
 }

@@ -16,6 +16,10 @@ inline ecs::EntitiesManager::~EntitiesManager()
 template<ecs::EntityConcept ReturnType>
 ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
 {
+    static_assert(std::is_same_v<ReturnType, ecs::Entity> || ecs::EntityWrapperLike<ReturnType>,
+        "ReturnType must be Entity or an EntityWrapper subclass without data members. "
+        "Use components for state, not wrapper fields.");
+
     Entity entity{};
 
     if(!m_freeEntities.empty())
@@ -44,8 +48,8 @@ ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 
-    if constexpr (std::is_same_v<ReturnType, EntityWrapper>)
-        return {entity, *this};
+    if constexpr (EntityWrapperLike<ReturnType>)
+        return ReturnType{entity, *this};
     else
         return entity;
 }
@@ -83,6 +87,9 @@ void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
 template<ecs::EntityConcept InputEntityType>
 bool ecs::EntitiesManager::IsAlive(const InputEntityType& entity) const
 {
+    if (entity.getId() == INVALID_ENTITY_ID || entity.getVersion() == INVALID_ENTITY_VERSION)
+        return false;
+
     if(entity.getId() >= m_versionByEntityIndex.size())
         return false;
 

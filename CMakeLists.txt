@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.0)
 project(R-ECS
-    VERSION 0.10.10
+    VERSION 0.11.3
     DESCRIPTION "Implementation of the Replication-Entities-Components-Systems in C++ using templates and modern language features."
     LANGUAGES CXX
 )
@@ -18,6 +18,7 @@ add_library(R-ECS
         src/ecs/EntityWrapper.cpp
         src/ecs/SystemsManager.cpp
         src/ecs/SystemsSchedule.cpp
+        src/ecs/Commands.cpp
 )
 
 target_include_directories(R-ECS
@@ -60,12 +61,14 @@ if(TEST_ENABLE)
             test/event/EventSystem.cpp
             test/collections/BitSet.cpp
             test/collections/Context.cpp
+            test/collections/CommandQueue.cpp
             test/collections/DirectedAcyclicGraph.cpp
             test/ecs/AutoRegistration.cpp
             test/ecs/EntitiesManager.cpp
             test/ecs/SystemsEvent.cpp
             test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
+            test/ecs/EntityCommands.cpp
     )
     target_include_directories(test_recs
         PRIVATE

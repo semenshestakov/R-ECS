@@ -261,6 +261,6 @@ namespace collections
         std::unordered_map<ctxId_t, std::unique_ptr<BaseHolder>> m_data;
     };
 
-} // namespace ecs
+} // namespace collections
 
 #include "detail/Context.ipp"

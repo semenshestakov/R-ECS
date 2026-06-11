@@ -1,5 +1,6 @@
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
+#include "ecs/registry/Commands.hpp"
 #include "ecs/systems/SystemsManager.hpp"
 #include "gtest/gtest.h"
 #include "SystemsClass.hpp"
@@ -193,4 +194,137 @@ TEST_F(EventSystemFlushTest, PushAfterFlushExecutesNextFrame)
     registry.Update();
 
     EXPECT_EQ(g_eventExecutionOrder.size(), firstFrameCalls * 2);
+}
+
+
+// ================================ Prefab Event Tests ================================
+
+class PrefabEventsTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        g_prefabPlayerCallCount = 0;
+        g_prefabCameraCallCount = 0;
+        g_createdPlayerCallCount = 0;
+        g_createdCameraCallCount = 0;
+
+        registry = Registry::Create("test_prefab_events");
+        registry.Init();
+    }
+
+    Registry registry;
+};
+
+
+TEST_F(PrefabEventsTest, PreFeedbackFiresPrefabEvtForPlayer)
+{
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{PlayerRecipe{}, CookFeedback::PRE_EVT_CALL});
+    registry.Update();
+
+    EXPECT_EQ(g_prefabPlayerCallCount, 1);
+}
+
+
+TEST_F(PrefabEventsTest, PostFeedbackFiresCreatedEntityEvtForPlayer)
+{
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{PlayerRecipe{}, CookFeedback::POST_EVT_CALL});
+    registry.Update();
+
+    EXPECT_EQ(g_createdPlayerCallCount, 1);
+}
+
+
+TEST_F(PrefabEventsTest, BothFeedbackFlagsFireBothEvents)
+{
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{
+        PlayerRecipe{},
+        CookFeedback::PRE_EVT_CALL | CookFeedback::POST_EVT_CALL
+    });
+    registry.Update();
+
+    EXPECT_EQ(g_prefabPlayerCallCount, 1);
+    EXPECT_EQ(g_createdPlayerCallCount, 1);
+}
+
+
+TEST_F(PrefabEventsTest, PrefabEnricherAddsComponentToPlayer)
+{
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{PlayerRecipe{}, CookFeedback::PRE_EVT_CALL});
+    registry.Update();
+
+    auto view = registry.Entities().view<Health, Position2d, TestId>();
+    int count = 0;
+    for (auto [health, pos, id] : view)
+    {
+        EXPECT_EQ(health.value, 100.f);
+        EXPECT_EQ(id.id, 99u);
+        ++count;
+    }
+    EXPECT_EQ(count, 1);
+}
+
+
+TEST_F(PrefabEventsTest, CameraPrefabEventAndCreation)
+{
+    registry.Commands().Push(CookCmd<Camera, CameraRecipe>{CameraRecipe{}, CookFeedback::PRE_EVT_CALL});
+    registry.Update();
+
+    EXPECT_EQ(g_prefabCameraCallCount, 1);
+
+    int count = 0;
+    for (auto [pos, config, id] : registry.Entities().view<Position3d, FullscreenConfig, TestId>())
+    {
+        EXPECT_TRUE(config.enabled);
+        EXPECT_EQ(id.id, 100u);
+        ++count;
+    }
+    EXPECT_EQ(count, 1);
+}
+
+
+TEST_F(PrefabEventsTest, CookCmdWithoutFeedbackDoesNotFireEvents)
+{
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{PlayerRecipe{}, CookFeedback::NONE});
+    registry.Update();
+
+    EXPECT_EQ(g_prefabPlayerCallCount, 0);
+    EXPECT_EQ(g_createdPlayerCallCount, 0);
+}
+
+
+TEST_F(PrefabEventsTest, MultiplePlayersEachFireEvents)
+{
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{PlayerRecipe{}, CookFeedback::PRE_EVT_CALL | CookFeedback::POST_EVT_CALL});
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{PlayerRecipe{}, CookFeedback::PRE_EVT_CALL | CookFeedback::POST_EVT_CALL});
+
+    registry.Update();
+
+    EXPECT_EQ(g_prefabPlayerCallCount, 2);
+    EXPECT_EQ(g_createdPlayerCallCount, 2);
+    EXPECT_EQ(registry.Entities().size(), 2);
+}
+
+
+TEST_F(PrefabEventsTest, CameraCreatedEntityEvtFires)
+{
+    registry.Commands().Push(CookCmd<Camera, CameraRecipe>{CameraRecipe{}, CookFeedback::POST_EVT_CALL});
+    registry.Update();
+
+    EXPECT_EQ(g_createdCameraCallCount, 1);
+}
+
+
+TEST_F(PrefabEventsTest, MixedEntityTypesFireCorrectEvents)
+{
+    registry.Commands().Push(CookCmd<Player, PlayerRecipe>{PlayerRecipe{}, CookFeedback::PRE_EVT_CALL | CookFeedback::POST_EVT_CALL});
+    registry.Commands().Push(CookCmd<Camera, CameraRecipe>{CameraRecipe{}, CookFeedback::PRE_EVT_CALL | CookFeedback::POST_EVT_CALL});
+
+    registry.Update();
+    EXPECT_EQ(registry.Entities().size(), 2);
+
+    EXPECT_EQ(g_prefabPlayerCallCount, 1);
+    EXPECT_EQ(g_createdPlayerCallCount, 1);
+    EXPECT_EQ(g_prefabCameraCallCount, 1);
+    EXPECT_EQ(g_createdCameraCallCount, 1);
 }

@@ -77,10 +77,24 @@ inline void collection::BitSet::reset(const std::size_t pos) noexcept
 
 inline void collection::BitSet::resize(const std::size_t pos) noexcept
 {
+    const auto oldSize = m_size;
     m_size = pos;
-    if (const std::size_t requiredBlocks = (m_size + BIT_COUNT - 1) / BIT_COUNT; m_data.size() < requiredBlocks)
+    const std::size_t requiredBlocks = (m_size + BIT_COUNT - 1) / BIT_COUNT;
+
+    if (m_data.size() < requiredBlocks)
     {
         m_data.resize(requiredBlocks);
+    }
+
+    if (m_size < oldSize)
+    {
+        const std::size_t oldRequiredBlocks = (oldSize + BIT_COUNT - 1) / BIT_COUNT;
+
+        if (requiredBlocks < oldRequiredBlocks)
+            std::fill(m_data.begin() + requiredBlocks, m_data.begin() + oldRequiredBlocks, dataItem_t{0});
+
+        if (const auto lastBits = m_size & 63)
+            m_data.back() &= (static_cast<dataItem_t>(1) << lastBits) - 1;
     }
 }
 
@@ -194,8 +208,16 @@ inline collection::BitSet collection::BitSet::operator^(const BitSet& other) con
 
 inline collection::BitSet& collection::BitSet::operator&=(const BitSet& other)
 {
-    for (std::size_t i = 0; i < (m_size < other.m_size? m_data.size() : other.m_data.size()); ++i)
+    const auto sharedWords = std::min(m_data.size(), other.m_data.size());
+
+    for (std::size_t i = 0; i < sharedWords; ++i)
         m_data[i] &= other.m_data[i];
+
+    for (std::size_t i = sharedWords; i < m_data.size(); ++i)
+        m_data[i] = 0;
+
+    if (m_size > other.m_size)
+        m_size = other.m_size;
 
     return *this;
 }

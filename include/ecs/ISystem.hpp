@@ -249,7 +249,7 @@ namespace ecs
  */
 #define ECS_EVENT(_METHOD_NAME, _EVENT) \
     private: \
-    std::unique_ptr<Super::EventListener<_EVENT>> m_listener_##_EVENT = Super::RegisterEvent<_EVENT>(&SelfSystemCls::_METHOD_NAME); \
+    std::unique_ptr<Super::EventListener<_EVENT>> m_listener_##_METHOD_NAME = Super::RegisterEvent<_EVENT>(&SelfSystemCls::_METHOD_NAME); \
     public:
 
 

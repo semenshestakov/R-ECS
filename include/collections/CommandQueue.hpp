@@ -10,17 +10,20 @@ namespace collections
     /**
      * @brief A FIFO queue of deferred callable commands.
      *
-     * Stores std::function<void()> entries and executes them in insertion
-     * order on Flush().  The queue is swapped out before execution so that
+     * Stores std::function<void(Args...)> entries and executes them in insertion
+     * order on Flush(Args...).  The queue is swapped out before execution so that
      * commands pushed during a flush are deferred to the next flush cycle.
+     *
+     * @tparam Args Argument types passed to each command at flush time.
      *
      * Non-copyable (move-only) to match the ownership semantics of the
      * callables it holds.
      */
+    template<typename... Args>
     class CommandQueue
     {
     public:
-        typedef std::function<void()> func_t; ///< Type-erased callable.
+        typedef std::function<void(Args...)> func_t; ///< Type-erased callable.
 
         /**
          * @brief Constructs an empty command queue.
@@ -60,8 +63,10 @@ namespace collections
          * The internal queue is swapped into a local vector so that
          * commands added during execution are not processed in the
          * same pass.
+         *
+         * @param args Arguments forwarded to each queued callable
          */
-        void Flush();
+        void Flush(Args... args);
 
         /**
          * @brief Check whether the queue holds any commands.

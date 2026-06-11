@@ -66,7 +66,7 @@ namespace ecs
         EventSystem m_eventSystem;                  ///< Local Event System
         SystemsManager m_systemManager;             ///< Underlying entity storage
         collections::Context m_context;             ///< Context (Data storage)
-        CommandQueue m_commandQueue;   ///< Deferred command queue (flushed each frame)
+        CommandQueue m_commandQueue;                ///< Deferred command queue (flushed each frame)
 
     public:
         /**

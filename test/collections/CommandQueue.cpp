@@ -7,7 +7,7 @@ using namespace collections;
 class CommandQueueTest : public ::testing::Test
 {
 protected:
-    CommandQueue queue;
+    CommandQueue<> queue;
 };
 
 
@@ -112,7 +112,7 @@ TEST_F(CommandQueueTest, MoveConstructorTransfersCommands)
     queue.Push([] {});
     EXPECT_EQ(queue.size(), 2);
 
-    CommandQueue other(std::move(queue));
+    CommandQueue<> other(std::move(queue));
     EXPECT_TRUE(queue.empty());
     EXPECT_EQ(other.size(), 2);
 }
@@ -120,7 +120,7 @@ TEST_F(CommandQueueTest, MoveConstructorTransfersCommands)
 TEST_F(CommandQueueTest, MoveAssignmentTransfersCommands)
 {
     queue.Push([] {});
-    const CommandQueue other = std::move(queue);
+    const CommandQueue<> other = std::move(queue);
 
     EXPECT_TRUE(queue.empty());
     EXPECT_EQ(other.size(), 1);
@@ -129,9 +129,9 @@ TEST_F(CommandQueueTest, MoveAssignmentTransfersCommands)
 
 TEST_F(CommandQueueTest, MoveDoesNotBreakExecution)
 {
-    CommandQueue other;
+    CommandQueue<> other;
     {
-        CommandQueue temp;
+        CommandQueue<> temp;
         temp.Push([] {});
         temp.Push([] {});
         other = std::move(temp);
@@ -162,7 +162,7 @@ TEST_F(CommandQueueTest, CapturedStateIsPreserved)
 
 TEST_F(CommandQueueTest, MultipleQueuesAreIndependent)
 {
-    CommandQueue q1, q2;
+    CommandQueue<> q1, q2;
     int v1 = 0, v2 = 0;
 
     q1.Push([&] { v1 = 1; });

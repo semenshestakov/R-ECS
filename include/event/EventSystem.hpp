@@ -177,7 +177,7 @@ namespace event
          * The queue is processed sequentially during FlushEvents(),
          * guaranteeing deterministic event ordering across the frame.
          */
-        collections::CommandQueue m_commandQueue;
+        collections::CommandQueue<> m_commandQueue;
     };
 
 } // namespace event

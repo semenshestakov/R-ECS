@@ -5,27 +5,31 @@
 namespace collections
 {
 
+    template<typename... Args>
     template<typename F>
-    void CommandQueue::Push(F&& func)
+    void CommandQueue<Args...>::Push(F&& func)
     {
         m_queue.push_back(std::forward<F>(func));
     }
 
-    inline void CommandQueue::Flush()
+    template<typename... Args>
+    void CommandQueue<Args...>::Flush(Args... args)
     {
         std::vector<func_t> processing;
         processing.swap(m_queue);
 
         for (auto& func : processing)
-            func();
+            func(args...);
     }
 
-    inline bool CommandQueue::empty() const
+    template<typename... Args>
+    bool CommandQueue<Args...>::empty() const
     {
         return m_queue.empty();
     }
 
-    inline size_t CommandQueue::size() const
+    template<typename... Args>
+    size_t CommandQueue<Args...>::size() const
     {
         return m_queue.size();
     }

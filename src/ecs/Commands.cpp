@@ -2,21 +2,21 @@
 #include "ecs/Registry.hpp"
 
 
-void ecs::CreateEntityCommand::operator()() const
+void ecs::CreateEntityCommand::operator()(Registry& registry) const
 {
-    const auto entity = registry.get().Entities().Create<Entity>(std::move(*prefab));
+    const auto entity = registry.Entities().Create<Entity>(std::move(*prefab));
     if (onCreated)
         onCreated(entity);
 }
 
 
-void ecs::DeleteEntityCommand::operator()() const
+void ecs::DeleteEntityCommand::operator()(Registry& registry) const
 {
-    if (!registry.get().Entities().IsAlive(entity))
+    if (!registry.Entities().IsAlive(entity))
         return;
 
     if (onDeleted)
         onDeleted(entity);
 
-    registry.get().Entities().Destroy(entity);
+    registry.Entities().Destroy(entity);
 }

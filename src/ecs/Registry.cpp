@@ -22,12 +22,12 @@ bool ecs::Registry::Init(void* args /* = nullptr */)
 
 void ecs::Registry::Update()
 {
-    m_commandQueue.Flush({});
+    m_commandQueue.Flush({}, *this);
 
     m_systemManager.Update(*this);
 
     m_eventSystem.FlushEvents({});
-    m_commandQueue.Flush({});
+    m_commandQueue.Flush({}, *this);
 }
 
 ecs::Registry ecs::Registry::Create(const std::string& name)

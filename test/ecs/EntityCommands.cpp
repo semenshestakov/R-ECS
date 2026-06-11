@@ -28,7 +28,7 @@ TEST_F(EntityCommandsTest, CreateEntityExecutesOnFlush)
     PrefabEntity prefab;
     prefab.AddComponent<Position2d>(3.f, 4.f);
 
-    registry.Commands().Push(CreateEntityCommand{std::move(prefab), registry, [&](Entity e) { created = e; }});
+    registry.Commands().Push(CreateEntityCommand{std::move(prefab), [&](Entity e) { created = e; }});
 
     EXPECT_FALSE(registry.Entities().IsAlive(created));
     EXPECT_EQ(registry.Commands().size(), 1);
@@ -46,7 +46,7 @@ TEST_F(EntityCommandsTest, CreateEntityCallbackFired)
     PrefabEntity prefab;
     prefab.AddComponent<Position2d>();
 
-    registry.Commands().Push(CreateEntityCommand{std::move(prefab), registry, [&](Entity e) {
+    registry.Commands().Push(CreateEntityCommand{std::move(prefab), [&](Entity e) {
         ++callCount;
         EXPECT_NE(e.id, INVALID_ENTITY_ID);
     }});
@@ -61,7 +61,7 @@ TEST_F(EntityCommandsTest, CreateEntityNoCallback)
     PrefabEntity prefab;
     prefab.AddComponent<Position2d>();
 
-    registry.Commands().Push(CreateEntityCommand{std::move(prefab), registry, nullptr});
+    registry.Commands().Push(CreateEntityCommand{std::move(prefab)});
 
     registry.Update();
     EXPECT_EQ(registry.Entities().size(), 1);
@@ -74,7 +74,7 @@ TEST_F(EntityCommandsTest, CreateEntityFromSharedPtr)
     prefab->AddComponent<Position2d>();
 
     Entity created;
-    registry.Commands().Push(CreateEntityCommand{prefab, registry, [&](Entity e) { created = e; }});
+    registry.Commands().Push(CreateEntityCommand{prefab, [&](Entity e) { created = e; }});
 
     registry.Update();
     EXPECT_TRUE(registry.Entities().IsAlive(created));
@@ -89,7 +89,7 @@ TEST_F(EntityCommandsTest, DeleteEntityDestroysOnFlush)
     ASSERT_TRUE(registry.Entities().IsAlive(entity));
 
     int callCount = 0;
-    registry.Commands().Push(DeleteEntityCommand{entity, registry, [&](Entity e) {
+    registry.Commands().Push(DeleteEntityCommand{entity, [&](Entity e) {
         ++callCount;
         EXPECT_TRUE(registry.Entities().IsAlive(e));
     }});
@@ -111,7 +111,7 @@ TEST_F(EntityCommandsTest, DeleteDeadEntityIsSkipped)
     ASSERT_FALSE(registry.Entities().IsAlive(entity));
 
     int callCount = 0;
-    registry.Commands().Push(DeleteEntityCommand{entity, registry, [&](Entity) { ++callCount; }});
+    registry.Commands().Push(DeleteEntityCommand{entity, [&](Entity) { ++callCount; }});
 
     registry.Update();
     EXPECT_EQ(callCount, 0);
@@ -127,7 +127,7 @@ TEST_F(EntityCommandsTest, CreateThenDeleteInSameFlush)
     PrefabEntity prefab;
     prefab.AddComponent<Position2d>();
 
-    registry.Commands().Push(CreateEntityCommand{std::move(prefab), registry, [&](Entity e) {
+    registry.Commands().Push(CreateEntityCommand{std::move(prefab), [&](Entity e) {
         ++createCalls;
         created = e;
     }});
@@ -137,7 +137,7 @@ TEST_F(EntityCommandsTest, CreateThenDeleteInSameFlush)
     EXPECT_EQ(registry.Entities().size(), 1);
     EXPECT_TRUE(registry.Entities().IsAlive(created));
 
-    registry.Commands().Push(DeleteEntityCommand{created, registry, [&](Entity) { ++deleteCalls; }});
+    registry.Commands().Push(DeleteEntityCommand{created, [&](Entity) { ++deleteCalls; }});
 
     EXPECT_EQ(registry.Entities().size(), 1);
     registry.Update();
@@ -156,7 +156,7 @@ TEST_F(EntityCommandsTest, CommandsEmptyAfterFlush)
     PrefabEntity prefab;
     prefab.AddComponent<Position2d>();
 
-    registry.Commands().Push(CreateEntityCommand{std::move(prefab), registry, nullptr});
+    registry.Commands().Push(CreateEntityCommand{std::move(prefab)});
 
     EXPECT_EQ(registry.Commands().size(), 1);
     registry.Update();

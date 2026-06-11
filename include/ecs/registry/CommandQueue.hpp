@@ -9,18 +9,18 @@ namespace ecs
     /**
      * @brief ECS-specific command queue with token-gated flush.
      *
-     * Wraps collections::CommandQueue and restricts Flush() access
+     * Wraps collections::CommandQueue<Args...> and restricts Flush() access
      * via CommandsToken so that only the Registry can trigger execution.
      * Systems use Push() / empty() / size() normally.
+     *
      */
-    class CommandQueue final : protected collections::CommandQueue
+    class CommandQueue final : DEEP_TEST_PROTECTED_ACCESS collections::CommandQueue<Registry&>
     {
-        using Super = collections::CommandQueue;
+    DEEP_TEST_PRIVATE_ACCESS:
+        using Super = collections::CommandQueue<Registry&>;
 
     public:
         using Super::Push;
-        using Super::empty;
-        using Super::size;
 
         /**
          * @brief Restricted token used to control command flushing.
@@ -37,8 +37,9 @@ namespace ecs
         /**
          * @brief Execute all deferred commands.
          * @param _ Authorization token (only Registry can construct)
+         * @param registry
          */
-        void Flush(CommandsToken _) { Super::Flush(); }
+        void Flush(CommandsToken _, Registry& registry) { Super::Flush(registry) ; }
     };
 
 } // namespace ecs

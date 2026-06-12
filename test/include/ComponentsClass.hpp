@@ -247,3 +247,18 @@ void ValidateRange(const ecs::EntityWrapper& entity, std::index_sequence<Is...>)
 {
     (ValidateOne<Is, Begin, End>(entity), ...);
 }
+
+
+struct MoveTracker
+{
+    inline static int copyCount = 0;
+    inline static int moveCount = 0;
+
+    int value = 0;
+
+    explicit MoveTracker(const int v = 0) : value(v) {}
+    MoveTracker(const MoveTracker& other) : value(other.value)          { ++copyCount; }
+    MoveTracker(MoveTracker&& other) noexcept : value(other.value)      { other.value = -1; ++moveCount; }
+
+    static void reset() { copyCount = moveCount = 0; }
+};

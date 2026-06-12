@@ -157,7 +157,8 @@ namespace ecs
          * @param entityId global entity id
          * @return Location descriptor for created entity
          */
-        ArchetypedChunkEntityLocation Create(const PrefabEntity& prefabEntity, entityId_t entityId);
+        template<PrefabEntityRef PrefabRef>
+        ArchetypedChunkEntityLocation Create(PrefabRef&& prefabEntity, entityId_t entityId);
 
         /**
          * @brief Destroys entity at given location.

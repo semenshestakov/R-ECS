@@ -53,17 +53,8 @@ namespace ecs
          * @param prefabEntity Prefab containing component data to initialize entity
          * @return Wrapper object providing safe access to the created entity
          */
-        template<EntityConcept ReturnType=EntityWrapper>
-        ReturnType Create(const PrefabEntity& prefabEntity);
-
-        /**
-         * @brief Creates new entity from prefab data (rvalue reference).
-         * Moves prefab data into storage for efficiency.
-         * @param prefabEntity Prefab containing component data to initialize entity
-         * @return Wrapper object providing safe access to the created entity
-         */
-        template<EntityConcept ReturnType=EntityWrapper>
-        ReturnType Create(PrefabEntity&& prefabEntity);
+        template<EntityConcept ReturnType=EntityWrapper, PrefabEntityRef PrefabRef>
+        ReturnType Create(PrefabRef&& prefabEntity);
 
         /**
          * @brief Destroys entity if it exists.

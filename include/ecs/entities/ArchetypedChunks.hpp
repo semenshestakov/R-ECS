@@ -3,12 +3,13 @@
 #include "Archetype.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
 #include "ecs/utils/EntitiesUtils.hpp"
+#include "ecs/entities/PrefabEntity.hpp"
 
 
 namespace ecs
 {
 
-    struct PrefabEntity;
+#include "PrefabEntity.hpp"
     struct Entity;
 
     /**
@@ -168,7 +169,8 @@ namespace ecs
          * @pre Entity must have all components required by this archetype
          * @post Entity is marked as alive and its component data is stored in the chunk arrays
          */
-        chunkEntityIndex_t Create(const PrefabEntity& entity, entityId_t entityId);
+        template<PrefabEntityRef PrefabRef>
+        chunkEntityIndex_t Create(PrefabRef&& entity, entityId_t entityId);
 
         /**
          * @brief Destroys an entity and frees its storage slot.

@@ -429,9 +429,10 @@ TEST_F(EntitiesManagerTest, ViewAfterManyRemovalsAndInsertions)
 {
     std::vector<Entity> entities;
 
+    entities.reserve(200);
     for (int i = 0; i < 200; ++i)
     {
-        entities.emplace_back(manager.Create(Create2DPrefab(static_cast<float>(i), 0.f)));
+        entities.emplace_back(manager.Create<Entity>(Create2DPrefab(static_cast<float>(i), 0.f)));
     }
 
     for (int i = 50; i < 150; ++i)
@@ -453,4 +454,137 @@ TEST_F(EntitiesManagerTest, ViewAfterManyRemovalsAndInsertions)
     }
 
     EXPECT_EQ(count, manager.size());
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_InvokesMoveConstructor)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    manager.Create(std::move(prefab));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Lvalue_InvokesCopyConstructor)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    manager.Create(prefab);
+
+    EXPECT_EQ(MoveTracker::copyCount, 1);
+    EXPECT_EQ(MoveTracker::moveCount, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_ComponentDataCorrect)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    const auto entity = manager.Create(std::move(prefab));
+
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Lvalue_ComponentDataCorrect)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    const auto entity = manager.Create(prefab);
+
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 42);
+    const auto entity2 = manager.Create(prefab);
+    EXPECT_EQ(entity2.GetComponent<MoveTracker>().value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_SourceIsMovedFrom)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(99);
+
+    manager.Create(std::move(prefab));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_Position3d_NoExtraAllocation)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position3d>(5.f, 6.f, 7.f);
+
+    const auto entity = manager.Create(std::move(prefab));
+
+    const auto& pos = entity.GetComponent<Position3d>();
+    EXPECT_NE(pos.testLeaks, nullptr);
+    EXPECT_FLOAT_EQ(pos.x, 5.f);
+    EXPECT_FLOAT_EQ(pos.y, 6.f);
+    EXPECT_FLOAT_EQ(pos.z, 7.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Lvalue_Position3d_CopyLeavesTestLeaksNull)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position3d>(1.f, 2.f, 3.f);
+
+    const auto entity = manager.Create(prefab);
+
+    const auto& pos = entity.GetComponent<Position3d>();
+    EXPECT_EQ(pos.testLeaks, nullptr);
+    EXPECT_FLOAT_EQ(pos.x, 1.f);
+    EXPECT_FLOAT_EQ(pos.y, 2.f);
+    EXPECT_FLOAT_EQ(pos.z, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_TemporaryPrefab)
+{
+    // Передача временного объекта напрямую
+    MoveTracker::reset();
+
+    auto makePrefab = [](int v)
+    {
+        PrefabEntity p;
+        p.AddComponent<MoveTracker>(v);
+        return p;
+    };
+
+    const auto entity = manager.Create(makePrefab(7));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 7);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_MultipleComponents_AllMoved)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(10);
+    prefab.AddComponent<Position2d>(3.f, 4.f);
+
+    const auto entity = manager.Create(std::move(prefab));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 10);
+    EXPECT_FLOAT_EQ(entity.GetComponent<Position2d>().x, 3.f);
 }

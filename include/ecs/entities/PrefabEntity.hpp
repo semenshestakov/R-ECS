@@ -121,4 +121,12 @@ namespace ecs
         return m_archetype;
     }
 
+    /**
+     * @brief Constrains a forwarding reference to PrefabEntity.
+     * Allows only `const PrefabEntity&` (copy path) or `PrefabEntity&&` (move path).
+     * Mutable lvalue references are rejected to enforce const-correctness.
+     */
+    template<typename T>
+    concept PrefabEntityRef = std::same_as<std::remove_cvref_t<T>, PrefabEntity>;
+
 } // namespace ecs

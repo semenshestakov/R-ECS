@@ -13,8 +13,8 @@ inline ecs::EntitiesManager::~EntitiesManager()
     }
 }
 
-template<ecs::EntityConcept ReturnType>
-ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
+template<ecs::EntityConcept ReturnType, ecs::PrefabEntityRef PrefabRef>
+ReturnType ecs::EntitiesManager::Create(PrefabRef&& prefabEntity)
 {
     static_assert(std::is_same_v<ReturnType, ecs::Entity> || ecs::EntityWrapperLike<ReturnType>,
         "ReturnType must be Entity or an EntityWrapper subclass without data members. "
@@ -44,7 +44,7 @@ ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
     }
 
     assert(entity.id < m_lastEntityId);
-    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(prefabEntity, entity.id);
+    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(std::forward<PrefabRef>(prefabEntity), entity.id);
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 
@@ -52,12 +52,6 @@ ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
         return ReturnType{entity, *this};
     else
         return entity;
-}
-
-template<ecs::EntityConcept ReturnType>
-ReturnType ecs::EntitiesManager::Create(PrefabEntity&& prefabEntity)
-{
-    return Create<ReturnType>(prefabEntity);
 }
 
 template<ecs::EntityConcept InputEntityType>

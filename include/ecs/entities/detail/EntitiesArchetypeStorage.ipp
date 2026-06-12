@@ -120,7 +120,8 @@ const ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const Archety
 }
 
 
-inline ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(const PrefabEntity& prefabEntity, const entityId_t entityId)
+template<ecs::PrefabEntityRef PrefabRef>
+ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(PrefabRef&& prefabEntity, const entityId_t entityId)
 {
     // - - - Calculate Archetype - - -
     const Archetype& archetype = prefabEntity.getArchetype();
@@ -144,7 +145,7 @@ inline ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(
 
     return {
         .archetypeIndex=archetypeIndex,
-        .chunkEntityIndex=m_storageByArchetypeIndex[archetypeIndex].Create(prefabEntity, entityId)
+        .chunkEntityIndex=m_storageByArchetypeIndex[archetypeIndex].Create(std::forward<PrefabRef>(prefabEntity), entityId)
     };
 }
 

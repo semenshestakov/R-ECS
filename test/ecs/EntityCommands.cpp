@@ -398,6 +398,290 @@ TEST_F(EntityCommandsTest, EnemyDeferredThenWrap)
 }
 
 
+TEST_F(EntityCommandsTest, AddComponentsCmd_DeferredUntilFlush)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab(1.f, 2.f));
+
+    registry.Commands().Push(AddComponentsCmd{entity, Health{77.f}});
+
+    EXPECT_EQ(registry.Entities().TryGetComponent<Health>(entity), nullptr);
+    EXPECT_EQ(registry.Commands().size(), 1);
+
+    registry.Update();
+
+    ASSERT_NE(registry.Entities().TryGetComponent<Health>(entity), nullptr);
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(entity).value, 77.f);
+    EXPECT_EQ(registry.Commands().size(), 0);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_PreservesExistingComponent)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab(3.f, 4.f));
+
+    registry.Commands().Push(AddComponentsCmd{entity, Health{50.f}});
+    registry.Update();
+
+    // migrated component kept its data
+    EXPECT_FLOAT_EQ(registry.Entities().GetComponent<Position2d>(entity).x, 3.f);
+    EXPECT_FLOAT_EQ(registry.Entities().GetComponent<Position2d>(entity).y, 4.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(entity).value, 50.f);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_MultipleComponentsAtOnce)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab());
+
+    registry.Commands().Push(AddComponentsCmd{entity, Health{50.f}, Damage{15.f}, Speed{3.f}});
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(entity).value, 50.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Damage>(entity).value, 15.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Speed>(entity).value, 3.f);
+    EXPECT_NE(registry.Entities().TryGetComponent<Position2d>(entity), nullptr);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_OverwritesExistingComponent)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Health>(100.f);
+    const auto entity = registry.Entities().Create<Entity>(prefab);
+
+
+    registry.Commands().Push(AddComponentsCmd{entity, Health{25.f}});
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(entity).value, 25.f);
+    EXPECT_EQ(registry.Entities().size(), 1);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_DeadEntity_NoOp)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab());
+    registry.Entities().Destroy(entity);
+    ASSERT_FALSE(registry.Entities().IsAlive(entity));
+
+    registry.Commands().Push(AddComponentsCmd{entity, Health{1.f}});
+    registry.Update();
+
+    EXPECT_FALSE(registry.Entities().IsAlive(entity));
+    EXPECT_EQ(registry.Entities().size(), 0);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_RvalueComponents_AreMovedNotCopied)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab());
+
+    LifeStats::reset();
+    registry.Commands().Push(AddComponentsCmd{entity, LifeTracker{42}});
+    registry.Update();
+
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_GT(LifeStats::moveCtor, 0);
+    EXPECT_EQ(registry.Entities().GetComponent<LifeTracker>(entity).value, 42);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_LvalueComponent_IsCopiedIntoCommand)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab());
+
+    LifeTracker source{7};
+    LifeStats::reset();
+    registry.Commands().Push(AddComponentsCmd{entity, source});
+    registry.Update();
+
+    EXPECT_GE(LifeStats::copyCtor, 1);
+    EXPECT_EQ(registry.Entities().GetComponent<LifeTracker>(entity).value, 7);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_MigratesAndIsVisibleInView)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab(5.f, 5.f));
+
+    registry.Commands().Push(AddComponentsCmd{entity, Position3d{1.f, 2.f, 9.f}});
+    registry.Update();
+
+    int count = 0;
+    for (auto [p2d, p3d] : registry.Entities().view<Position2d, Position3d>())
+    {
+        EXPECT_FLOAT_EQ(p2d.x, 5.f);
+        EXPECT_FLOAT_EQ(p3d.z, 9.f);
+        ++count;
+    }
+    EXPECT_EQ(count, 1);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_MultipleCommandsInOneFlush)
+{
+    const auto a = registry.Entities().Create<Entity>(Create2DPrefab(1.f, 0.f));
+    const auto b = registry.Entities().Create<Entity>(Create2DPrefab(2.f, 0.f));
+
+    registry.Commands().Push(AddComponentsCmd{a, Health{10.f}});
+    registry.Commands().Push(AddComponentsCmd{b, Health{20.f}, Damage{5.f}});
+
+    EXPECT_EQ(registry.Commands().size(), 2);
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(a).value, 10.f);
+    EXPECT_EQ(registry.Entities().TryGetComponent<Damage>(a), nullptr);
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(b).value, 20.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Damage>(b).value, 5.f);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_DeferredCreateThenDeferredAdd)
+{
+    Entity created;
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(8.f, 9.f);
+
+    registry.Commands().Push(CreateEntityCmd{std::move(prefab), [&](Entity e) { created = e; }});
+    registry.Update(); // entity now exists
+
+    ASSERT_TRUE(registry.Entities().IsAlive(created));
+
+    registry.Commands().Push(AddComponentsCmd{created, Health{60.f}, Speed{2.f}});
+    registry.Update(); // components added in a later frame
+
+    EXPECT_FLOAT_EQ(registry.Entities().GetComponent<Position2d>(created).x, 8.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(created).value, 60.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Speed>(created).value, 2.f);
+}
+
+
+TEST_F(EntityCommandsTest, AddComponentsCmd_CtadDeducesComponentTypes)
+{
+    const auto entity = registry.Entities().Create<Entity>(Create2DPrefab());
+
+    AddComponentsCmd cmd{entity, Health{33.f}, Damage{44.f}};
+    static_assert(std::is_same_v<decltype(cmd), AddComponentsCmd<Health, Damage>>,
+        "CTAD must decay component argument types into the tuple element types");
+
+    registry.Commands().Push(std::move(cmd));
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(entity).value, 33.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Damage>(entity).value, 44.f);
+}
+
+
+// ============================================= RemoveComponentsCmd ================================================
+
+
+TEST_F(EntityCommandsTest, RemoveComponentsCmd_DeferredUntilFlush)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(1.f, 2.f);
+    prefab.AddComponent<Health>(50.f);
+    const Entity entity = registry.Entities().Create<Entity>(prefab);
+
+    registry.Commands().Push(RemoveComponentsCmd<Health>{entity});
+
+    // not removed before flush
+    EXPECT_NE(registry.Entities().TryGetComponent<Health>(entity), nullptr);
+    EXPECT_EQ(registry.Commands().size(), 1);
+
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().TryGetComponent<Health>(entity), nullptr);
+    EXPECT_FLOAT_EQ(registry.Entities().GetComponent<Position2d>(entity).x, 1.f);
+    EXPECT_EQ(registry.Commands().size(), 0);
+}
+
+
+TEST_F(EntityCommandsTest, RemoveComponentsCmd_MultipleTypes)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>();
+    prefab.AddComponent<Health>(50.f);
+    prefab.AddComponent<Damage>(15.f);
+    const Entity entity = registry.Entities().Create<Entity>(prefab);
+
+    registry.Commands().Push(RemoveComponentsCmd<Health, Damage>{entity});
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().TryGetComponent<Health>(entity), nullptr);
+    EXPECT_EQ(registry.Entities().TryGetComponent<Damage>(entity), nullptr);
+    EXPECT_NE(registry.Entities().TryGetComponent<Position2d>(entity), nullptr);
+}
+
+
+TEST_F(EntityCommandsTest, RemoveComponentsCmd_LastComponent_DestroysEntity)
+{
+    const Entity entity = registry.Entities().Create<Entity>(Create2DPrefab());
+
+    registry.Commands().Push(RemoveComponentsCmd<Position2d>{entity});
+    registry.Update();
+
+    EXPECT_FALSE(registry.Entities().IsAlive(entity));
+    EXPECT_EQ(registry.Entities().size(), 0);
+}
+
+
+TEST_F(EntityCommandsTest, RemoveComponentsCmd_DeadEntity_NoOp)
+{
+    const Entity entity = registry.Entities().Create<Entity>(Create2DPrefab());
+    registry.Entities().Destroy(entity);
+
+    registry.Commands().Push(RemoveComponentsCmd<Position2d>{entity});
+    registry.Update();
+
+    EXPECT_FALSE(registry.Entities().IsAlive(entity));
+    EXPECT_EQ(registry.Entities().size(), 0);
+}
+
+
+TEST_F(EntityCommandsTest, RemoveComponentsCmd_MultipleCommandsInOneFlush)
+{
+    PrefabEntity prefabA;
+    prefabA.AddComponent<Position2d>(1.f, 0.f);
+    prefabA.AddComponent<Health>(10.f);
+    const Entity a = registry.Entities().Create<Entity>(prefabA);
+
+    PrefabEntity prefabB;
+    prefabB.AddComponent<Position2d>(2.f, 0.f);
+    prefabB.AddComponent<Health>(20.f);
+    prefabB.AddComponent<Damage>(5.f);
+    const Entity b = registry.Entities().Create<Entity>(prefabB);
+
+    registry.Commands().Push(RemoveComponentsCmd<Health>{a});
+    registry.Commands().Push(RemoveComponentsCmd<Health, Damage>{b});
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().TryGetComponent<Health>(a), nullptr);
+    EXPECT_FLOAT_EQ(registry.Entities().GetComponent<Position2d>(a).x, 1.f);
+    EXPECT_EQ(registry.Entities().TryGetComponent<Health>(b), nullptr);
+    EXPECT_EQ(registry.Entities().TryGetComponent<Damage>(b), nullptr);
+    EXPECT_FLOAT_EQ(registry.Entities().GetComponent<Position2d>(b).x, 2.f);
+}
+
+
+TEST_F(EntityCommandsTest, AddThenRemoveComponentsCmd_AcrossFrames)
+{
+    const Entity entity = registry.Entities().Create<Entity>(Create2DPrefab(4.f, 5.f));
+
+    registry.Commands().Push(AddComponentsCmd{entity, Health{30.f}, Damage{12.f}});
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(entity).value, 30.f);
+    EXPECT_EQ(registry.Entities().GetComponent<Damage>(entity).value, 12.f);
+
+    registry.Commands().Push(RemoveComponentsCmd<Damage>{entity});
+    registry.Update();
+
+    EXPECT_EQ(registry.Entities().TryGetComponent<Damage>(entity), nullptr);
+    EXPECT_EQ(registry.Entities().GetComponent<Health>(entity).value, 30.f);
+    EXPECT_FLOAT_EQ(registry.Entities().GetComponent<Position2d>(entity).x, 4.f);
+}
+
+
 TEST_F(EntityCommandsTest, EntityWrapperLikeSizeConstraint)
 {
     static_assert(ecs::EntityWrapperLike<Player>,

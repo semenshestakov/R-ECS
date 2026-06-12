@@ -57,6 +57,48 @@ namespace ecs
         ReturnType Create(PrefabRef&& prefabEntity);
 
         /**
+         * @brief Adds (or overwrites) components on an existing entity.
+         *
+         * Recomputes the entity's archetype as the union of its current archetype and the
+         * supplied components. If the archetype is unchanged (all supplied components are
+         * already present) the components are overwritten in place. Otherwise the entity is
+         * migrated to the new archetype: its existing components are move-constructed into
+         * the new storage and the entity is swap-removed from its previous archetype.
+         *
+         * For each supplied component: a component already owned by the entity is assigned
+         * (move-assigned when the argument is an rvalue, copy-assigned otherwise); a newly
+         * added component is move-constructed when the argument is an rvalue and
+         * copy-constructed otherwise.
+         *
+         * @tparam Args Component value types (deduced)
+         * @param entity Entity to modify
+         * @param args Component values to add or overwrite
+         * @note No-op if the entity is not alive.
+         */
+        template<typename... Args>
+        void AddComponents(const Entity& entity, Args&&... args);
+
+        /**
+         * @brief Removes components from an existing entity.
+         *
+         * Recomputes the entity's archetype by dropping the requested component types and
+         * migrates the entity to the resulting archetype: every remaining component is
+         * move-constructed into the new storage, the dropped components are destructed, and
+         * the entity is swap-removed from its previous archetype.
+         *
+         * Requested components that the entity does not have are ignored. If none of the
+         * requested components are present the call is a no-op. If every component would be
+         * removed (the resulting archetype is empty) the entity is destroyed, since an
+         * archetype-based entity cannot exist without components.
+         *
+         * @tparam Args Component types to remove
+         * @param entity Entity to modify
+         * @note No-op if the entity is not alive.
+         */
+        template<IsComponent... Args>
+        void RemoveComponents(const Entity& entity);
+
+        /**
          * @brief Destroys entity if it exists.
          * Marks entity as dead, calls component destructors, and returns
          * entity ID to free list for reuse with incremented version.

@@ -161,6 +161,44 @@ namespace ecs
         ArchetypedChunkEntityLocation Create(PrefabRef&& prefabEntity, entityId_t entityId);
 
         /**
+         * @brief Result of migrating an entity between archetypes.
+         */
+        struct EntityMigration final
+        {
+            ArchetypedChunkEntityLocation newLocation {};       ///< Location of the entity in the new archetype storage.
+            entityId_t swapRemovedEntityId {INVALID_ENTITY_ID}; ///< Entity relocated inside the old storage by swap-remove, or INVALID_ENTITY_ID.
+        };
+
+        /**
+         * @brief Returns the archetype stored at the given archetype index.
+         * @param archetypeIndex Index into archetype storage
+         * @return Const reference to the archetype
+         */
+        [[nodiscard]] const Archetype& getArchetype(archetypeIndex_t archetypeIndex) const;
+
+        /**
+         * @brief Migrates an entity from its current archetype to an arbitrary target archetype.
+         *
+         * Reserves a slot in the destination archetype (found or created on demand) and
+         * move-constructs every component shared by both archetypes into the new slot.
+         * Components present only in the old archetype (i.e. being removed) are not moved;
+         * components present only in the new archetype (i.e. being added) are left
+         * raw/uninitialized for the caller to construct. The entity is then removed from its
+         * previous storage via swap-remove, which destructs all of its old components
+         * (the moved-from shared ones and the dropped ones alike).
+         *
+         * @param oldLocation Current location of the entity
+         * @param newArchetype Fully resolved target archetype (with an up-to-date hash)
+         * @param entityId Global id of the migrated entity
+         * @return Location in the new archetype plus any swap-removed entity id
+         *
+         * @pre newArchetype must be non-empty and differ from the entity's current archetype.
+         */
+        EntityMigration MigrateEntity(
+            const ArchetypedChunkEntityLocation& oldLocation, const Archetype& newArchetype, entityId_t entityId
+            );
+
+        /**
          * @brief Destroys entity at given location.
          * Calls destructors and marks slot for reuse.
          * @param entityLocation Location of entity to destroy
@@ -222,6 +260,13 @@ namespace ecs
         [[nodiscard]] const ComponentCls& GetComponent(const ArchetypedChunkEntityLocation& location) const;
 
     private:
+        /**
+         * @brief Finds the storage index for an archetype, creating it if absent.
+         * @param archetype Archetype to look up (must have an up-to-date hash)
+         * @return Index of the archetype storage
+         */
+        archetypeIndex_t findOrCreateArchetype(const Archetype& archetype);
+
         /**
          * @brief Maps archetype hash to internal storage index.
          *

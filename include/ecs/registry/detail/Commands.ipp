@@ -21,6 +21,23 @@ void ecs::CookCmd<E, R>::operator()(Registry& registry) const
     }
 }
 
+template<typename... Args>
+void ecs::AddComponentsCmd<Args...>::operator()(Registry& registry) const
+{
+    std::apply(
+        [&](Args&... comps)
+        {
+            registry.Entities().AddComponents(entity, std::move(comps)...);
+        },
+        components);
+}
+
+template<ecs::IsComponent... Args>
+void ecs::RemoveComponentsCmd<Args...>::operator()(Registry& registry) const
+{
+    registry.Entities().RemoveComponents<Args...>(entity);
+}
+
 inline ecs::CookFeedback operator|(ecs::CookFeedback v1, ecs::CookFeedback v2)
 {
     return static_cast<ecs::CookFeedback>(static_cast<std::uint8_t>(v1) | static_cast<std::uint8_t>(v2));

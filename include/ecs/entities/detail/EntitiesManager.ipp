@@ -54,6 +54,91 @@ ReturnType ecs::EntitiesManager::Create(PrefabRef&& prefabEntity)
         return entity;
 }
 
+template<typename... Args>
+void ecs::EntitiesManager::AddComponents(const Entity& entity, Args&&... args)
+{
+    static_assert(sizeof...(Args) > 0, "AddComponents requires at least one component");
+
+    if (!IsAlive(entity))
+        return;
+
+    const ArchetypedChunkEntityLocation oldLocation = m_entitiesLocationByEntityIndex[entity.id];
+
+    Archetype argsArchetype;
+    (argsArchetype.set(ComponentRegistrator::GetСomponentId<std::remove_cvref_t<Args>>()), ...);
+
+    const Archetype oldArchetype = m_storage.getArchetype(oldLocation.archetypeIndex);
+
+    if (argsArchetype.isSubsetOf(oldArchetype))
+    {
+        ([&]
+        {
+            using Component = std::remove_cvref_t<Args>;
+            byte* dest = m_storage.GetComponentData(oldLocation, ComponentRegistrator::GetСomponentId<Component>());
+            *std::bit_cast<Component*>(dest) = std::forward<Args>(args);
+        }(), ...);
+        return;
+    }
+
+    Archetype newArchetype = oldArchetype;
+    (newArchetype.set(ComponentRegistrator::GetСomponentId<std::remove_cvref_t<Args>>()), ...);
+    newArchetype.updateHash();
+
+    const auto [newLocation, swapRemovedEntityId] =
+        m_storage.MigrateEntity(oldLocation, newArchetype, entity.id);
+
+    if (swapRemovedEntityId != INVALID_ENTITY_ID)
+        m_entitiesLocationByEntityIndex[swapRemovedEntityId].chunkEntityIndex = oldLocation.chunkEntityIndex;
+
+    ([&]
+    {
+        using Comp = std::remove_cvref_t<Args>;
+        const componentId_t componentId = ComponentRegistrator::GetСomponentId<Comp>();
+        byte* dest = m_storage.GetComponentData(newLocation, componentId);
+
+        if (oldArchetype.test(componentId))
+            *std::bit_cast<Comp*>(dest) = std::forward<Args>(args);
+        else
+            new(dest) Comp(std::forward<Args>(args));
+    }(), ...);
+
+    m_entitiesLocationByEntityIndex[entity.id] = newLocation;
+}
+
+template<ecs::IsComponent... Args>
+void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
+{
+    static_assert(sizeof...(Args) > 0, "RemoveComponents requires at least one component");
+
+    if (!IsAlive(entity))
+        return;
+
+    const ArchetypedChunkEntityLocation oldLocation = m_entitiesLocationByEntityIndex[entity.id];
+    const Archetype oldArchetype = m_storage.getArchetype(oldLocation.archetypeIndex);
+
+    Archetype newArchetype = oldArchetype;
+    (newArchetype.reset(ComponentRegistrator::GetСomponentId<Args>()), ...);
+
+    if (newArchetype == oldArchetype) // none of the requested components were present
+        return;
+
+    if (newArchetype.min() == collection::BitSet::INVALID_INDEX) // every component removed -> entity no longer exists
+    {
+        Destroy(entity);
+        return;
+    }
+
+    newArchetype.updateHash();
+
+    const auto [newLocation, swapRemovedEntityId] =
+        m_storage.MigrateEntity(oldLocation, newArchetype, entity.id);
+
+    if (swapRemovedEntityId != INVALID_ENTITY_ID)
+        m_entitiesLocationByEntityIndex[swapRemovedEntityId].chunkEntityIndex = oldLocation.chunkEntityIndex;
+
+    m_entitiesLocationByEntityIndex[entity.id] = newLocation;
+}
+
 template<ecs::EntityConcept InputEntityType>
 void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
 {

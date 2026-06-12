@@ -231,8 +231,7 @@ auto ecs::ArchetypedChunks::end()
     return iterator<ValueType, ComponentCls...>();
 }
 
-template<ecs::PrefabEntityRef PrefabRef>
-ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const entityId_t entityId)
+inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::AllocateRawSlot(const entityId_t entityId)
 {
     // - - - Find Chunk Index, Entity Index - - -
     chunkEntityIndex_t chunkIndex;
@@ -257,9 +256,8 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const 
     }
     assert(m_localIndexToEntityId[chunkIndex][localEntityIndex] == INVALID_ENTITY_ID);
 
-    // - - - Fill Data For Components - - -
+    // - - - Ensure Backing Chunk Memory - - -
 
-    const PrefabEntity::componentsData_t& componentsData = entity.GetComponentsData();
     for (const componentId_t componentId : m_archetype)
     {
         const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
@@ -271,10 +269,25 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const 
             componentChunks.resize(chunkIndex + 1);
             componentChunks[chunkIndex] = std::make_unique<byte[]>(componentInfo.componentSize * MAX_ENTITIES_IN_CHUNK);
         }
+    }
+
+    m_localIndexToEntityId[chunkIndex][localEntityIndex] = entityId;
+    return localEntityIndex + (chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS);
+}
+
+template<ecs::PrefabEntityRef PrefabRef>
+ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const entityId_t entityId)
+{
+    const chunkEntityIndex_t chunkEntityIndex = AllocateRawSlot(entityId);
+
+    const PrefabEntity::componentsData_t& componentsData = entity.GetComponentsData();
+    for (const componentId_t componentId : m_archetype)
+    {
+        const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
 
         assert(componentsData[componentId] != nullptr);
 
-        byte* dest = &componentChunks[chunkIndex][componentInfo.componentSize * localEntityIndex];
+        byte* dest = GetComponentData(chunkEntityIndex, componentId);
         byte* src  = componentsData[componentId].get();
 
         if constexpr (!std::is_lvalue_reference_v<PrefabRef>)
@@ -283,7 +296,6 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const 
             componentInfo.copy(dest, src);
     }
 
-    m_localIndexToEntityId[chunkIndex][localEntityIndex] = entityId;
-    return localEntityIndex + (chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS);
+    return chunkEntityIndex;
 }
 

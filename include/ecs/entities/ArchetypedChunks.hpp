@@ -173,6 +173,19 @@ namespace ecs
         chunkEntityIndex_t Create(PrefabRef&& entity, entityId_t entityId);
 
         /**
+         * @brief Reserves a new entity slot without constructing component data.
+         *
+         * Performs the same slot bookkeeping as Create (reusing a freed chunk index or
+         * expanding storage and ensuring backing chunk memory exists for every component),
+         * but leaves the component memory raw/uninitialized so the caller can construct or
+         * migrate component data into it.
+         *
+         * @param entityId global entity id stored in the reserved slot
+         * @return chunkEntityIndex_t Unique index identifying the reserved slot
+         */
+        [[nodiscard]] chunkEntityIndex_t AllocateRawSlot(entityId_t entityId);
+
+        /**
          * @brief Destroys an entity and frees its storage slot.
          *
          * Calls component destructors for all components of the entity and marks the slot as free

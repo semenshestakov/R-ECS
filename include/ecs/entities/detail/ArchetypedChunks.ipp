@@ -278,11 +278,11 @@ inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::AllocateRawSlot(const enti
 
     for (const componentId_t componentId : m_archetype)
     {
-        const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
         componentChunks_t& componentChunks = m_chunksByComponentId[componentId];
 
         if (componentChunks.size() <= chunkIndex)
         {
+            const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
             componentChunks.reserve(chunkIndex * 2);
             componentChunks.resize(chunkIndex + 1);
             componentChunks[chunkIndex] = std::make_unique<byte[]>(componentInfo.componentSize * MAX_ENTITIES_IN_CHUNK);
@@ -297,6 +297,8 @@ template<ecs::PrefabEntityRef PrefabRef>
 ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const entityId_t entityId)
 {
     const chunkEntityIndex_t chunkEntityIndex = AllocateRawSlot(entityId);
+    const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
+    const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
     const PrefabEntity::componentsData_t& componentsData = entity.GetComponentsData();
     for (const componentId_t componentId : m_archetype)
@@ -305,7 +307,7 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const 
 
         assert(componentsData[componentId] != nullptr);
 
-        byte* dest = GetComponentData(chunkEntityIndex, componentId);
+        byte* dest = &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * localEntityIndex];
         byte* src  = componentsData[componentId].get();
 
         if constexpr (!std::is_lvalue_reference_v<PrefabRef>)

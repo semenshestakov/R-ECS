@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 #include "ecs/systems/SystemsManager.hpp"
 
 
@@ -11,7 +12,7 @@ bool ecs::SystemsManager::Register()
 template<typename SystemCls>
 SystemCls& ecs::SystemsManager::Get()
 {
-    const SystemCls* systemPtr = TryGet<SystemCls>();
+    SystemCls* systemPtr = TryGet<SystemCls>();
     assert(systemPtr != nullptr);
     return *systemPtr;
 }
@@ -41,5 +42,5 @@ const SystemCls* ecs::SystemsManager::TryGet() const
     if(it == m_systemsMap.end())
         return nullptr;
 
-    return dynamic_cast<SystemCls*>(it->second.get());
+    return dynamic_cast<const SystemCls*>(it->second.get());
 }

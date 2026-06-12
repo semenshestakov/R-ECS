@@ -68,3 +68,28 @@ TEST_F(ScheduleSystemTest, FullCallSequence)
             << sys << " is not Update!";
     }
 }
+
+
+TEST_F(ScheduleSystemTest, MultipleUpdates_SystemsCalledEachTime)
+{
+    registry.Update();
+    const size_t firstCount = g_systemCallOrder.size();
+    ASSERT_GT(firstCount, 0u);
+
+    g_systemCallOrder.clear();
+    registry.Update();
+
+    EXPECT_EQ(g_systemCallOrder.size(), firstCount);
+}
+
+
+TEST_F(ScheduleSystemTest, OrderIsDeterministicAcrossFrames)
+{
+    registry.Update();
+    const auto firstOrder = g_systemCallOrder;
+
+    g_systemCallOrder.clear();
+    registry.Update();
+
+    EXPECT_EQ(firstOrder, g_systemCallOrder);
+}

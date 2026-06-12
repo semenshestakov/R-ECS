@@ -14,7 +14,10 @@ ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(En
     assert(storage != nullptr);
 
     if (storage->m_storageByArchetypeIndex.empty())
+    {
+        m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
         return;
+    }
 
     if (
         !s_archetype.isSubsetOf(storage->m_storageByArchetypeIndex[m_archetypeIndex].archetype()) or

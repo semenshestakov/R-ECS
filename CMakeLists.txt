@@ -69,6 +69,7 @@ if(TEST_ENABLE)
             test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
             test/ecs/EntityCommands.cpp
+            test/ecs/SystemsManager.cpp
     )
     target_include_directories(test_recs
         PRIVATE

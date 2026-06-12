@@ -362,6 +362,69 @@ TEST_F(EntitiesManagerTest, RemoveMiddleThenInsertAgain)
 }
 
 
+TEST_F(EntitiesManagerTest, IsAlive_DefaultConstructedEntity_ReturnsFalse)
+{
+    Entity invalid{};
+    EXPECT_FALSE(manager.IsAlive(invalid));
+}
+
+
+TEST_F(EntitiesManagerTest, TryGetComponent_ExistingComponent_ReturnsNonNull)
+{
+    auto entity = manager.Create(Create2DPrefab(3.f, 4.f));
+    auto* pos = entity.TryGetComponent<Position2d>();
+
+    ASSERT_NE(pos, nullptr);
+    EXPECT_FLOAT_EQ(pos->x, 3.f);
+    EXPECT_FLOAT_EQ(pos->y, 4.f);
+}
+
+
+TEST_F(EntitiesManagerTest, MutateComponent_ChangesPersist)
+{
+    auto entity = manager.Create(Create2DPrefab(1.f, 2.f));
+    entity.GetComponent<Position2d>().x = 99.f;
+
+    EXPECT_FLOAT_EQ(entity.GetComponent<Position2d>().x, 99.f);
+    EXPECT_FLOAT_EQ(entity.GetComponent<Position2d>().y, 2.f);
+}
+
+
+TEST_F(EntitiesManagerTest, View_EmptyManager_NoIterations)
+{
+    size_t count = 0;
+    for (auto [pos] : manager.view<Position2d>())
+        ++count;
+
+    EXPECT_EQ(count, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, View_NoMatchingEntities_NoIterations)
+{
+    manager.Create(Create3DPrefab());
+
+    size_t count = 0;
+    for (auto [pos] : manager.view<Position2d>())
+        ++count;
+
+    EXPECT_EQ(count, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, MutateComponent_ViaView_ChangesPersist)
+{
+    manager.Create(Create2DPrefab(1.f, 1.f));
+    manager.Create(Create2DPrefab(2.f, 2.f));
+
+    for (auto [pos] : manager.view<Position2d>())
+        pos.x = 77.f;
+
+    for (auto [pos] : manager.view<Position2d>())
+        EXPECT_FLOAT_EQ(pos.x, 77.f);
+}
+
+
 TEST_F(EntitiesManagerTest, ViewAfterManyRemovalsAndInsertions)
 {
     std::vector<Entity> entities;

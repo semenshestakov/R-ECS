@@ -30,7 +30,7 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::iterator(Archetyped
 
 template<typename ValueType, ecs::IsComponent... ComponentCls> ValueType ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::operator*() const
 {
-    assert(m_archetypedChunks);
+    assert(m_archetypedChunks != nullptr);
 
     if constexpr (sizeof...(ComponentCls) == 0)
         return m_entityIndex | m_chunkIndex;
@@ -102,6 +102,7 @@ void ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::advance()
         if (m_archetypedChunks->m_chunksEntityCount[m_chunkIndex] > 0)
             return;
     }
+
 }
 
 // ================================================= ArchetypedChunks ==================================================

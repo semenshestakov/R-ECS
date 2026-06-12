@@ -328,3 +328,68 @@ TEST_F(PrefabEventsTest, MixedEntityTypesFireCorrectEvents)
     EXPECT_EQ(g_prefabCameraCallCount, 1);
     EXPECT_EQ(g_createdCameraCallCount, 1);
 }
+
+
+// ================================ SystemEventHandler Tests ================================
+
+class SystemEventHandlerTest : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        registry = Registry::Create("test_event");
+        registry.Init();
+    }
+
+    Registry registry = Registry();
+};
+
+
+TEST_F(SystemEventHandlerTest, Handler1_ReceivesEvent1)
+{
+    auto& handler = registry.Systems().Get<SystemEventHandler1>();
+    EXPECT_CALL(handler, callInt(1)).Times(1);
+
+    registry.Events().OnEvent<Event1>(Event1{1});
+}
+
+
+TEST_F(SystemEventHandlerTest, Handler2_ReceivesEvent1)
+{
+    auto& handler = registry.Systems().Get<SystemEventHandler2>();
+    EXPECT_CALL(handler, callInt(1)).Times(1);
+
+    registry.Events().OnEvent<Event1>(Event1{1});
+}
+
+
+TEST_F(SystemEventHandlerTest, Handler2_ReceivesEvent2)
+{
+    auto& handler = registry.Systems().Get<SystemEventHandler2>();
+    EXPECT_CALL(handler, callInt(2)).Times(1);
+
+    registry.Events().OnEvent<Event2>(Event2{2});
+}
+
+
+TEST_F(SystemEventHandlerTest, Handler1_NotCalledForEvent2)
+{
+    auto& handler = registry.Systems().Get<SystemEventHandler1>();
+    EXPECT_CALL(handler, callInt(::testing::_)).Times(0);
+
+    registry.Events().OnEvent<Event2>(Event2{2});
+}
+
+
+TEST_F(SystemEventHandlerTest, BothHandlers_ReceiveBothEvents)
+{
+    auto& h1 = registry.Systems().Get<SystemEventHandler1>();
+    auto& h2 = registry.Systems().Get<SystemEventHandler2>();
+
+    EXPECT_CALL(h1, callInt(42)).Times(1);
+    EXPECT_CALL(h2, callInt(42)).Times(1);
+    EXPECT_CALL(h2, callInt(7)).Times(1);
+
+    registry.Events().OnEvent<Event1>(Event1{42});
+    registry.Events().OnEvent<Event2>(Event2{7});
+}

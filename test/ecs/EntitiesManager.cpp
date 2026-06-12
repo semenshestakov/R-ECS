@@ -1328,3 +1328,40 @@ TEST_F(EntitiesManagerTest, RemoveComponents_NonexistentComponent_NoConstructors
     EXPECT_EQ(MoveTracker::copyCount, 0);
     EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 4);
 }
+
+
+TEST_F(EntitiesManagerTest, Teardown_DestructsEveryLiveComponent_HeapNoLeak)
+{
+    // Regression: destroying the manager must destruct every live component exactly once,
+    // even when several heap-owning components share one archetype. Validated under ASan/LSan.
+    for (int i = 0; i < 5; ++i)
+        manager.Create<Entity>(CreateMixedPrefab()); // {Position2d, Position3d (owns a heap buffer)}
+
+    // Include a migrated entity in the same archetype.
+    const auto migrated = manager.Create<Entity>(Create2DPrefab());
+    manager.AddComponents(migrated, Position3d{1.f, 2.f, 3.f});
+
+    EXPECT_EQ(manager.size(), 6);
+    // No explicit Destroy: the fixture's manager is destructed at the end of the test.
+}
+
+
+TEST_F(EntitiesManagerTest, Teardown_CallsDestructorForEveryLiveComponent)
+{
+    LifeStats::reset();
+    {
+        EntitiesManager local;
+        for (int i = 0; i < 4; ++i)
+        {
+            PrefabEntity prefab;
+            prefab.AddComponent<LifeTracker>(i);
+            prefab.AddComponent<Position2d>();
+            local.Create<Entity>(std::move(prefab));
+        }
+        // 4 live LifeTracker components remain in storage and are destructed on teardown.
+    }
+
+    // Balanced lifecycle: every constructed LifeTracker is destructed exactly once.
+    EXPECT_EQ(LifeStats::dtor, LifeStats::liveConstructions());
+    EXPECT_EQ(LifeStats::dtor, 8); // 4 moved into storage + 4 moved-from prefab temporaries
+}

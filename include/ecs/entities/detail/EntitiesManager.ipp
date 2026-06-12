@@ -4,14 +4,7 @@
 
 inline ecs::EntitiesManager::EntitiesManager() { resize(256); }
 
-inline ecs::EntitiesManager::~EntitiesManager()
-{
-    for(entityId_t entityId = INVALID_ENTITY_ID + 1; entityId < m_lastEntityId; ++entityId)
-    {
-        if(m_versionByEntityIndex[entityId] != INVALID_ENTITY_VERSION)
-            m_storage.Destroy(m_entitiesLocationByEntityIndex[entityId]);
-    }
-}
+inline ecs::EntitiesManager::~EntitiesManager() = default;
 
 template<ecs::EntityConcept ReturnType, ecs::PrefabEntityRef PrefabRef>
 ReturnType ecs::EntitiesManager::Create(PrefabRef&& prefabEntity)

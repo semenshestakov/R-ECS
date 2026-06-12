@@ -115,6 +115,24 @@ inline ecs::ArchetypedChunks::ArchetypedChunks(Archetype a_archetype) : m_archet
     m_hasFreeEntityInChunk.set(0);
 }
 
+inline ecs::ArchetypedChunks::~ArchetypedChunks()
+{
+    for (std::size_t chunkIndex = 0; chunkIndex < m_chunksEntityCount.size(); ++chunkIndex)
+    {
+        const chunkEntityIndex_t aliveCount = m_chunksEntityCount[chunkIndex];
+
+        for (chunkEntityIndex_t localEntityIndex = 0; localEntityIndex < aliveCount; ++localEntityIndex)
+        {
+            for (const componentId_t componentId : m_archetype)
+            {
+                const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+                componentInfo.destructor(
+                    &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * localEntityIndex]);
+            }
+        }
+    }
+}
+
 
 inline ecs::entityId_t ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityIndex)
 {

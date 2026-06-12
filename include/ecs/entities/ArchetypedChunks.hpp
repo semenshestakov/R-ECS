@@ -157,6 +157,17 @@ namespace ecs
         ArchetypedChunks& operator=(ArchetypedChunks&&) noexcept = default;
 
         /**
+         * @brief Destroys all components of every live entity still stored here.
+         *
+         * Iterates the live range of each chunk and calls the destructor of each
+         * component in place. No swap-remove relocation is performed, so this is safe
+         * to run at teardown regardless of external location bookkeeping. Moved-from
+         * source slots left behind by prior swap-remove operations lie outside the live
+         * range and are intentionally not destructed.
+         */
+        ~ArchetypedChunks();
+
+        /**
          * @brief Creates a new entity in this archetype's storage.
          *
          * Allocates a new entity slot, either reusing a freed index or expanding the storage.

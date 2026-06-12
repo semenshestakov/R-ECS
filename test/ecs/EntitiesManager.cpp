@@ -1171,3 +1171,160 @@ TEST_F(EntitiesManagerTest, RemoveComponents_ManyEntities_DataIntegrity)
         }
     }
 }
+
+
+TEST_F(EntitiesManagerTest, AddComponents_PreservedComponent_IsMovedOnce_NeverCopied)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(7);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.AddComponents(entity, Position2d{1.f, 2.f});
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 7);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_MultiplePreservedComponents_EachMovedOnce)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(1);
+    prefab.AddComponent<Position2d>(3.f, 4.f);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.AddComponents(entity, Position3d{5.f, 6.f, 7.f});
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_NewComponent_Rvalue_OneMove_NoCopy)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    LifeStats::reset();
+    manager.AddComponents(entity, LifeTracker{42});
+
+    EXPECT_EQ(LifeStats::moveCtor, 1);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 0);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_NewComponent_Lvalue_OneCopy_NoMove)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    LifeTracker source{42};
+    LifeStats::reset();
+    manager.AddComponents(entity, source);
+
+    EXPECT_EQ(LifeStats::copyCtor, 1);
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_OverwriteExisting_NoConstructors_OnlyAssignment)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<LifeTracker>(1);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    LifeStats::reset();
+    manager.AddComponents(entity, LifeTracker{9});
+
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 1);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_PreservedComponent_IsMovedOnce_NeverCopied)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(5);
+    prefab.AddComponent<Position2d>(1.f, 2.f);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<Position2d>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 5);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_DroppedComponent_NeverCopiedOrMoved)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(3);
+    prefab.AddComponent<Position2d>();
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<MoveTracker>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 0);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.TryGetComponent<MoveTracker>(entity), nullptr);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_MultiplePreservedComponents_EachMovedOnce)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(8);
+    prefab.AddComponent<Position2d>(1.f, 1.f);
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<TestId>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 1.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddThenRemove_PreservedComponent_MovedOncePerMigration_NeverCopied)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(11);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.AddComponents(entity, Position2d{1.f, 2.f});
+    manager.RemoveComponents<Position2d>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 2);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 11);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_NonexistentComponent_NoConstructorsAtAll)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(4);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<Position2d>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 0);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 4);
+}

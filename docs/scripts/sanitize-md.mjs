@@ -11,10 +11,24 @@ const SENT = String.fromCharCode(0)
 const KEEP_HTML =
   /<\/?(?:a|br|hr|sub|sup|b|i|em|strong|small|kbd|p|ul|ol|li|table|thead|tbody|tr|td|th|div|span|details|summary|img)\b[^>]*\/?>/gi
 
+// In GFM tables a literal "|" inside a cell (even within `code`) must be
+// escaped as "\|", otherwise it is read as a column separator. moxygen emits
+// operator names like `operator|` unescaped, so fix them here.
+function escapeTablePipes(text) {
+  return text
+    .split('\n')
+    .map((line) =>
+      /^\s*\|/.test(line)
+        ? line.replace(/`[^`\n]*`/g, (code) => code.replace(/(?<!\\)\|/g, '\\|'))
+        : line,
+    )
+    .join('\n')
+}
+
 function sanitize(text) {
   const stash = []
   const keep = (m) => SENT + (stash.push(m) - 1) + SENT
-  let t = text
+  let t = escapeTablePipes(text)
     .replace(/```[\s\S]*?```/g, keep) // fenced code blocks
     .replace(/`[^`\n]*`/g, keep) // inline code spans
     .replace(KEEP_HTML, keep) // genuine HTML tags

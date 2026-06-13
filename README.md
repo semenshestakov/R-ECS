@@ -9,11 +9,14 @@
   <img alt="C++20"   src="https://img.shields.io/badge/C%2B%2B-20-00599C?logo=c%2B%2B&logoColor=white">
   <img alt="CMake"   src="https://img.shields.io/badge/build-CMake-064F8C?logo=cmake&logoColor=white">
   <img alt="Tests"   src="https://img.shields.io/badge/tests-GoogleTest-34A853">
+  <img alt="Benchmarks" src="https://img.shields.io/badge/benchmarks-Google%20Benchmark-EA4335">
   <img alt="License" src="https://img.shields.io/badge/license-see%20LICENSE.md-blue">
   <img alt="Version" src="https://img.shields.io/badge/version-0.11.3-orange">
+  <a href="https://semenshestakov.github.io/R-ECS/"><img alt="Docs site" src="https://img.shields.io/badge/docs-online-success?logo=readthedocs&logoColor=white"></a>
 </p>
 
 <p align="center">
+  🌐 <a href="https://semenshestakov.github.io/R-ECS/"><b>Live docs site</b></a> &nbsp;·&nbsp;
   📖 <a href="docs/README.md">Documentation</a> &nbsp;·&nbsp;
   🚀 <a href="examples/README.md">Examples</a> &nbsp;·&nbsp;
   🇬🇧 <a href="docs/en/README.md">English docs</a> &nbsp;·&nbsp;

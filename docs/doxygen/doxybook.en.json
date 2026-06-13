@@ -1,0 +1,18 @@
+{
+  "baseUrl": "/en/api/",
+  "fileExt": "md",
+  "linkSuffix": ".md",
+  "indexInFolders": true,
+  "mainPageInRoot": false,
+  "mainPageName": "index",
+  "sort": true,
+  "indexClassesName": "Classes",
+  "indexNamespacesName": "Namespaces",
+  "indexFilesName": "Files",
+  "indexGroupsName": "Modules",
+  "indexExamplesName": "Examples",
+  "folderClassesName": "classes",
+  "folderFilesName": "files",
+  "folderGroupsName": "modules",
+  "folderNamespacesName": "namespaces"
+}

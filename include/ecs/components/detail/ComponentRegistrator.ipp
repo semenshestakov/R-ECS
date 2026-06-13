@@ -42,7 +42,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
 }
 
 template<ecs::IsComponent ComponentCls>
-/* static */ ecs::componentId_t ecs::ComponentRegistrator::GetСomponentId()
+/* static */ ecs::componentId_t ecs::ComponentRegistrator::GetComponentId()
 {
     static componentId_t s_componentId = []()
     {

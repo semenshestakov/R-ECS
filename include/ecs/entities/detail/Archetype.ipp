@@ -42,7 +42,7 @@ template<ecs::IsComponent... ComponentCls>
         Archetype archetype;
         if(sizeof...(ComponentCls) > 0)
         {
-            (archetype.set(ComponentRegistrator::GetСomponentId<ComponentCls>()), ...);
+            (archetype.set(ComponentRegistrator::GetComponentId<ComponentCls>()), ...);
             archetype.m_hash = Archetype::GetArchetypeHash(archetype);
         }
         return archetype;

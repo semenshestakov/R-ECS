@@ -114,7 +114,7 @@ namespace ecs
          * @note If the component type was not registered, behavior is undefined.
          */
         template<IsComponent ComponentCls>
-        static componentId_t GetСomponentId();
+        static componentId_t GetComponentId();
     };
 
 }

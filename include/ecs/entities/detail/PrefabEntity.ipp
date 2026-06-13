@@ -5,7 +5,7 @@
 template<ecs::IsComponent ComponentCls, typename... Args>
 void ecs::PrefabEntity::AddComponent(Args&&... args)
 {
-    static const componentId_t componentId = ComponentRegistrator::GetСomponentId<ComponentCls>();
+    static const componentId_t componentId = ComponentRegistrator::GetComponentId<ComponentCls>();
     if(m_dataByComponentsIndex.size() <= componentId)
     {
         m_dataByComponentsIndex.resize(componentId + 1);

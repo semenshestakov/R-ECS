@@ -1,0 +1,39 @@
+# ── Build directories ──────────────────────────────────────────────
+build/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.cmake
+!.clang-format
+
+# ── Generated documentation ────────────────────────────────────────
+docs/.build/
+docs/xml/
+docs/html/
+docs/latex/
+docs/en/api/
+docs/ru/api/
+
+# ── IDE / editor ───────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.user
+
+# ── OS / filesystem cruft ──────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+.fuse_hidden*
+Thumbs.db
+
+# ── Compiled artifacts ─────────────────────────────────────────────
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe

@@ -58,7 +58,7 @@ void ecs::EntitiesManager::AddComponents(const Entity& entity, Args&&... args)
     const ArchetypedChunkEntityLocation oldLocation = m_entitiesLocationByEntityIndex[entity.id];
 
     Archetype argsArchetype;
-    (argsArchetype.set(ComponentRegistrator::GetСomponentId<std::remove_cvref_t<Args>>()), ...);
+    (argsArchetype.set(ComponentRegistrator::GetComponentId<std::remove_cvref_t<Args>>()), ...);
 
     const Archetype oldArchetype = m_storage.getArchetype(oldLocation.archetypeIndex);
 
@@ -67,14 +67,14 @@ void ecs::EntitiesManager::AddComponents(const Entity& entity, Args&&... args)
         ([&]
         {
             using Component = std::remove_cvref_t<Args>;
-            byte* dest = m_storage.GetComponentData(oldLocation, ComponentRegistrator::GetСomponentId<Component>());
+            byte* dest = m_storage.GetComponentData(oldLocation, ComponentRegistrator::GetComponentId<Component>());
             *std::bit_cast<Component*>(dest) = std::forward<Args>(args);
         }(), ...);
         return;
     }
 
     Archetype newArchetype = oldArchetype;
-    (newArchetype.set(ComponentRegistrator::GetСomponentId<std::remove_cvref_t<Args>>()), ...);
+    (newArchetype.set(ComponentRegistrator::GetComponentId<std::remove_cvref_t<Args>>()), ...);
     newArchetype.updateHash();
 
     const auto [newLocation, swapRemovedEntityId] =
@@ -86,7 +86,7 @@ void ecs::EntitiesManager::AddComponents(const Entity& entity, Args&&... args)
     ([&]
     {
         using Comp = std::remove_cvref_t<Args>;
-        const componentId_t componentId = ComponentRegistrator::GetСomponentId<Comp>();
+        const componentId_t componentId = ComponentRegistrator::GetComponentId<Comp>();
         byte* dest = m_storage.GetComponentData(newLocation, componentId);
 
         if (oldArchetype.test(componentId))
@@ -110,7 +110,7 @@ void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
     const Archetype oldArchetype = m_storage.getArchetype(oldLocation.archetypeIndex);
 
     Archetype newArchetype = oldArchetype;
-    (newArchetype.reset(ComponentRegistrator::GetСomponentId<Args>()), ...);
+    (newArchetype.reset(ComponentRegistrator::GetComponentId<Args>()), ...);
 
     if (newArchetype == oldArchetype) // none of the requested components were present
         return;
@@ -190,13 +190,13 @@ inline const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& ent
 template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
 {
-    return std::bit_cast<ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) const
 {
-    return std::bit_cast<const ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<const ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>

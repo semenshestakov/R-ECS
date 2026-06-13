@@ -20,7 +20,7 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::iterator(Archetyped
     {
         m_componentArrays = std::tuple{
             std::bit_cast<ComponentCls*>(
-                m_archetypedChunks->GetComponentData(0, ComponentRegistrator::GetСomponentId<ComponentCls>())
+                m_archetypedChunks->GetComponentData(0, ComponentRegistrator::GetComponentId<ComponentCls>())
             )...
         };
     }
@@ -92,7 +92,7 @@ void ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::advance()
 
         m_componentArrays = std::tuple{
             std::bit_cast<ComponentCls*>(
-                m_archetypedChunks->GetComponentData(m_chunkIndex, ComponentRegistrator::GetСomponentId<ComponentCls>())
+                m_archetypedChunks->GetComponentData(m_chunkIndex, ComponentRegistrator::GetComponentId<ComponentCls>())
             )...
         };
         m_entityIndex = 0;
@@ -210,13 +210,13 @@ template <ecs::IsComponent ComponentCls>
 ComponentCls* ecs::ArchetypedChunks::TryGetComponent(const chunkEntityIndex_t chunkEntityIndex)
 {
     return std::bit_cast<ComponentCls*>(
-            GetComponentData(chunkEntityIndex, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+            GetComponentData(chunkEntityIndex, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template <ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::ArchetypedChunks::TryGetComponent(const chunkEntityIndex_t chunkEntityIndex) const
 {
-    return std::bit_cast<const ComponentCls*>(GetComponentData(chunkEntityIndex, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<const ComponentCls*>(GetComponentData(chunkEntityIndex, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template <ecs::IsComponent ComponentCls>

@@ -29,7 +29,9 @@ target_include_directories(R-ECS
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark = = = = = = = = = = = = = = = = = = = = = = = = =
 
-if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+option(IS_DOCS_GEN "Configure for documentation generation only (skip tests/benchmarks)" OFF)
+
+if(NOT IS_DOCS_GEN AND CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     SET(TEST_ENABLE ON)
     SET(BENCHMARK_ENABLE ON)
     add_compile_definitions(DEEP_TEST_ENABLE)

@@ -110,13 +110,13 @@ auto ecs::EntitiesArchetypeStorage::end() const
 template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location)
 {
-    return std::bit_cast<ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location) const
 {
-    return std::bit_cast<const ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<const ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 

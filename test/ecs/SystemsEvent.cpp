@@ -1,9 +1,9 @@
+#include "SystemsClass.hpp"
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
 #include "ecs/registry/Commands.hpp"
 #include "ecs/systems/SystemsManager.hpp"
 #include "gtest/gtest.h"
-#include "SystemsClass.hpp"
 
 
 using namespace ecs;

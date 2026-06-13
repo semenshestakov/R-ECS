@@ -1,6 +1,7 @@
 #pragma once
 #include "../Commands.hpp"
 #include "../Events.hpp"
+#include "ecs/Registry.hpp"
 
 template <typename E, ecs::Recipe R>
 void ecs::CookCmd<E, R>::operator()(Registry& registry) const

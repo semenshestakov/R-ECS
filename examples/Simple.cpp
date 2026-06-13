@@ -3,7 +3,6 @@
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
-#include "ecs/systems/SystemRegistrator.hpp"
 
 
 struct Vel2d
@@ -38,9 +37,7 @@ struct MoveSystem final : ecs::ISystem<MoveSystem>
 
 int main()
 {
-    auto registry = ecs::Registry(
-        *ecs::SystemRegistrator::GetSystemsManager("MyName")
-        );
+    auto registry = ecs::Registry::Create("MyName");
     registry.Init();
 
     ecs::PrefabEntity prefab;

@@ -46,7 +46,7 @@ namespace ecs
         /**
          * @brief Adds a component to the prefab entity.
          * Constructs component in-place using forwarded arguments and stores it
-         * at the index corresponding to ComponentRegistrator::GetСomponentId<ComponentCls>().
+         * at the index corresponding to ComponentRegistrator::GetComponentId<ComponentCls>().
          *
          * @tparam ComponentCls Component type to add (must be registered)
          * @tparam Args Argument types for component constructor

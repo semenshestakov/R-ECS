@@ -626,14 +626,14 @@ TEST_F(EntitiesManagerTest, GetComponentData_RawAccess_MatchesTypedAccess)
 {
     const auto entity = manager.Create<Entity>(Create2DPrefab(3.f, 4.f));
 
-    byte* raw = manager.GetComponentData(entity, ComponentRegistrator::GetСomponentId<Position2d>());
+    byte* raw = manager.GetComponentData(entity, ComponentRegistrator::GetComponentId<Position2d>());
     ASSERT_NE(raw, nullptr);
 
     const auto* pos = std::bit_cast<Position2d*>(raw);
     EXPECT_FLOAT_EQ(pos->x, 3.f);
     EXPECT_FLOAT_EQ(pos->y, 4.f);
 
-    EXPECT_EQ(manager.GetComponentData(Entity{}, ComponentRegistrator::GetСomponentId<Position2d>()), nullptr);
+    EXPECT_EQ(manager.GetComponentData(Entity{}, ComponentRegistrator::GetComponentId<Position2d>()), nullptr);
 }
 
 

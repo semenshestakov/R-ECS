@@ -139,11 +139,11 @@ namespace ecs
         std::vector<std::function<void(EventSystem&, event::priority_t)>> m_registerEventFunctions;
 
         /**
-         * @brief Creates a array of system hashes for the specified system types.
+         * @brief Creates an array of system hashes for the specified system types.
          *
          * This function generates a `std::array` containing the unique hash values of the provided
          * system types. It is primarily used for dependency management, allowing systems to
-         * declare their dependencies on other systems in a type-safe.
+         * declare their dependencies on other systems in a type-safe manner.
          *
          * @tparam SystemsArgs The system types to generate hashes for. Each type should be
          *                     a valid system class that has a corresponding `getSystemHash`
@@ -276,11 +276,13 @@ namespace ecs
 
 
 /**
- * @brief Macro to define factory registration names for an ECS component
+ * @brief Macro to define factory registration names for an ECS system
  *
- * This macro should be used within a component class definition to specify
- * one or more factory names under which the component will be registered.
- * The names enable factory-based creation and lookup of the component type.
+ * This macro should be used within a system class definition to specify
+ * one or more factory names under which the system will be registered.
+ * The names enable factory-based creation and lookup of the system type,
+ * and associate the system with the named Registry created via
+ * Registry::Create(name).
  *
  * @param ... One or more string literals representing factory names
  *
@@ -288,16 +290,17 @@ namespace ecs
  *       1. Defines GetRegistryNames() as a public static constexpr function
  *       2. Returns a std::array<std::string, N> with the specified names
  *
- * @warning Must be used inside a component class derived from IComponent<T>
+ * @warning Must be used inside a system class derived from ISystem<T>
  * @warning Names must be string literals (compile-time constants)
  *
- * @see IComponent
+ * @see ISystem
  * @see SystemRegistrator::Register
+ * @see Registry::Create
  *
  * @example
  * @code
- * class MyComponent : public IComponent<MyComponent> {
- *     ECS_REGISTRY("my_component", "alt_name")
+ * struct MySystem : ecs::ISystem<MySystem> {
+ *     ECS_REGISTRY("my_system", "alt_name")
  * };
  * @endcode
  */

@@ -1,0 +1,70 @@
+name: Docs
+
+# Build the API docs + VitePress site and publish to GitHub Pages.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'include/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'CMakeLists.txt'
+      - '.github/workflows/docs.yml'
+  workflow_dispatch:
+
+# Allow GITHUB_TOKEN to deploy to Pages and use OIDC.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One concurrent deployment; cancel superseded runs.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Pages serves this project under /<repo>/ — must match the repo name.
+      DOCS_BASE: /R-ECS/
+      # Uncomment + add the libretranslate service below to translate ru/api in CI.
+      # LT_URL: http://localhost:5000/translate
+    # services:
+    #   libretranslate:
+    #     image: libretranslate/libretranslate
+    #     ports: ['5000:5000']
+    #     env:
+    #       LT_LOAD_ONLY: en,ru
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends doxygen
+
+      - name: Install moxygen
+        run: npm install -g moxygen
+
+      - name: Generate docs + build site
+        run: bash docs/scripts/generate-docs.sh
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

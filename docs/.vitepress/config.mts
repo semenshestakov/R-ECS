@@ -59,6 +59,7 @@ const ruGuides = [
 export default defineConfig({
   title: 'R-ECS',
   description: 'Archetype-based Entity-Component-System framework for modern C++ (C++20)',
+  base: process.env.DOCS_BASE || '/',
   cleanUrls: true,
   ignoreDeadLinks: true,
   srcExclude: ['**/.build/**', '**/node_modules/**'],
@@ -68,6 +69,7 @@ export default defineConfig({
   },
   themeConfig: {
     search: { provider: 'local' },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/semenshestakov/R-ECS' }],
     nav: [
       {
         text: 'Guides',

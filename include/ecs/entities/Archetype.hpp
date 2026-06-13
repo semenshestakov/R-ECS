@@ -38,7 +38,7 @@ namespace ecs
      * Archetype represents a unique combination of components and serves as a template
      * for organizing entities with identical component sets.
      */
-    struct Archetype final : collection::BitSet
+    struct Archetype final : collections::BitSet
     {
 
         /**

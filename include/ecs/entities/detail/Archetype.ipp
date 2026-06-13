@@ -25,7 +25,7 @@ inline void ecs::Archetype::updateHash()
     m_hash = GetArchetypeHash(*this);
 }
 
-/* static */ constexpr ecs::archetypeHash_t ecs::Archetype::GetArchetypeHash(const collection::BitSet& bits)
+/* static */ constexpr ecs::archetypeHash_t ecs::Archetype::GetArchetypeHash(const collections::BitSet& bits)
 {
     archetypeHash_t result = 0x9e3779b9;
     for(const auto bitId: bits.data())

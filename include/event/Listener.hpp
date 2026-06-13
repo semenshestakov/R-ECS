@@ -132,7 +132,7 @@ namespace event
      *
      * @details
      * `SingleListener` is ideal for scenarios where you need to listen to an event
-     * with just one callback. It's more lightweight than collection-based listeners
+     * with just one callback. It's more lightweight than collections-based listeners
      * and provides simpler semantics when you know you'll only need one callback
      * per listener instance.
      *

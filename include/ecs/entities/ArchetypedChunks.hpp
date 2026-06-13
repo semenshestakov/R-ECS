@@ -276,7 +276,7 @@ namespace ecs
         Archetype m_archetype;                                                                      ///< Archetype shared by all entities stored in this container.
         std::vector<componentChunks_t> m_chunksByComponentId {};                                    ///< Indexed by component ID. Each entry stores memory chunks for that component.
         std::vector<chunkEntityIndex_t> m_chunksEntityCount {};                                     ///< Number of alive entities stored in each chunk.
-        collection::BitSet m_hasFreeEntityInChunk;                                                  ///< Tracks chunks that still have free capacity for new entities.
+        collections::BitSet m_hasFreeEntityInChunk;                                                  ///< Tracks chunks that still have free capacity for new entities.
 
         /// @brief Maps [chunkIndex][localEntityIndex] to global entity ID
         /// Used during entity destruction to retrieve the global ID of the entity being removed.

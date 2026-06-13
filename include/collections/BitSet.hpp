@@ -6,7 +6,7 @@
 #include "common_recs/utils/ClassUtils.hpp"
 
 
-namespace collection
+namespace collections
 {
 
     /**
@@ -286,6 +286,6 @@ namespace collection
         static constexpr dataItem_t getBit(std::size_t pos) noexcept;
     };
 
-} // namespace collection
+} // namespace collections
 #endif
 #include "detail/BitSet.ipp"

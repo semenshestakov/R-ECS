@@ -115,7 +115,7 @@ void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
     if (newArchetype == oldArchetype) // none of the requested components were present
         return;
 
-    if (newArchetype.min() == collection::BitSet::INVALID_INDEX) // every component removed -> entity no longer exists
+    if (newArchetype.min() == collections::BitSet::INVALID_INDEX) // every component removed -> entity no longer exists
     {
         Destroy(entity);
         return;

@@ -1,6 +1,6 @@
 #ifndef ARCHETYPE_HPP
 #define ARCHETYPE_HPP
-#include "ecs/utils/ComponentUtils.hpp"
+#include "../components/Utils.hpp"
 #include "collections/BitSet.hpp"
 
 

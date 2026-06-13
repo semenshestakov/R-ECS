@@ -4,7 +4,7 @@
 #include <atomic>
 #include <cstddef>
 
-#include "ecs/utils/ComponentUtils.hpp"
+#include "Utils.hpp"
 
 
 namespace ecs

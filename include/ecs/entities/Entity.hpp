@@ -4,7 +4,7 @@
  */
 
 #pragma once
-#include "ecs/utils/EntitiesUtils.hpp"
+#include "Utils.hpp"
 
 
 namespace ecs

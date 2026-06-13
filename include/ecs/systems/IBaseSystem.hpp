@@ -1,8 +1,7 @@
 #pragma once
-#include <string_view>
 #include <memory>
-#include "ecs/utils/SystemsError.hpp"
-#include "ecs/utils/SystemUtils.hpp"
+#include <string_view>
+#include "Utils.hpp"
 
 
 namespace ecs

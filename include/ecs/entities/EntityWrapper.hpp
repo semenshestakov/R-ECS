@@ -2,8 +2,8 @@
 #define ECS_ENTITY_WRAPPER_HPP
 #include <concepts>
 #include <functional>
+#include "../components/Utils.hpp"
 #include "Entity.hpp"
-#include "ecs/utils/ComponentUtils.hpp"
 
 
 namespace ecs

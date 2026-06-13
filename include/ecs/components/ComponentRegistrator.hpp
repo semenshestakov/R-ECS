@@ -1,7 +1,7 @@
 #ifndef COMPONENTS_REGISTRATOR_HPP
 #define COMPONENTS_REGISTRATOR_HPP
 
-#include "../utils/ComponentUtils.hpp"
+#include "Utils.hpp"
 #include "reg/Registrator.hpp"
 
 

@@ -5,10 +5,10 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include "../components/Utils.hpp"
 #include "Archetype.hpp"
 #include "ArchetypedChunks.hpp"
-#include "ecs/utils/ComponentUtils.hpp"
-#include "ecs/utils/EntitiesUtils.hpp"
+#include "Utils.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 
 

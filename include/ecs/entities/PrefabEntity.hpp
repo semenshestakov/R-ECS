@@ -3,9 +3,9 @@
 #include <memory>
 #include <vector>
 
+#include "../components/Utils.hpp"
 #include "Archetype.hpp"
 #include "ecs/components/ComponentRegistrator.hpp"
-#include "ecs/utils/ComponentUtils.hpp"
 
 
 namespace ecs

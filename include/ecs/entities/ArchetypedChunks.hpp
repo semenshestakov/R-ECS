@@ -1,10 +1,10 @@
 #ifndef ARCHETYPED_CHUNKS_HPP
 #define ARCHETYPED_CHUNKS_HPP
+#include "../components/Utils.hpp"
 #include "Archetype.hpp"
-#include "ecs/utils/ComponentUtils.hpp"
-#include "ecs/utils/EntitiesUtils.hpp"
-#include "ecs/entities/PrefabEntity.hpp"
+#include "Utils.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
+#include "ecs/entities/PrefabEntity.hpp"
 
 
 namespace ecs

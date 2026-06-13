@@ -1,12 +1,12 @@
 #pragma once
 #include <bit>
-#include <stdexcept>
-#include "../ComponentRegistrator.hpp"
+
 #include "../ComponentFreeList.hpp"
-#include "ecs/utils/ComponentError.hpp"
+#include "../ComponentRegistrator.hpp"
+#include "../Utils.hpp"
 
 
-template<ecs::IsComponent ComponentCls>
+template <ecs::IsComponent ComponentCls>
 ecs::RegisterComponentInfo ecs::RegisterComponentInfo::Create(const std::string& name)
 {
     return {.name = std::string(name),

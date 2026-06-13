@@ -10,6 +10,9 @@ cmake_install.cmake
 
 # ── Generated documentation ────────────────────────────────────────
 docs/.build/
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
 docs/xml/
 docs/html/
 docs/latex/

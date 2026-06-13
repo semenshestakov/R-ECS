@@ -10,15 +10,15 @@ C++ (C++20). Сущности хранятся в плотных чанках, �
 
 ## 🚀 С чего начать
 
-| Руководство | О чём |
-|-------------|-------|
-| [Быстрый старт](./guides/getting-started.md) | Сборка, первая программа на 30 строк, цикл кадра |
-| [Компоненты и префабы](./guides/components-and-prefabs.md) | Описание компонентов, `PrefabEntity`, `AddComponent` |
-| [Сущности и представления](./guides/entities-and-views.md) | `Create`, `GetComponent`, `view<...>`, `EntityWrapper` |
-| [Системы и планирование](./guides/systems-and-scheduling.md) | `ISystem`, `ECS_REGISTRY`, `ECS_DEPENDENT_SYSTEMS`, DAG |
-| [События](./guides/events.md) | `ECS_EVENT`, `OnEvent` против `PushEvent`, приоритет |
-| [Команды](./guides/commands.md) | Отложенные `CreateEntityCmd` / `DeleteEntityCmd` / `AddComponentsCmd` |
-| [Рецепты и «готовка»](./guides/recipes-and-cooking.md) | `Recipe`, `CookCmd`, `PrefabEvt` / `CreatedEntityEvt` |
+| Руководство | О чём                                                                    |
+|-------------|--------------------------------------------------------------------------|
+| [Быстрый старт](./guides/getting-started.md) | Сборка, первая программа на 30 строк, цикл кадра                         |
+| [Компоненты и префабы](./guides/components-and-prefabs.md) | Описание компонентов, `PrefabEntity`, `AddComponent`                     |
+| [Сущности и представления](./guides/entities-and-views.md) | `Create`, `GetComponent`, `view<...>`, `EntityWrapper`                   |
+| [Системы и планирование](./guides/systems-and-scheduling.md) | `ISystem`, `ECS_REGISTRY`, `ECS_DEPENDENT_SYSTEMS`, DAG                  |
+| [События](./guides/events.md) | `ECS_EVENT`, `OnEvent` против `PushEvent`, приоритет                     |
+| [Команды](./guides/commands.md) | Отложенные `CreateEntityCmd` / `DeleteEntityCmd` / `AddComponentsCmd` / `RemoveComponentsCmd` |
+| [Рецепты и «готовка»](./guides/recipes-and-cooking.md) | `Recipe`, `CookCmd`, `PrefabEvt` / `CreatedEntityEvt`                    |
 
 ## 📚 Справочник API
 

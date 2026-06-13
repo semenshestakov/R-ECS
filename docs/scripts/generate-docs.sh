@@ -50,6 +50,7 @@ need() {
 }
 need doxygen   "Install:  brew install doxygen   |   apt-get install doxygen"
 need moxygen   "Install:  npm install -g moxygen"
+need npm       "Install Node.js (https://nodejs.org) — provides npm/npx for the VitePress site"
 
 # ── Project version (read from CMakeLists.txt) ──────────────────────────
 PROJECT_NUMBER="$(grep -Eo 'VERSION[[:space:]]+[0-9]+\.[0-9]+\.[0-9]+' "${ROOT_DIR}/CMakeLists.txt" \
@@ -81,7 +82,23 @@ for code in ${LANGUAGES}; do
   echo "  ─ [${code}] moxygen → Markdown (docs/${code}/api)"
   rm -rf "${api_dir}"
   mkdir -p "${api_dir}"
-  moxygen --anchors --classes --output "${api_dir}/%s.md" "${xml_dir}/xml"
+  moxygen --html-anchors --classes --output "${api_dir}/%s.md" "${xml_dir}/xml"
+
+  echo "  ─ [${code}] sanitize Markdown for VitePress"
+  node "${SCRIPT_DIR}/sanitize-md.mjs" "${api_dir}"
 done
 
-echo "✓ Done. Open docs/README.md and pick a language."
+# ── Build the VitePress site from the generated Markdown ─────────────────
+echo "▶ Building VitePress site"
+(
+  cd "${DOCS_DIR}"
+  [[ -d node_modules ]] || npm install
+  npx vitepress build
+)
+
+echo "✓ Done. Static site built → docs/.vitepress/dist"
+echo ""
+echo "  Open the site:"
+echo "    • Live dev server (hot reload):   cd docs && npm run docs:dev      → http://localhost:5173"
+echo "    • Preview the built site:          cd docs && npm run docs:preview  → http://localhost:4173"
+echo "    • Rebuild static site only:        cd docs && npm run docs:build"

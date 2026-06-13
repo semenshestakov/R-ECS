@@ -25,7 +25,7 @@ inline void ecs::Archetype::updateHash()
     m_hash = GetArchetypeHash(*this);
 }
 
-/* static */ constexpr ecs::archetypeHash_t ecs::Archetype::GetArchetypeHash(const collection::BitSet& bits)
+/* static */ constexpr ecs::archetypeHash_t ecs::Archetype::GetArchetypeHash(const collections::BitSet& bits)
 {
     archetypeHash_t result = 0x9e3779b9;
     for(const auto bitId: bits.data())
@@ -42,7 +42,7 @@ template<ecs::IsComponent... ComponentCls>
         Archetype archetype;
         if(sizeof...(ComponentCls) > 0)
         {
-            (archetype.set(ComponentRegistrator::GetСomponentId<ComponentCls>()), ...);
+            (archetype.set(ComponentRegistrator::GetComponentId<ComponentCls>()), ...);
             archetype.m_hash = Archetype::GetArchetypeHash(archetype);
         }
         return archetype;

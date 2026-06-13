@@ -1,14 +1,16 @@
 #ifndef ARCHETYPED_CHUNKS_HPP
 #define ARCHETYPED_CHUNKS_HPP
+#include "../components/Utils.hpp"
 #include "Archetype.hpp"
-#include "ecs/utils/ComponentUtils.hpp"
-#include "ecs/utils/EntitiesUtils.hpp"
+#include "Utils.hpp"
+#include "common_recs/utils/ClassUtils.hpp"
+#include "ecs/entities/PrefabEntity.hpp"
 
 
 namespace ecs
 {
 
-    struct PrefabEntity;
+#include "PrefabEntity.hpp"
     struct Entity;
 
     /**
@@ -156,6 +158,17 @@ namespace ecs
         ArchetypedChunks& operator=(ArchetypedChunks&&) noexcept = default;
 
         /**
+         * @brief Destroys all components of every live entity still stored here.
+         *
+         * Iterates the live range of each chunk and calls the destructor of each
+         * component in place. No swap-remove relocation is performed, so this is safe
+         * to run at teardown regardless of external location bookkeeping. Moved-from
+         * source slots left behind by prior swap-remove operations lie outside the live
+         * range and are intentionally not destructed.
+         */
+        ~ArchetypedChunks();
+
+        /**
          * @brief Creates a new entity in this archetype's storage.
          *
          * Allocates a new entity slot, either reusing a freed index or expanding the storage.
@@ -168,7 +181,21 @@ namespace ecs
          * @pre Entity must have all components required by this archetype
          * @post Entity is marked as alive and its component data is stored in the chunk arrays
          */
-        chunkEntityIndex_t Create(const PrefabEntity& entity, entityId_t entityId);
+        template<PrefabEntityRef PrefabRef>
+        chunkEntityIndex_t Create(PrefabRef&& entity, entityId_t entityId);
+
+        /**
+         * @brief Reserves a new entity slot without constructing component data.
+         *
+         * Performs the same slot bookkeeping as Create (reusing a freed chunk index or
+         * expanding storage and ensuring backing chunk memory exists for every component),
+         * but leaves the component memory raw/uninitialized so the caller can construct or
+         * migrate component data into it.
+         *
+         * @param entityId global entity id stored in the reserved slot
+         * @return chunkEntityIndex_t Unique index identifying the reserved slot
+         */
+        [[nodiscard]] chunkEntityIndex_t AllocateRawSlot(entityId_t entityId);
 
         /**
          * @brief Destroys an entity and frees its storage slot.
@@ -243,13 +270,13 @@ namespace ecs
         template<typename ValueType, IsComponent... ComponentCls>
         auto end();
 
-    private:
+    DEEP_TEST_PRIVATE_ACCESS:
         using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;                             ///< Collection of memory chunks storing one component type.
 
         Archetype m_archetype;                                                                      ///< Archetype shared by all entities stored in this container.
         std::vector<componentChunks_t> m_chunksByComponentId {};                                    ///< Indexed by component ID. Each entry stores memory chunks for that component.
         std::vector<chunkEntityIndex_t> m_chunksEntityCount {};                                     ///< Number of alive entities stored in each chunk.
-        collection::BitSet m_hasFreeEntityInChunk;                                                  ///< Tracks chunks that still have free capacity for new entities.
+        collections::BitSet m_hasFreeEntityInChunk;                                                  ///< Tracks chunks that still have free capacity for new entities.
 
         /// @brief Maps [chunkIndex][localEntityIndex] to global entity ID
         /// Used during entity destruction to retrieve the global ID of the entity being removed.

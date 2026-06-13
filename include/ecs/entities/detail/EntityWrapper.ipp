@@ -23,11 +23,11 @@ const ComponentCls& ecs::EntityWrapper::GetComponent() const
 template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntityWrapper::TryGetComponent()
 {
-    return std::bit_cast<ComponentCls*>(GetComponentData(ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<ComponentCls*>(GetComponentData(ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntityWrapper::TryGetComponent() const
 {
-    return std::bit_cast<const ComponentCls*>(GetComponentData(ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<const ComponentCls*>(GetComponentData(ComponentRegistrator::GetComponentId<ComponentCls>()));
 }

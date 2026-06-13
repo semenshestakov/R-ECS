@@ -2,8 +2,8 @@
 #define ECS_ENTITY_WRAPPER_HPP
 #include <concepts>
 #include <functional>
+#include "../components/Utils.hpp"
 #include "Entity.hpp"
-#include "ecs/utils/ComponentUtils.hpp"
 
 
 namespace ecs
@@ -105,13 +105,9 @@ namespace ecs
         [[nodiscard]] const byte* GetComponentData(componentId_t componentId) const;
 
         /**
-         * @brief Gets underlying entity handle.
-         * Provides access to raw entity (ID + version) for cases where
-         * direct entity reference is needed.
-         * @return Const reference to stored entity
-         */
-        /**
          * @brief Gets the underlying entity handle.
+         * Provides access to the raw entity (ID + version) for cases where a
+         * direct entity reference is needed.
          * @return Const reference to stored entity
          */
         [[nodiscard]] const Entity& getEntity() const { return m_entity; }

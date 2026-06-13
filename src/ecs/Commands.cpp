@@ -1,5 +1,5 @@
-#include "ecs/Registry.hpp"
 #include "ecs/registry/Commands.hpp"
+#include "ecs/Registry.hpp"
 
 
 void ecs::CreateEntityCmd::operator()(Registry& registry) const

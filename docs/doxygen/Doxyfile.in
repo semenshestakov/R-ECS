@@ -1,0 +1,71 @@
+# ════════════════════════════════════════════════════════════════════════
+#  R-ECS — Doxyfile template
+#  Processed by docs/scripts/generate-docs.sh (placeholders @VAR@ substituted).
+#  Generates Doxygen XML only; Markdown is produced from the XML by doxybook2.
+# ════════════════════════════════════════════════════════════════════════
+
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "R-ECS"
+PROJECT_NUMBER         = "@PROJECT_NUMBER@"
+PROJECT_BRIEF          = "Archetype-based Entity-Component-System framework for modern C++"
+
+# Language of the auto-generated labels ("Parameters", "Returns", ...).
+# Substituted per target language by the generator (English / Russian / ...).
+OUTPUT_LANGUAGE        = @OUTPUT_LANGUAGE@
+
+OUTPUT_DIRECTORY       = "@OUTPUT_DIRECTORY@"
+CREATE_SUBDIRS         = NO
+ALLOW_UNICODE_NAMES    = YES
+
+# ── Parsing ────────────────────────────────────────────────────────────
+INPUT                  = @INPUT_PATHS@
+INPUT_ENCODING         = UTF-8
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.ipp *.h *.cpp *.md
+USE_MDFILE_AS_MAINPAGE = @MAINPAGE@
+
+TAB_SIZE               = 4
+MARKDOWN_SUPPORT       = YES
+AUTOLINK_SUPPORT       = YES
+BUILTIN_STL_SUPPORT    = YES
+JAVADOC_AUTOBRIEF      = YES
+QT_AUTOBRIEF           = YES
+DISTRIBUTE_GROUP_DOC   = YES
+
+# ── What to extract ────────────────────────────────────────────────────
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_PRIV_VIRTUAL   = NO
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+CASE_SENSE_NAMES       = YES
+SHOW_USED_FILES        = YES
+SORT_MEMBER_DOCS       = NO
+
+# ── Preprocessor: teach Doxygen the project's access macros ────────────
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+SKIP_FUNCTION_MACROS   = NO
+PREDEFINED             = DEEP_TEST_PRIVATE_ACCESS=private \
+                         DEEP_TEST_PROTECTED_ACCESS=protected \
+                         "ECS_REGISTRY(...)=" \
+                         "ECS_EVENT(m,e)=" \
+                         "ECS_DEPENDENT_SYSTEMS(...)="
+
+# ── Diagnostics ────────────────────────────────────────────────────────
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+
+# ── Output: XML only (Markdown comes from doxybook2) ───────────────────
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = YES
+XML_OUTPUT             = xml
+XML_PROGRAMLISTING     = NO
+GENERATE_TODOLIST      = YES

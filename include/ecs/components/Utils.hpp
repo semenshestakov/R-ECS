@@ -1,6 +1,6 @@
 #pragma once
-#include <concepts>
-#include <type_traits>
+#include <cstdint>
+#include "common_recs/utils/BaseError.hpp"
 
 
 namespace ecs
@@ -23,5 +23,15 @@ namespace ecs
      * (e.g. trivially copyable, default-constructible, etc.).
      */
     template<typename T> concept IsComponent = requires { true; };
+
+
+    namespace error
+    {
+        inline constexpr char g_componentErrorName[] = "ComponentError: ";
+        using BaseComponentError = recs::error::BaseNamedError<g_componentErrorName>;
+
+        /// @brief Thrown when an invalid component ID is encountered.
+        struct InvalidComponentId final : BaseComponentError { using BaseComponentError::BaseComponentError;};
+    }
 
 }

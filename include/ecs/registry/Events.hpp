@@ -12,7 +12,7 @@ namespace ecs
      *
      * @tparam E The EntityWrapper-derived type to create
      *
-     * Fired by CookCommand via EventSystem::OnEvent().
+     * Fired by CookCmd via EventSystem::OnEvent().
      * A subscribed handler typically reads the prefab and creates the entity
      * (directly or via another deferred command).
      */

@@ -2,7 +2,7 @@
 #include "collections/BitSet.hpp"
 
 
-using collection::BitSet;
+using collections::BitSet;
 
 
 TEST(BitSetTest, ConstructorAndSize)

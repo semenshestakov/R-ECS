@@ -1,10 +1,11 @@
-#pragma once
+#ifndef PREFAB_ENTITY_HPP
+#define PREFAB_ENTITY_HPP
 #include <memory>
 #include <vector>
 
+#include "../components/Utils.hpp"
 #include "Archetype.hpp"
 #include "ecs/components/ComponentRegistrator.hpp"
-#include "ecs/utils/ComponentUtils.hpp"
 
 
 namespace ecs
@@ -45,7 +46,7 @@ namespace ecs
         /**
          * @brief Adds a component to the prefab entity.
          * Constructs component in-place using forwarded arguments and stores it
-         * at the index corresponding to ComponentRegistrator::GetСomponentId<ComponentCls>().
+         * at the index corresponding to ComponentRegistrator::GetComponentId<ComponentCls>().
          *
          * @tparam ComponentCls Component type to add (must be registered)
          * @tparam Args Argument types for component constructor
@@ -62,11 +63,29 @@ namespace ecs
         void AddComponent(Args&&... args);
 
         /**
+         * @brief Custom deleter for component slots acquired from ComponentFreeList.
+         *
+         * Used as the deleter type of unique_ptr<byte[], PoolDeleter> inside
+         * componentsData_t. On destruction, returns the raw slot back to the
+         * per-type free list via ComponentRegistrator::GetInfo(componentId).poolRelease,
+         * avoiding a call to the system deallocator.
+         *
+         * @note Does NOT call the component destructor — that responsibility belongs
+         *       to the PrefabEntity destructor and clear(), which must run it explicitly
+         *       before the unique_ptr goes out of scope.
+         */
+        struct PoolDeleter
+        {
+            componentId_t componentId { INVALID_COMPONENT_ID }; ///< ID of the component type whose free list owns this slot.
+            void operator()(byte* ptr) const;
+        };
+
+        /**
          * @brief Container type for component data.
          * Sparse vector indexed by component ID, each entry holds a unique_ptr
-         * to the component's byte array or nullptr if component not present.
+         * to the component's byte array (acquired from ComponentFreeList) or nullptr if component not present.
          */
-        using componentsData_t = std::vector<std::unique_ptr<byte[]>>;
+        using componentsData_t = std::vector<std::unique_ptr<byte[], PoolDeleter>>;
 
         /**
          * @brief Gets the raw component data storage.
@@ -83,42 +102,30 @@ namespace ecs
          */
         void clear();
 
+        /**
+         * @brief Returns the archetype derived from currently added components.
+         *
+         * Recomputes the archetype hash lazily when the component set has changed
+         * since the last call (i.e. when m_isDirtyArchetype is true).
+         *
+         * @return Const reference to the up-to-date archetype.
+         */
         const Archetype& getArchetype() const;
 
     private:
         componentsData_t m_dataByComponentsIndex {};        ///< Sparse vector of component data indexed by component ID
-        mutable Archetype m_archetype;
-        mutable bool m_isDirtyArchetype = false;
+        mutable Archetype m_archetype;              ///< Cached archetype built from all added component IDs.
+        mutable bool m_isDirtyArchetype = false;    ///< True when the component set changed and the archetype hash needs recomputation.
     };
 
-    template<IsComponent ComponentCls, typename... Args>
-    void PrefabEntity::AddComponent(Args&&... args)
-    {
-        static const componentId_t componentId = ComponentRegistrator::GetСomponentId<ComponentCls>();
-        if(m_dataByComponentsIndex.size() <= componentId)
-        {
-            m_dataByComponentsIndex.resize(componentId + 1);
-        }
-
-        auto ptr = std::make_unique<byte[]>(sizeof(ComponentCls));
-        new(ptr.get()) ComponentCls(std::forward<Args>(args)...);
-
-        if (m_dataByComponentsIndex[componentId] == nullptr)
-            m_isDirtyArchetype = true;
-
-        m_archetype.set(componentId);
-        m_dataByComponentsIndex[componentId] = std::move(ptr);
-    }
-
-    inline const Archetype& PrefabEntity::getArchetype() const
-    {
-        if (m_isDirtyArchetype)
-        {
-            m_archetype.updateHash();
-            m_isDirtyArchetype = false;
-        }
-
-        return m_archetype;
-    }
+    /**
+     * @brief Constrains a forwarding reference to PrefabEntity.
+     * Allows only `const PrefabEntity&` (copy path) or `PrefabEntity&&` (move path).
+     * Mutable lvalue references are rejected to enforce const-correctness.
+     */
+    template<typename T>
+    concept PrefabEntityRef = std::same_as<std::remove_cvref_t<T>, PrefabEntity>;
 
 } // namespace ecs
+#endif
+#include "detail/PrefabEntity.ipp"

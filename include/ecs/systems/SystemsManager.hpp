@@ -1,12 +1,12 @@
 #ifndef SYSTEM_MANAGER_HPP
 #define SYSTEM_MANAGER_HPP
 
-#include <unordered_map>
 #include <span>
-#include "common_recs/utils/ClassUtils.hpp"
+#include <unordered_map>
 #include "IBaseSystem.hpp"
 #include "SystemsSchedule.hpp"
-#include "ecs/utils/SystemUtils.hpp"
+#include "Utils.hpp"
+#include "common_recs/utils/ClassUtils.hpp"
 
 
 namespace ecs

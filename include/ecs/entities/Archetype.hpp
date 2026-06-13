@@ -1,6 +1,6 @@
 #ifndef ARCHETYPE_HPP
 #define ARCHETYPE_HPP
-#include "ecs/utils/ComponentUtils.hpp"
+#include "../components/Utils.hpp"
 #include "collections/BitSet.hpp"
 
 
@@ -38,7 +38,7 @@ namespace ecs
      * Archetype represents a unique combination of components and serves as a template
      * for organizing entities with identical component sets.
      */
-    struct Archetype final : collection::BitSet
+    struct Archetype final : collections::BitSet
     {
 
         /**

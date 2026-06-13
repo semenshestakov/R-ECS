@@ -247,3 +247,65 @@ void ValidateRange(const ecs::EntityWrapper& entity, std::index_sequence<Is...>)
 {
     (ValidateOne<Is, Begin, End>(entity), ...);
 }
+
+
+struct MoveTracker
+{
+    inline static int copyCount = 0;
+    inline static int moveCount = 0;
+
+    int value = 0;
+
+    explicit MoveTracker(const int v = 0) : value(v) {}
+    MoveTracker(const MoveTracker& other) : value(other.value)          { ++copyCount; }
+    MoveTracker(MoveTracker&& other) noexcept : value(other.value)      { other.value = -1; ++moveCount; }
+
+    static void reset() { copyCount = moveCount = 0; }
+};
+
+
+/**
+ * @brief Full lifecycle counters shared by every LifeTracker instance.
+ *
+ * Unlike MoveTracker, this also tracks assignment operators and destruction,
+ * which is required to verify in-place overwrite paths (move-assign / copy-assign).
+ */
+struct LifeStats
+{
+    inline static int defaultCtor = 0;
+    inline static int valueCtor   = 0;
+    inline static int copyCtor    = 0;
+    inline static int moveCtor    = 0;
+    inline static int copyAssign  = 0;
+    inline static int moveAssign  = 0;
+    inline static int dtor        = 0;
+
+    static void reset()
+    {
+        defaultCtor = valueCtor = copyCtor = moveCtor = copyAssign = moveAssign = dtor = 0;
+    }
+
+    [[nodiscard]] static int liveConstructions()
+    {
+        return defaultCtor + valueCtor + copyCtor + moveCtor;
+    }
+};
+
+/**
+ * @brief Component tracking the full construct/assign/destroy lifecycle.
+ *
+ * Holds no heap resources, so it stays leak-safe even under the storage's
+ * "moved-from sources are not destructed" swap-remove convention.
+ */
+struct LifeTracker
+{
+    int value = 0;
+
+    LifeTracker()                                   { ++LifeStats::defaultCtor; }
+    explicit LifeTracker(const int v) : value(v)    { ++LifeStats::valueCtor; }
+    LifeTracker(const LifeTracker& o) : value(o.value)          { ++LifeStats::copyCtor; }
+    LifeTracker(LifeTracker&& o) noexcept : value(o.value)      { o.value = -1; ++LifeStats::moveCtor; }
+    LifeTracker& operator=(const LifeTracker& o)    { value = o.value; ++LifeStats::copyAssign; return *this; }
+    LifeTracker& operator=(LifeTracker&& o) noexcept{ value = o.value; o.value = -1; ++LifeStats::moveAssign; return *this; }
+    ~LifeTracker()                                  { ++LifeStats::dtor; }
+};

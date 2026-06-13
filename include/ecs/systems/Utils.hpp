@@ -1,6 +1,6 @@
 #pragma once
 #include "event/EventUtils.hpp"
-
+#include "common_recs/utils/BaseError.hpp"
 
 namespace event
 {
@@ -143,5 +143,18 @@ namespace ecs
         const systemHash_t* systemHashes = nullptr;
         std::size_t count = 0;
     };
+
+
+    namespace error
+    {
+
+        inline constexpr char g_systemsErrorName[] = "SystemsError: ";
+        using BaseSystemsError = recs::error::BaseNamedError<g_systemsErrorName>;
+
+        /// @brief Thrown when a system is initialized more than once.
+        struct DoubleInitialization final : BaseSystemsError { using BaseSystemsError::BaseSystemsError;};
+
+    }
+
 
 }

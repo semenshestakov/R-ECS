@@ -362,13 +362,77 @@ TEST_F(EntitiesManagerTest, RemoveMiddleThenInsertAgain)
 }
 
 
+TEST_F(EntitiesManagerTest, IsAlive_DefaultConstructedEntity_ReturnsFalse)
+{
+    Entity invalid{};
+    EXPECT_FALSE(manager.IsAlive(invalid));
+}
+
+
+TEST_F(EntitiesManagerTest, TryGetComponent_ExistingComponent_ReturnsNonNull)
+{
+    auto entity = manager.Create(Create2DPrefab(3.f, 4.f));
+    auto* pos = entity.TryGetComponent<Position2d>();
+
+    ASSERT_NE(pos, nullptr);
+    EXPECT_FLOAT_EQ(pos->x, 3.f);
+    EXPECT_FLOAT_EQ(pos->y, 4.f);
+}
+
+
+TEST_F(EntitiesManagerTest, MutateComponent_ChangesPersist)
+{
+    auto entity = manager.Create(Create2DPrefab(1.f, 2.f));
+    entity.GetComponent<Position2d>().x = 99.f;
+
+    EXPECT_FLOAT_EQ(entity.GetComponent<Position2d>().x, 99.f);
+    EXPECT_FLOAT_EQ(entity.GetComponent<Position2d>().y, 2.f);
+}
+
+
+TEST_F(EntitiesManagerTest, View_EmptyManager_NoIterations)
+{
+    size_t count = 0;
+    for (auto [pos] : manager.view<Position2d>())
+        ++count;
+
+    EXPECT_EQ(count, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, View_NoMatchingEntities_NoIterations)
+{
+    manager.Create(Create3DPrefab());
+
+    size_t count = 0;
+    for (auto [pos] : manager.view<Position2d>())
+        ++count;
+
+    EXPECT_EQ(count, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, MutateComponent_ViaView_ChangesPersist)
+{
+    manager.Create(Create2DPrefab(1.f, 1.f));
+    manager.Create(Create2DPrefab(2.f, 2.f));
+
+    for (auto [pos] : manager.view<Position2d>())
+        pos.x = 77.f;
+
+    for (auto [pos] : manager.view<Position2d>())
+        EXPECT_FLOAT_EQ(pos.x, 77.f);
+}
+
+
 TEST_F(EntitiesManagerTest, ViewAfterManyRemovalsAndInsertions)
 {
     std::vector<Entity> entities;
 
+    entities.reserve(200);
     for (int i = 0; i < 200; ++i)
     {
-        entities.emplace_back(manager.Create(Create2DPrefab(static_cast<float>(i), 0.f)));
+        entities.emplace_back(manager.Create<Entity>(Create2DPrefab(static_cast<float>(i), 0.f)));
     }
 
     for (int i = 50; i < 150; ++i)
@@ -390,4 +454,1236 @@ TEST_F(EntitiesManagerTest, ViewAfterManyRemovalsAndInsertions)
     }
 
     EXPECT_EQ(count, manager.size());
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_InvokesMoveConstructor)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    manager.Create(std::move(prefab));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Lvalue_InvokesCopyConstructor)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    manager.Create(prefab);
+
+    EXPECT_EQ(MoveTracker::copyCount, 1);
+    EXPECT_EQ(MoveTracker::moveCount, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_ComponentDataCorrect)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    const auto entity = manager.Create(std::move(prefab));
+
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Lvalue_ComponentDataCorrect)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(42);
+
+    const auto entity = manager.Create(prefab);
+
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 42);
+    const auto entity2 = manager.Create(prefab);
+    EXPECT_EQ(entity2.GetComponent<MoveTracker>().value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_SourceIsMovedFrom)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(99);
+
+    manager.Create(std::move(prefab));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_Position3d_NoExtraAllocation)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position3d>(5.f, 6.f, 7.f);
+
+    const auto entity = manager.Create(std::move(prefab));
+
+    const auto& pos = entity.GetComponent<Position3d>();
+    EXPECT_NE(pos.testLeaks, nullptr);
+    EXPECT_FLOAT_EQ(pos.x, 5.f);
+    EXPECT_FLOAT_EQ(pos.y, 6.f);
+    EXPECT_FLOAT_EQ(pos.z, 7.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Lvalue_Position3d_CopyLeavesTestLeaksNull)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position3d>(1.f, 2.f, 3.f);
+
+    const auto entity = manager.Create(prefab);
+
+    const auto& pos = entity.GetComponent<Position3d>();
+    EXPECT_EQ(pos.testLeaks, nullptr);
+    EXPECT_FLOAT_EQ(pos.x, 1.f);
+    EXPECT_FLOAT_EQ(pos.y, 2.f);
+    EXPECT_FLOAT_EQ(pos.z, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_TemporaryPrefab)
+{
+    MoveTracker::reset();
+
+    auto makePrefab = [](int v)
+    {
+        PrefabEntity p;
+        p.AddComponent<MoveTracker>(v);
+        return p;
+    };
+
+    const auto entity = manager.Create(makePrefab(7));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 7);
+}
+
+
+TEST_F(EntitiesManagerTest, Create_Rvalue_MultipleComponents_AllMoved)
+{
+    MoveTracker::reset();
+
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(10);
+    prefab.AddComponent<Position2d>(3.f, 4.f);
+
+    const auto entity = manager.Create(std::move(prefab));
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(entity.GetComponent<MoveTracker>().value, 10);
+    EXPECT_FLOAT_EQ(entity.GetComponent<Position2d>().x, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Destroy_InvalidEntity_NoOp)
+{
+    const Entity invalid{};
+    manager.Destroy(invalid);
+    EXPECT_EQ(manager.size(), 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Destroy_AlreadyDestroyed_NoDoubleFree)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    manager.Destroy(entity);
+    manager.Destroy(entity);
+
+    EXPECT_FALSE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 0);
+}
+
+
+TEST_F(EntitiesManagerTest, Destroy_LastEntity_NoRelocation)
+{
+    const auto a = manager.Create<Entity>(Create2DPrefab(1.f, 1.f));
+    const auto b = manager.Create<Entity>(Create2DPrefab(2.f, 2.f));
+
+    manager.Destroy(b);
+
+    EXPECT_TRUE(manager.IsAlive(a));
+    EXPECT_FALSE(manager.IsAlive(b));
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponentData_RawAccess_MatchesTypedAccess)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab(3.f, 4.f));
+
+    byte* raw = manager.GetComponentData(entity, ComponentRegistrator::GetComponentId<Position2d>());
+    ASSERT_NE(raw, nullptr);
+
+    const auto* pos = std::bit_cast<Position2d*>(raw);
+    EXPECT_FLOAT_EQ(pos->x, 3.f);
+    EXPECT_FLOAT_EQ(pos->y, 4.f);
+
+    EXPECT_EQ(manager.GetComponentData(Entity{}, ComponentRegistrator::GetComponentId<Position2d>()), nullptr);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_NewComponent_MigratesArchetype)
+{
+    auto prefab = Create2DPrefab(5.f, 6.f);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    manager.AddComponents(entity, Position3d{7.f, 8.f, 9.f});
+
+    EXPECT_TRUE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 1);
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 5.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).y, 6.f);
+
+    const auto& pos3d = manager.GetComponent<Position3d>(entity);
+    EXPECT_FLOAT_EQ(pos3d.x, 7.f);
+    EXPECT_FLOAT_EQ(pos3d.y, 8.f);
+    EXPECT_FLOAT_EQ(pos3d.z, 9.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_NewComponent_Rvalue_MoveConstructs)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    LifeStats::reset();
+    manager.AddComponents(entity, LifeTracker{42});
+
+    EXPECT_EQ(LifeStats::moveCtor, 1);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 0);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_NewComponent_Lvalue_CopyConstructs)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    LifeTracker source{42};
+    LifeStats::reset();
+    manager.AddComponents(entity, source);
+
+    EXPECT_EQ(LifeStats::copyCtor, 1);
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 0);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_ExistingComponent_NoMigration_OverwritesInPlace)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<LifeTracker>(1);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    LifeStats::reset();
+    manager.AddComponents(entity, LifeTracker{99});
+
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 1);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 99);
+    EXPECT_EQ(manager.size(), 1);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_ExistingComponent_Lvalue_CopyAssignsInPlace)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<LifeTracker>(1);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    LifeTracker source{77};
+    LifeStats::reset();
+    manager.AddComponents(entity, source);
+
+    EXPECT_EQ(LifeStats::copyAssign, 1);
+    EXPECT_EQ(LifeStats::moveAssign, 0);
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 77);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_PreservesExistingTrackedComponent_DuringMigration)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<LifeTracker>(5);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    LifeStats::reset();
+    manager.AddComponents(entity, Position2d{1.f, 2.f});
+
+    EXPECT_EQ(LifeStats::moveCtor, 1);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(LifeStats::dtor, 1);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 5);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 1.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_MixedNewAndExisting_DuringMigration)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<LifeTracker>(1);
+    prefab.AddComponent<Position2d>(0.f, 0.f);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    LifeStats::reset();
+    manager.AddComponents(entity, LifeTracker{9}, Position3d{1.f, 2.f, 3.f});
+
+    EXPECT_EQ(LifeStats::moveCtor, 1);
+    EXPECT_EQ(LifeStats::moveAssign, 1);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 9);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 0.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entity).z, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_MultipleNewComponents_AtOnce)
+{
+    const auto entity = manager.Create<Entity>(CreateTestIdPrefab());
+
+    manager.AddComponents(entity, Position2d{1.f, 2.f}, Position3d{4.f, 5.f, 6.f});
+
+    EXPECT_NE(manager.TryGetComponent<TestId>(entity), nullptr);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 1.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entity).z, 6.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_DeadEntity_NoOp)
+{
+    const Entity invalid{999, 999};
+    manager.AddComponents(invalid, Position3d{});
+    EXPECT_EQ(manager.size(), 0);
+
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+    manager.Destroy(entity);
+
+    manager.AddComponents(entity, Position3d{});
+    EXPECT_FALSE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 0);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_MigrationSwapRemove_KeepsOtherEntitiesValid)
+{
+    const auto a = manager.Create<Entity>(Create2DPrefab(1.f, 10.f));
+    const auto b = manager.Create<Entity>(Create2DPrefab(2.f, 20.f));
+    const auto c = manager.Create<Entity>(Create2DPrefab(3.f, 30.f));
+
+    manager.AddComponents(b, Position3d{0.f, 0.f, 99.f});
+
+    EXPECT_TRUE(manager.IsAlive(a));
+    EXPECT_TRUE(manager.IsAlive(b));
+    EXPECT_TRUE(manager.IsAlive(c));
+    EXPECT_EQ(manager.size(), 3);
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(b).x, 2.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).x, 3.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).y, 30.f);
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(b).z, 99.f);
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(a), nullptr);
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(c), nullptr);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_ReusesExistingTargetArchetype)
+{
+    const auto e1 = manager.Create<Entity>(Create2DPrefab(1.f, 1.f));
+    manager.AddComponents(e1, Position3d{1.f, 1.f, 1.f});
+
+    const auto e2 = manager.Create<Entity>(CreateMixedPrefab());
+
+    size_t count = 0;
+    for (auto [p2d, p3d] : manager.view<Position2d, Position3d>())
+    {
+        (void)p2d; (void)p3d;
+        ++count;
+    }
+    EXPECT_EQ(count, 2);
+    EXPECT_TRUE(manager.IsAlive(e1));
+    EXPECT_TRUE(manager.IsAlive(e2));
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_ThenView_SeesEntityInBothViews)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab(4.f, 4.f));
+    manager.AddComponents(entity, Position3d{});
+
+    size_t oldView = 0;
+    for (auto [p] : manager.view<Position2d>()) { (void)p; ++oldView; }
+
+    size_t newView = 0;
+    for (auto [p] : manager.view<Position3d>()) { (void)p; ++newView; }
+
+    EXPECT_EQ(oldView, 1);
+    EXPECT_EQ(newView, 1);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_RepeatedMigrations_GrowingArchetype)
+{
+    const auto entity = manager.Create<Entity>(CreateTestIdPrefab());
+    manager.GetComponent<TestId>(entity).id = 7;
+
+    manager.AddComponents(entity, PositionX{11.f});
+    manager.AddComponents(entity, PositionY{22.f});
+    manager.AddComponents(entity, PositionZ{33.f});
+
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 7u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionX>(entity).x, 11.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionY>(entity).y, 22.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionZ>(entity).z, 33.f);
+    EXPECT_EQ(manager.size(), 1);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_OverwriteOnly_KeepsArchetypeAndLocation)
+{
+    auto prefab = CreateMixedPrefab();
+    const auto entity = manager.Create<Entity>(prefab);
+
+    manager.AddComponents(entity, Position2d{1.f, 2.f}, Position3d{3.f, 4.f, 5.f});
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 1.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).y, 2.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entity).z, 5.f);
+    EXPECT_EQ(manager.size(), 1);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_Position3d_NoLeakAcrossMigration)
+{
+    const auto a = manager.Create<Entity>(Create2DPrefab());
+    manager.AddComponents(a, Position3d{1.f, 2.f, 3.f});
+    EXPECT_NE(manager.GetComponent<Position3d>(a).testLeaks, nullptr);
+
+    const auto b = manager.Create<Entity>(Create2DPrefab());
+    Position3d src{4.f, 5.f, 6.f};
+    manager.AddComponents(b, src);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(b).z, 6.f);
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(a).z, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_ManyEntities_DataIntegrity)
+{
+    constexpr int N = 200;
+    std::vector<Entity> entities;
+    entities.reserve(N);
+
+    for (int i = 0; i < N; ++i)
+        entities.emplace_back(manager.Create<Entity>(Create2DPrefab(static_cast<float>(i), 0.f)));
+
+    for (int i = 50; i < 150; ++i)
+        manager.AddComponents(entities[i], Position3d{0.f, 0.f, static_cast<float>(i)});
+
+    EXPECT_EQ(manager.size(), static_cast<size_t>(N));
+
+    for (int i = 0; i < N; ++i)
+    {
+        ASSERT_TRUE(manager.IsAlive(entities[i]));
+        EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entities[i]).x, static_cast<float>(i));
+
+        if (i >= 50 && i < 150)
+        {
+            ASSERT_NE(manager.TryGetComponent<Position3d>(entities[i]), nullptr);
+            EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entities[i]).z, static_cast<float>(i));
+        }
+        else
+        {
+            EXPECT_EQ(manager.TryGetComponent<Position3d>(entities[i]), nullptr);
+        }
+    }
+
+    size_t migrated = 0;
+    for (auto [p2d, p3d] : manager.view<Position2d, Position3d>()) { (void)p2d; (void)p3d; ++migrated; }
+    EXPECT_EQ(migrated, 100u);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_AllComponentsBalanced_NoDanglingState)
+{
+    LifeStats::reset();
+    {
+        EntitiesManager local;
+        const auto e = local.Create<Entity>(Create2DPrefab());
+        local.AddComponents(e, LifeTracker{1});
+        local.AddComponents(e, LifeTracker{2});
+        local.AddComponents(e, Position3d{}, LifeTracker{3});
+        EXPECT_EQ(local.GetComponent<LifeTracker>(e).value, 3);
+    }
+
+    EXPECT_LE(LifeStats::dtor, LifeStats::liveConstructions());
+    EXPECT_GT(LifeStats::dtor, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_RemovesComponent_MigratesArchetype)
+{
+    const auto entity = manager.Create<Entity>(CreateMixedPrefab()); // {Position2d, Position3d}
+
+    manager.RemoveComponents<Position3d>(entity);
+
+    EXPECT_TRUE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 1);
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(entity), nullptr);
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 10.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).y, 20.f);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_NonexistentComponent_NoOp)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab(3.f, 4.f));
+
+    manager.RemoveComponents<Position3d>(entity);
+
+    EXPECT_TRUE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 1);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_MultipleAtOnce)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(1.f, 2.f);
+    prefab.AddComponent<Position3d>();
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+
+    manager.RemoveComponents<Position3d, TestId>(entity);
+
+    EXPECT_NE(manager.TryGetComponent<Position2d>(entity), nullptr);
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(entity), nullptr);
+    EXPECT_EQ(manager.TryGetComponent<TestId>(entity), nullptr);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 1.f);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_PartiallyPresent_RemovesOnlyExisting)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(5.f, 6.f);
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+
+    manager.RemoveComponents<Position3d, TestId>(entity);
+
+    EXPECT_NE(manager.TryGetComponent<Position2d>(entity), nullptr);
+    EXPECT_EQ(manager.TryGetComponent<TestId>(entity), nullptr);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).y, 6.f);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_LastComponent_DestroysEntity)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    manager.RemoveComponents<Position2d>(entity);
+
+    EXPECT_FALSE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 0);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_AllListedComponents_DestroysEntity)
+{
+    const auto entity = manager.Create<Entity>(CreateMixedPrefab());
+
+    manager.RemoveComponents<Position2d, Position3d>(entity);
+
+    EXPECT_FALSE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 0);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_DeadEntity_NoOp)
+{
+    const Entity invalid{999, 999};
+    manager.RemoveComponents<Position2d>(invalid);
+    EXPECT_EQ(manager.size(), 0);
+
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+    manager.Destroy(entity);
+
+    manager.RemoveComponents<Position2d>(entity);
+    EXPECT_FALSE(manager.IsAlive(entity));
+    EXPECT_EQ(manager.size(), 0);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_DestructsRemovedComponent)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<LifeTracker>(5);
+    prefab.AddComponent<Position2d>(0.f, 0.f);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    LifeStats::reset();
+    manager.RemoveComponents<LifeTracker>(entity);
+
+    EXPECT_EQ(LifeStats::dtor, 1);
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(manager.TryGetComponent<LifeTracker>(entity), nullptr);
+    EXPECT_NE(manager.TryGetComponent<Position2d>(entity), nullptr);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_SwapRemove_KeepsOtherEntitiesValid)
+{
+    std::vector<Entity> entities;
+    for (int i = 0; i < 3; ++i)
+    {
+        PrefabEntity prefab;
+        prefab.AddComponent<Position2d>(static_cast<float>(i), 0.f);
+        prefab.AddComponent<Position3d>(0.f, 0.f, static_cast<float>(i));
+        entities.emplace_back(manager.Create<Entity>(prefab));
+    }
+
+    manager.RemoveComponents<Position3d>(entities[1]);
+
+    EXPECT_EQ(manager.size(), 3);
+    for (int i = 0; i < 3; ++i)
+    {
+        ASSERT_TRUE(manager.IsAlive(entities[i]));
+        EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entities[i]).x, static_cast<float>(i));
+    }
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(entities[1]), nullptr);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entities[0]).z, 0.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entities[2]).z, 2.f);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_ThenView)
+{
+    manager.Create<Entity>(CreateMixedPrefab());
+    const auto entity = manager.Create<Entity>(CreateMixedPrefab());
+
+    manager.RemoveComponents<Position3d>(entity);
+
+    size_t both = 0;
+    for (auto [p2d, p3d] : manager.view<Position2d, Position3d>()) { (void)p2d; (void)p3d; ++both; }
+    EXPECT_EQ(both, 1);
+
+    size_t twoD = 0;
+    for (auto [p2d] : manager.view<Position2d>()) { (void)p2d; ++twoD; }
+    EXPECT_EQ(twoD, 2);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_HeapComponent_FreesBuffer)
+{
+    const auto entity = manager.Create<Entity>(CreateMixedPrefab());
+
+    manager.RemoveComponents<Position3d>(entity);
+
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(entity), nullptr);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 10.f);
+
+    manager.Destroy(entity);
+    EXPECT_EQ(manager.size(), 0);
+}
+
+
+TEST_F(EntitiesManagerTest, AddThenRemove_RoundTripsArchetype)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab(7.f, 8.f));
+
+    manager.AddComponents(entity, Position3d{1.f, 2.f, 3.f});
+    EXPECT_NE(manager.TryGetComponent<Position3d>(entity), nullptr);
+
+    manager.RemoveComponents<Position3d>(entity);
+
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(entity), nullptr);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 7.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).y, 8.f);
+
+    const auto other = manager.Create<Entity>(CreateMixedPrefab());
+    manager.AddComponents(entity, Position3d{4.f, 5.f, 6.f});
+
+    size_t count = 0;
+    for (auto [p2d, p3d] : manager.view<Position2d, Position3d>()) { (void)p2d; (void)p3d; ++count; }
+    EXPECT_EQ(count, 2);
+    EXPECT_TRUE(manager.IsAlive(other));
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_ManyEntities_DataIntegrity)
+{
+    constexpr int N = 200;
+    std::vector<Entity> entities;
+    entities.reserve(N);
+
+    for (int i = 0; i < N; ++i)
+    {
+        PrefabEntity prefab;
+        prefab.AddComponent<Position2d>(static_cast<float>(i), 0.f);
+        prefab.AddComponent<TestId>();
+        entities.emplace_back(manager.Create<Entity>(prefab));
+        manager.GetComponent<TestId>(entities[i]).id = static_cast<unsigned int>(i);
+    }
+
+    for (int i = 50; i < 150; ++i)
+        manager.RemoveComponents<TestId>(entities[i]);
+
+    EXPECT_EQ(manager.size(), static_cast<size_t>(N));
+
+    for (int i = 0; i < N; ++i)
+    {
+        ASSERT_TRUE(manager.IsAlive(entities[i]));
+        EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entities[i]).x, static_cast<float>(i));
+
+        if (i >= 50 && i < 150)
+            EXPECT_EQ(manager.TryGetComponent<TestId>(entities[i]), nullptr);
+        else
+        {
+            ASSERT_NE(manager.TryGetComponent<TestId>(entities[i]), nullptr);
+            EXPECT_EQ(manager.GetComponent<TestId>(entities[i]).id, static_cast<unsigned int>(i));
+        }
+    }
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_PreservedComponent_IsMovedOnce_NeverCopied)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(7);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.AddComponents(entity, Position2d{1.f, 2.f});
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 7);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_MultiplePreservedComponents_EachMovedOnce)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(1);
+    prefab.AddComponent<Position2d>(3.f, 4.f);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.AddComponents(entity, Position3d{5.f, 6.f, 7.f});
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_NewComponent_Rvalue_OneMove_NoCopy)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    LifeStats::reset();
+    manager.AddComponents(entity, LifeTracker{42});
+
+    EXPECT_EQ(LifeStats::moveCtor, 1);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 0);
+    EXPECT_EQ(manager.GetComponent<LifeTracker>(entity).value, 42);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_NewComponent_Lvalue_OneCopy_NoMove)
+{
+    const auto entity = manager.Create<Entity>(Create2DPrefab());
+
+    LifeTracker source{42};
+    LifeStats::reset();
+    manager.AddComponents(entity, source);
+
+    EXPECT_EQ(LifeStats::copyCtor, 1);
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, AddComponents_OverwriteExisting_NoConstructors_OnlyAssignment)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<LifeTracker>(1);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    LifeStats::reset();
+    manager.AddComponents(entity, LifeTracker{9});
+
+    EXPECT_EQ(LifeStats::moveCtor, 0);
+    EXPECT_EQ(LifeStats::copyCtor, 0);
+    EXPECT_EQ(LifeStats::moveAssign, 1);
+    EXPECT_EQ(LifeStats::copyAssign, 0);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_PreservedComponent_IsMovedOnce_NeverCopied)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(5);
+    prefab.AddComponent<Position2d>(1.f, 2.f);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<Position2d>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 5);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_DroppedComponent_NeverCopiedOrMoved)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(3);
+    prefab.AddComponent<Position2d>();
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<MoveTracker>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 0);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.TryGetComponent<MoveTracker>(entity), nullptr);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_MultiplePreservedComponents_EachMovedOnce)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(8);
+    prefab.AddComponent<Position2d>(1.f, 1.f);
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<TestId>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 1);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(entity).x, 1.f);
+}
+
+
+TEST_F(EntitiesManagerTest, AddThenRemove_PreservedComponent_MovedOncePerMigration_NeverCopied)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(11);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.AddComponents(entity, Position2d{1.f, 2.f});
+    manager.RemoveComponents<Position2d>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 2);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 11);
+}
+
+
+TEST_F(EntitiesManagerTest, RemoveComponents_NonexistentComponent_NoConstructorsAtAll)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<MoveTracker>(4);
+    const auto entity = manager.Create<Entity>(prefab);
+
+    MoveTracker::reset();
+    manager.RemoveComponents<Position2d>(entity);
+
+    EXPECT_EQ(MoveTracker::moveCount, 0);
+    EXPECT_EQ(MoveTracker::copyCount, 0);
+    EXPECT_EQ(manager.GetComponent<MoveTracker>(entity).value, 4);
+}
+
+
+TEST_F(EntitiesManagerTest, Teardown_DestructsEveryLiveComponent_HeapNoLeak)
+{
+    // Regression: destroying the manager must destruct every live component exactly once,
+    // even when several heap-owning components share one archetype. Validated under ASan/LSan.
+    for (int i = 0; i < 5; ++i)
+        manager.Create<Entity>(CreateMixedPrefab()); // {Position2d, Position3d (owns a heap buffer)}
+
+    // Include a migrated entity in the same archetype.
+    const auto migrated = manager.Create<Entity>(Create2DPrefab());
+    manager.AddComponents(migrated, Position3d{1.f, 2.f, 3.f});
+
+    EXPECT_EQ(manager.size(), 6);
+    // No explicit Destroy: the fixture's manager is destructed at the end of the test.
+}
+
+
+TEST_F(EntitiesManagerTest, Teardown_CallsDestructorForEveryLiveComponent)
+{
+    LifeStats::reset();
+    {
+        EntitiesManager local;
+        for (int i = 0; i < 4; ++i)
+        {
+            PrefabEntity prefab;
+            prefab.AddComponent<LifeTracker>(i);
+            prefab.AddComponent<Position2d>();
+            local.Create<Entity>(std::move(prefab));
+        }
+        // 4 live LifeTracker components remain in storage and are destructed on teardown.
+    }
+
+    // Balanced lifecycle: every constructed LifeTracker is destructed exactly once.
+    EXPECT_EQ(LifeStats::dtor, LifeStats::liveConstructions());
+    EXPECT_EQ(LifeStats::dtor, 8); // 4 moved into storage + 4 moved-from prefab temporaries
+}
+
+
+// ============================================ Migration value validity ===============================================
+//
+// These tests focus on the *correctness of the data* after an entity is migrated between archetypes (Add/Remove
+// components) and after swap-remove relocates a neighbouring entity. Every value is re-fetched from the manager
+// after the operation to ensure the move actually landed the bytes where later lookups expect them.
+
+
+TEST_F(EntitiesManagerTest, Migration_AddComponent_AllFieldsValidAfterRefetch)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(11.f, 22.f);
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+    manager.GetComponent<TestId>(entity).id = 123u;
+
+    manager.AddComponents(entity, Position3d{4.f, 5.f, 6.f});
+
+    // Re-fetch everything: preserved components must keep their exact values, new one must hold what we passed.
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 123u);
+
+    const auto& p2d = manager.GetComponent<Position2d>(entity);
+    EXPECT_FLOAT_EQ(p2d.x, 11.f);
+    EXPECT_FLOAT_EQ(p2d.y, 22.f);
+
+    const auto& p3d = manager.GetComponent<Position3d>(entity);
+    EXPECT_FLOAT_EQ(p3d.x, 4.f);
+    EXPECT_FLOAT_EQ(p3d.y, 5.f);
+    EXPECT_FLOAT_EQ(p3d.z, 6.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_RemoveComponent_RemainingFieldsValidAfterRefetch)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(7.f, 8.f);
+    prefab.AddComponent<Position3d>(1.f, 2.f, 3.f);
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+    manager.GetComponent<TestId>(entity).id = 55u;
+
+    manager.RemoveComponents<Position3d>(entity);
+
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(entity), nullptr);
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 55u);
+
+    const auto& p2d = manager.GetComponent<Position2d>(entity);
+    EXPECT_FLOAT_EQ(p2d.x, 7.f);
+    EXPECT_FLOAT_EQ(p2d.y, 8.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_SwapRemovedNeighbour_KeepsValidDataAndLocation)
+{
+    // Three entities share one archetype. Migrating the middle one swap-removes the *last* entity into the
+    // middle's vacated slot inside the old storage. That relocated entity must still resolve to valid data.
+    PrefabEntity pa; pa.AddComponent<Position2d>(1.f, 10.f); pa.AddComponent<TestId>();
+    PrefabEntity pb; pb.AddComponent<Position2d>(2.f, 20.f); pb.AddComponent<TestId>();
+    PrefabEntity pc; pc.AddComponent<Position2d>(3.f, 30.f); pc.AddComponent<TestId>();
+
+    const auto a = manager.Create<Entity>(pa); manager.GetComponent<TestId>(a).id = 1u;
+    const auto b = manager.Create<Entity>(pb); manager.GetComponent<TestId>(b).id = 2u;
+    const auto c = manager.Create<Entity>(pc); manager.GetComponent<TestId>(c).id = 3u;
+
+    manager.AddComponents(b, Position3d{0.f, 0.f, 99.f}); // b leaves -> c swap-removed into b's old slot
+
+    EXPECT_TRUE(manager.IsAlive(a));
+    EXPECT_TRUE(manager.IsAlive(b));
+    EXPECT_TRUE(manager.IsAlive(c));
+
+    // The relocated neighbour (c) must still expose its original, correct values.
+    EXPECT_EQ(manager.GetComponent<TestId>(c).id, 3u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).x, 3.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).y, 30.f);
+
+    // The migrated entity (b) keeps preserved data and gains the new component.
+    EXPECT_EQ(manager.GetComponent<TestId>(b).id, 2u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(b).x, 2.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(b).z, 99.f);
+
+    // Untouched entity (a) is unaffected.
+    EXPECT_EQ(manager.GetComponent<TestId>(a).id, 1u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_ChainedAddThenRemove_ValuesSurviveEveryStep)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+    manager.GetComponent<TestId>(entity).id = 9u;
+
+    manager.AddComponents(entity, PositionX{11.f});
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 9u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionX>(entity).x, 11.f);
+
+    manager.AddComponents(entity, PositionY{22.f});
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 9u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionX>(entity).x, 11.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionY>(entity).y, 22.f);
+
+    manager.RemoveComponents<PositionX>(entity);
+    EXPECT_EQ(manager.TryGetComponent<PositionX>(entity), nullptr);
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 9u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionY>(entity).y, 22.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_InterleavedMigrations_PerEntityValuesStayCorrect)
+{
+    constexpr int N = 256;
+    std::vector<Entity> entities;
+    entities.reserve(N);
+
+    for (int i = 0; i < N; ++i)
+    {
+        PrefabEntity prefab;
+        prefab.AddComponent<Position2d>(static_cast<float>(i), static_cast<float>(i) * 2.f);
+        prefab.AddComponent<TestId>();
+        entities.emplace_back(manager.Create<Entity>(prefab));
+        manager.GetComponent<TestId>(entities[i]).id = static_cast<unsigned int>(i);
+    }
+
+    // Migrate a strided subset out (add Position3d), then migrate a different subset by removing TestId.
+    for (int i = 0; i < N; i += 3)
+        manager.AddComponents(entities[i], Position3d{0.f, 0.f, static_cast<float>(i)});
+
+    for (int i = 1; i < N; i += 5)
+        manager.RemoveComponents<TestId>(entities[i]);
+
+    for (int i = 0; i < N; ++i)
+    {
+        ASSERT_TRUE(manager.IsAlive(entities[i]));
+
+        const auto& p2d = manager.GetComponent<Position2d>(entities[i]);
+        EXPECT_FLOAT_EQ(p2d.x, static_cast<float>(i));
+        EXPECT_FLOAT_EQ(p2d.y, static_cast<float>(i) * 2.f);
+
+        if (i % 3 == 0)
+            EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entities[i]).z, static_cast<float>(i));
+
+        if (i % 5 == 1)
+            EXPECT_EQ(manager.TryGetComponent<TestId>(entities[i]), nullptr);
+        else
+            EXPECT_EQ(manager.GetComponent<TestId>(entities[i]).id, static_cast<unsigned int>(i));
+    }
+}
+
+
+// ====================================== ArchetypedChunks internal state checks =======================================
+//
+// These tests reach into the storage internals exposed via DEEP_TEST_PRIVATE_ACCESS / DEEP_TEST_PROTECTED_ACCESS
+// and assert that the bookkeeping fields of ArchetypedChunks are updated correctly:
+//   - m_chunksEntityCount   : alive count per chunk
+//   - m_hasFreeEntityInChunk: which chunks still have free capacity
+//   - m_localIndexToEntityId: local-slot -> global entity id mapping (incl. swap-remove relocation)
+
+class ArchetypedChunksStateTest : public ::testing::Test
+{
+protected:
+    EntitiesManager manager;
+
+    static PrefabEntity Make2D(float x = 0.f, float y = 0.f)
+    {
+        PrefabEntity prefab;
+        prefab.AddComponent<Position2d>(x, y);
+        return prefab;
+    }
+
+    [[nodiscard]] ArchetypedChunkEntityLocation locationOf(const Entity& e) const
+    {
+        return manager.m_entitiesLocationByEntityIndex[e.id];
+    }
+
+    [[nodiscard]] ArchetypedChunks& chunksOf(const Entity& e)
+    {
+        const auto [archetypeIndex, chunkEntityIndex] = manager.m_entitiesLocationByEntityIndex[e.id];
+        return manager.m_storage.m_storageByArchetypeIndex[archetypeIndex];
+    }
+};
+
+
+TEST_F(ArchetypedChunksStateTest, Create_TracksCount_FreeBit_AndMapping)
+{
+    std::vector<Entity> entities;
+    entities.reserve(5);
+
+    for (int i = 0; i < 5; ++i)
+        entities.emplace_back(manager.Create<Entity>(Make2D(static_cast<float>(i), 0.f)));
+
+    const ArchetypedChunks& chunks = chunksOf(entities[0]);
+
+    ASSERT_FALSE(chunks.m_chunksEntityCount.empty());
+    EXPECT_EQ(chunks.m_chunksEntityCount[0], 5u);
+
+    // Plenty of room left in the single chunk.
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
+
+    // Each freshly created entity occupies the next local slot in order.
+    for (chunkEntityIndex_t i = 0; i < 5; ++i)
+    {
+        EXPECT_EQ(getChunkByEntityIndex(locationOf(entities[i]).chunkEntityIndex), 0u);
+        EXPECT_EQ(getLocalEntityIndex(locationOf(entities[i]).chunkEntityIndex), i);
+        EXPECT_EQ(chunks.m_localIndexToEntityId[0][i], entities[i].id);
+    }
+}
+
+
+TEST_F(ArchetypedChunksStateTest, DestroyMiddle_SwapRemoveUpdatesMappingAndCount)
+{
+    const auto a = manager.Create<Entity>(Make2D(1.f, 0.f)); // local 0
+    const auto b = manager.Create<Entity>(Make2D(2.f, 0.f)); // local 1
+    const auto c = manager.Create<Entity>(Make2D(3.f, 0.f)); // local 2
+
+    ASSERT_EQ(getLocalEntityIndex(locationOf(b).chunkEntityIndex), 1u);
+    ASSERT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 2u);
+
+    manager.Destroy(b); // last entity (c) is swap-removed into b's slot (local 1)
+
+    ArchetypedChunks& chunks = chunksOf(a);
+
+    EXPECT_EQ(chunks.m_chunksEntityCount[0], 2u);
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
+
+    // c now lives in the slot b used to occupy; the freed tail slot is cleared.
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0], a.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1], c.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][2], INVALID_ENTITY_ID);
+
+    // The manager-side location of c must follow the relocation.
+    EXPECT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 1u);
+
+    // Data is still correct after the swap-remove move.
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).x, 3.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+}
+
+
+TEST_F(ArchetypedChunksStateTest, DestroyLast_NoSwapRemove_OnlyClearsTail)
+{
+    const auto a = manager.Create<Entity>(Make2D(1.f, 0.f)); // local 0
+    const auto b = manager.Create<Entity>(Make2D(2.f, 0.f)); // local 1
+
+    manager.Destroy(b); // b is the last slot -> no relocation
+
+    const ArchetypedChunks& chunks = chunksOf(a);
+
+    EXPECT_EQ(chunks.m_chunksEntityCount[0], 1u);
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0], a.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1], INVALID_ENTITY_ID);
+
+    EXPECT_TRUE(manager.IsAlive(a));
+    EXPECT_FALSE(manager.IsAlive(b));
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+}
+
+
+TEST_F(ArchetypedChunksStateTest, FillChunk_ResetsFreeBit_AndAllocatesSecondChunk)
+{
+    std::vector<Entity> entities;
+    entities.reserve(MAX_ENTITIES_IN_CHUNK + 1);
+
+    for (chunkEntityIndex_t i = 0; i < MAX_ENTITIES_IN_CHUNK; ++i)
+        entities.emplace_back(manager.Create<Entity>(Make2D(static_cast<float>(i), 0.f)));
+
+    {
+        ArchetypedChunks& chunks = chunksOf(entities[0]);
+        ASSERT_EQ(chunks.m_chunksEntityCount.size(), 1u);
+        EXPECT_EQ(chunks.m_chunksEntityCount[0], MAX_ENTITIES_IN_CHUNK);
+        // A full chunk must no longer be advertised as having free capacity.
+        EXPECT_FALSE(chunks.m_hasFreeEntityInChunk.test(0));
+    }
+
+    // One more entity forces allocation of a brand-new chunk.
+    const auto overflow = manager.Create<Entity>(Make2D(123.f, 0.f));
+
+    ArchetypedChunks& chunks = chunksOf(overflow);
+    ASSERT_EQ(chunks.m_chunksEntityCount.size(), 2u);
+    EXPECT_EQ(chunks.m_chunksEntityCount[1], 1u);
+    EXPECT_FALSE(chunks.m_hasFreeEntityInChunk.test(0));
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(1));
+
+    EXPECT_EQ(getChunkByEntityIndex(locationOf(overflow).chunkEntityIndex), 1u);
+    EXPECT_EQ(getLocalEntityIndex(locationOf(overflow).chunkEntityIndex), 0u);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[1][0], overflow.id);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(overflow).x, 123.f);
+}
+
+
+TEST_F(ArchetypedChunksStateTest, Migration_UpdatesBothSourceAndDestinationChunkState)
+{
+    const auto a = manager.Create<Entity>(Make2D(1.f, 0.f)); // source local 0
+    const auto b = manager.Create<Entity>(Make2D(2.f, 0.f)); // source local 1
+    const auto c = manager.Create<Entity>(Make2D(3.f, 0.f)); // source local 2
+
+    manager.AddComponents(b, Position3d{0.f, 0.f, 7.f}); // b migrates out; c swap-removed into local 1
+
+    // --- Source archetype ({Position2d}) bookkeeping ---
+    ArchetypedChunks& source = chunksOf(a);
+    EXPECT_EQ(source.m_chunksEntityCount[0], 2u);
+    EXPECT_TRUE(source.m_hasFreeEntityInChunk.test(0));
+    EXPECT_EQ(source.m_localIndexToEntityId[0][0], a.id);
+    EXPECT_EQ(source.m_localIndexToEntityId[0][1], c.id);            // c relocated here
+    EXPECT_EQ(source.m_localIndexToEntityId[0][2], INVALID_ENTITY_ID);
+    EXPECT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 1u);
+
+    // --- Destination archetype ({Position2d, Position3d}) bookkeeping ---
+    ArchetypedChunks& dest = chunksOf(b);
+    EXPECT_EQ(dest.m_chunksEntityCount[0], 1u);
+    EXPECT_TRUE(dest.m_hasFreeEntityInChunk.test(0));
+    EXPECT_EQ(dest.m_localIndexToEntityId[0][0], b.id);
+    EXPECT_EQ(getChunkByEntityIndex(locationOf(b).chunkEntityIndex), 0u);
+    EXPECT_EQ(getLocalEntityIndex(locationOf(b).chunkEntityIndex), 0u);
+
+    // Data integrity across the migration.
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(b).x, 2.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(b).z, 7.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).x, 3.f);
 }

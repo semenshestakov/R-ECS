@@ -4,17 +4,10 @@
 
 inline ecs::EntitiesManager::EntitiesManager() { resize(256); }
 
-inline ecs::EntitiesManager::~EntitiesManager()
-{
-    for(entityId_t entityId = INVALID_ENTITY_ID + 1; entityId < m_lastEntityId; ++entityId)
-    {
-        if(m_versionByEntityIndex[entityId] != INVALID_ENTITY_VERSION)
-            m_storage.Destroy(m_entitiesLocationByEntityIndex[entityId]);
-    }
-}
+inline ecs::EntitiesManager::~EntitiesManager() = default;
 
-template<ecs::EntityConcept ReturnType>
-ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
+template<ecs::EntityConcept ReturnType, ecs::PrefabEntityRef PrefabRef>
+ReturnType ecs::EntitiesManager::Create(PrefabRef&& prefabEntity)
 {
     static_assert(std::is_same_v<ReturnType, ecs::Entity> || ecs::EntityWrapperLike<ReturnType>,
         "ReturnType must be Entity or an EntityWrapper subclass without data members. "
@@ -44,7 +37,7 @@ ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
     }
 
     assert(entity.id < m_lastEntityId);
-    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(prefabEntity, entity.id);
+    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(std::forward<PrefabRef>(prefabEntity), entity.id);
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 
@@ -54,10 +47,89 @@ ReturnType ecs::EntitiesManager::Create(const PrefabEntity& prefabEntity)
         return entity;
 }
 
-template<ecs::EntityConcept ReturnType>
-ReturnType ecs::EntitiesManager::Create(PrefabEntity&& prefabEntity)
+template<typename... Args>
+void ecs::EntitiesManager::AddComponents(const Entity& entity, Args&&... args)
 {
-    return Create<ReturnType>(prefabEntity);
+    static_assert(sizeof...(Args) > 0, "AddComponents requires at least one component");
+
+    if (!IsAlive(entity))
+        return;
+
+    const ArchetypedChunkEntityLocation oldLocation = m_entitiesLocationByEntityIndex[entity.id];
+
+    Archetype argsArchetype;
+    (argsArchetype.set(ComponentRegistrator::GetComponentId<std::remove_cvref_t<Args>>()), ...);
+
+    const Archetype oldArchetype = m_storage.getArchetype(oldLocation.archetypeIndex);
+
+    if (argsArchetype.isSubsetOf(oldArchetype))
+    {
+        ([&]
+        {
+            using Component = std::remove_cvref_t<Args>;
+            byte* dest = m_storage.GetComponentData(oldLocation, ComponentRegistrator::GetComponentId<Component>());
+            *std::bit_cast<Component*>(dest) = std::forward<Args>(args);
+        }(), ...);
+        return;
+    }
+
+    Archetype newArchetype = oldArchetype;
+    (newArchetype.set(ComponentRegistrator::GetComponentId<std::remove_cvref_t<Args>>()), ...);
+    newArchetype.updateHash();
+
+    const auto [newLocation, swapRemovedEntityId] =
+        m_storage.MigrateEntity(oldLocation, newArchetype, entity.id);
+
+    if (swapRemovedEntityId != INVALID_ENTITY_ID)
+        m_entitiesLocationByEntityIndex[swapRemovedEntityId].chunkEntityIndex = oldLocation.chunkEntityIndex;
+
+    ([&]
+    {
+        using Comp = std::remove_cvref_t<Args>;
+        const componentId_t componentId = ComponentRegistrator::GetComponentId<Comp>();
+        byte* dest = m_storage.GetComponentData(newLocation, componentId);
+
+        if (oldArchetype.test(componentId))
+            *std::bit_cast<Comp*>(dest) = std::forward<Args>(args);
+        else
+            new(dest) Comp(std::forward<Args>(args));
+    }(), ...);
+
+    m_entitiesLocationByEntityIndex[entity.id] = newLocation;
+}
+
+template<ecs::IsComponent... Args>
+void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
+{
+    static_assert(sizeof...(Args) > 0, "RemoveComponents requires at least one component");
+
+    if (!IsAlive(entity))
+        return;
+
+    const ArchetypedChunkEntityLocation oldLocation = m_entitiesLocationByEntityIndex[entity.id];
+    const Archetype oldArchetype = m_storage.getArchetype(oldLocation.archetypeIndex);
+
+    Archetype newArchetype = oldArchetype;
+    (newArchetype.reset(ComponentRegistrator::GetComponentId<Args>()), ...);
+
+    if (newArchetype == oldArchetype) // none of the requested components were present
+        return;
+
+    if (newArchetype.min() == collections::BitSet::INVALID_INDEX) // every component removed -> entity no longer exists
+    {
+        Destroy(entity);
+        return;
+    }
+
+    newArchetype.updateHash();
+
+    const auto [newLocation, swapRemovedEntityId] =
+        m_storage.MigrateEntity(oldLocation, newArchetype, entity.id);
+
+    if (swapRemovedEntityId != INVALID_ENTITY_ID)
+        m_entitiesLocationByEntityIndex[swapRemovedEntityId].chunkEntityIndex = oldLocation.chunkEntityIndex;
+
+    m_entitiesLocationByEntityIndex[entity.id] = newLocation;
 }
 
 template<ecs::EntityConcept InputEntityType>
@@ -118,13 +190,13 @@ inline const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& ent
 template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
 {
-    return std::bit_cast<ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) const
 {
-    return std::bit_cast<const ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetСomponentId<ComponentCls>()));
+    return std::bit_cast<const ComponentCls*>(GetComponentData(entity, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template<ecs::IsComponent ComponentCls>

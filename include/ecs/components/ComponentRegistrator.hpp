@@ -19,9 +19,11 @@ namespace ecs
         void(*constructor)(byte*) = nullptr;                        ///< Placement new constructor function
         void(*destructor)(byte*) = nullptr;                         ///< Destructor function
         void(*copy)(byte* to, byte* from) = nullptr;                ///< Copy function
-        void(*move)(byte* to, byte* from) = nullptr;                ///< Copy function
+        void(*move)(byte* to, byte* from) = nullptr;                ///< Move function
+        byte*(*poolAcquire)() = nullptr;                            ///< Acquire one component-sized slot from the free list
+        void(*poolRelease)(byte*) = nullptr;                        ///< Return slot to the free list
 
-        template <typename ComponentCls>
+        template <IsComponent ComponentCls>
         static RegisterComponentInfo Create(const std::string& name);
     };
 
@@ -45,6 +47,8 @@ namespace ecs
 
         ComponentRegistrator() = delete;
 
+        using Super::size;
+
         /**
          * @brief Registers a component type and assigns it a unique ID.
          *
@@ -65,7 +69,7 @@ namespace ecs
          * @note Component IDs start from 1 (0 is reserved for invalid/unregistered)
          * @note Registration is idempotent - calling multiple times returns the same ID
          */
-        template<typename ComponentCls>
+        template<IsComponent ComponentCls>
         static componentId_t Register();
 
         /**
@@ -109,7 +113,7 @@ namespace ecs
          *
          * @note If the component type was not registered, behavior is undefined.
          */
-        template<typename ComponentCls>
+        template<IsComponent ComponentCls>
         static componentId_t GetСomponentId();
     };
 

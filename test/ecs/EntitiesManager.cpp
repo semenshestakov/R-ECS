@@ -1365,3 +1365,325 @@ TEST_F(EntitiesManagerTest, Teardown_CallsDestructorForEveryLiveComponent)
     EXPECT_EQ(LifeStats::dtor, LifeStats::liveConstructions());
     EXPECT_EQ(LifeStats::dtor, 8); // 4 moved into storage + 4 moved-from prefab temporaries
 }
+
+
+// ============================================ Migration value validity ===============================================
+//
+// These tests focus on the *correctness of the data* after an entity is migrated between archetypes (Add/Remove
+// components) and after swap-remove relocates a neighbouring entity. Every value is re-fetched from the manager
+// after the operation to ensure the move actually landed the bytes where later lookups expect them.
+
+
+TEST_F(EntitiesManagerTest, Migration_AddComponent_AllFieldsValidAfterRefetch)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(11.f, 22.f);
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+    manager.GetComponent<TestId>(entity).id = 123u;
+
+    manager.AddComponents(entity, Position3d{4.f, 5.f, 6.f});
+
+    // Re-fetch everything: preserved components must keep their exact values, new one must hold what we passed.
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 123u);
+
+    const auto& p2d = manager.GetComponent<Position2d>(entity);
+    EXPECT_FLOAT_EQ(p2d.x, 11.f);
+    EXPECT_FLOAT_EQ(p2d.y, 22.f);
+
+    const auto& p3d = manager.GetComponent<Position3d>(entity);
+    EXPECT_FLOAT_EQ(p3d.x, 4.f);
+    EXPECT_FLOAT_EQ(p3d.y, 5.f);
+    EXPECT_FLOAT_EQ(p3d.z, 6.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_RemoveComponent_RemainingFieldsValidAfterRefetch)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(7.f, 8.f);
+    prefab.AddComponent<Position3d>(1.f, 2.f, 3.f);
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+    manager.GetComponent<TestId>(entity).id = 55u;
+
+    manager.RemoveComponents<Position3d>(entity);
+
+    EXPECT_EQ(manager.TryGetComponent<Position3d>(entity), nullptr);
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 55u);
+
+    const auto& p2d = manager.GetComponent<Position2d>(entity);
+    EXPECT_FLOAT_EQ(p2d.x, 7.f);
+    EXPECT_FLOAT_EQ(p2d.y, 8.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_SwapRemovedNeighbour_KeepsValidDataAndLocation)
+{
+    // Three entities share one archetype. Migrating the middle one swap-removes the *last* entity into the
+    // middle's vacated slot inside the old storage. That relocated entity must still resolve to valid data.
+    PrefabEntity pa; pa.AddComponent<Position2d>(1.f, 10.f); pa.AddComponent<TestId>();
+    PrefabEntity pb; pb.AddComponent<Position2d>(2.f, 20.f); pb.AddComponent<TestId>();
+    PrefabEntity pc; pc.AddComponent<Position2d>(3.f, 30.f); pc.AddComponent<TestId>();
+
+    const auto a = manager.Create<Entity>(pa); manager.GetComponent<TestId>(a).id = 1u;
+    const auto b = manager.Create<Entity>(pb); manager.GetComponent<TestId>(b).id = 2u;
+    const auto c = manager.Create<Entity>(pc); manager.GetComponent<TestId>(c).id = 3u;
+
+    manager.AddComponents(b, Position3d{0.f, 0.f, 99.f}); // b leaves -> c swap-removed into b's old slot
+
+    EXPECT_TRUE(manager.IsAlive(a));
+    EXPECT_TRUE(manager.IsAlive(b));
+    EXPECT_TRUE(manager.IsAlive(c));
+
+    // The relocated neighbour (c) must still expose its original, correct values.
+    EXPECT_EQ(manager.GetComponent<TestId>(c).id, 3u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).x, 3.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).y, 30.f);
+
+    // The migrated entity (b) keeps preserved data and gains the new component.
+    EXPECT_EQ(manager.GetComponent<TestId>(b).id, 2u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(b).x, 2.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(b).z, 99.f);
+
+    // Untouched entity (a) is unaffected.
+    EXPECT_EQ(manager.GetComponent<TestId>(a).id, 1u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_ChainedAddThenRemove_ValuesSurviveEveryStep)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<TestId>();
+    const auto entity = manager.Create<Entity>(prefab);
+    manager.GetComponent<TestId>(entity).id = 9u;
+
+    manager.AddComponents(entity, PositionX{11.f});
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 9u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionX>(entity).x, 11.f);
+
+    manager.AddComponents(entity, PositionY{22.f});
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 9u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionX>(entity).x, 11.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionY>(entity).y, 22.f);
+
+    manager.RemoveComponents<PositionX>(entity);
+    EXPECT_EQ(manager.TryGetComponent<PositionX>(entity), nullptr);
+    EXPECT_EQ(manager.GetComponent<TestId>(entity).id, 9u);
+    EXPECT_FLOAT_EQ(manager.GetComponent<PositionY>(entity).y, 22.f);
+}
+
+
+TEST_F(EntitiesManagerTest, Migration_InterleavedMigrations_PerEntityValuesStayCorrect)
+{
+    constexpr int N = 256;
+    std::vector<Entity> entities;
+    entities.reserve(N);
+
+    for (int i = 0; i < N; ++i)
+    {
+        PrefabEntity prefab;
+        prefab.AddComponent<Position2d>(static_cast<float>(i), static_cast<float>(i) * 2.f);
+        prefab.AddComponent<TestId>();
+        entities.emplace_back(manager.Create<Entity>(prefab));
+        manager.GetComponent<TestId>(entities[i]).id = static_cast<unsigned int>(i);
+    }
+
+    // Migrate a strided subset out (add Position3d), then migrate a different subset by removing TestId.
+    for (int i = 0; i < N; i += 3)
+        manager.AddComponents(entities[i], Position3d{0.f, 0.f, static_cast<float>(i)});
+
+    for (int i = 1; i < N; i += 5)
+        manager.RemoveComponents<TestId>(entities[i]);
+
+    for (int i = 0; i < N; ++i)
+    {
+        ASSERT_TRUE(manager.IsAlive(entities[i]));
+
+        const auto& p2d = manager.GetComponent<Position2d>(entities[i]);
+        EXPECT_FLOAT_EQ(p2d.x, static_cast<float>(i));
+        EXPECT_FLOAT_EQ(p2d.y, static_cast<float>(i) * 2.f);
+
+        if (i % 3 == 0)
+            EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(entities[i]).z, static_cast<float>(i));
+
+        if (i % 5 == 1)
+            EXPECT_EQ(manager.TryGetComponent<TestId>(entities[i]), nullptr);
+        else
+            EXPECT_EQ(manager.GetComponent<TestId>(entities[i]).id, static_cast<unsigned int>(i));
+    }
+}
+
+
+// ====================================== ArchetypedChunks internal state checks =======================================
+//
+// These tests reach into the storage internals exposed via DEEP_TEST_PRIVATE_ACCESS / DEEP_TEST_PROTECTED_ACCESS
+// and assert that the bookkeeping fields of ArchetypedChunks are updated correctly:
+//   - m_chunksEntityCount   : alive count per chunk
+//   - m_hasFreeEntityInChunk: which chunks still have free capacity
+//   - m_localIndexToEntityId: local-slot -> global entity id mapping (incl. swap-remove relocation)
+
+class ArchetypedChunksStateTest : public ::testing::Test
+{
+protected:
+    EntitiesManager manager;
+
+    static PrefabEntity Make2D(float x = 0.f, float y = 0.f)
+    {
+        PrefabEntity prefab;
+        prefab.AddComponent<Position2d>(x, y);
+        return prefab;
+    }
+
+    [[nodiscard]] ArchetypedChunkEntityLocation locationOf(const Entity& e) const
+    {
+        return manager.m_entitiesLocationByEntityIndex[e.id];
+    }
+
+    [[nodiscard]] ArchetypedChunks& chunksOf(const Entity& e)
+    {
+        const auto [archetypeIndex, chunkEntityIndex] = manager.m_entitiesLocationByEntityIndex[e.id];
+        return manager.m_storage.m_storageByArchetypeIndex[archetypeIndex];
+    }
+};
+
+
+TEST_F(ArchetypedChunksStateTest, Create_TracksCount_FreeBit_AndMapping)
+{
+    std::vector<Entity> entities;
+    entities.reserve(5);
+
+    for (int i = 0; i < 5; ++i)
+        entities.emplace_back(manager.Create<Entity>(Make2D(static_cast<float>(i), 0.f)));
+
+    const ArchetypedChunks& chunks = chunksOf(entities[0]);
+
+    ASSERT_FALSE(chunks.m_chunksEntityCount.empty());
+    EXPECT_EQ(chunks.m_chunksEntityCount[0], 5u);
+
+    // Plenty of room left in the single chunk.
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
+
+    // Each freshly created entity occupies the next local slot in order.
+    for (chunkEntityIndex_t i = 0; i < 5; ++i)
+    {
+        EXPECT_EQ(getChunkByEntityIndex(locationOf(entities[i]).chunkEntityIndex), 0u);
+        EXPECT_EQ(getLocalEntityIndex(locationOf(entities[i]).chunkEntityIndex), i);
+        EXPECT_EQ(chunks.m_localIndexToEntityId[0][i], entities[i].id);
+    }
+}
+
+
+TEST_F(ArchetypedChunksStateTest, DestroyMiddle_SwapRemoveUpdatesMappingAndCount)
+{
+    const auto a = manager.Create<Entity>(Make2D(1.f, 0.f)); // local 0
+    const auto b = manager.Create<Entity>(Make2D(2.f, 0.f)); // local 1
+    const auto c = manager.Create<Entity>(Make2D(3.f, 0.f)); // local 2
+
+    ASSERT_EQ(getLocalEntityIndex(locationOf(b).chunkEntityIndex), 1u);
+    ASSERT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 2u);
+
+    manager.Destroy(b); // last entity (c) is swap-removed into b's slot (local 1)
+
+    ArchetypedChunks& chunks = chunksOf(a);
+
+    EXPECT_EQ(chunks.m_chunksEntityCount[0], 2u);
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
+
+    // c now lives in the slot b used to occupy; the freed tail slot is cleared.
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0], a.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1], c.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][2], INVALID_ENTITY_ID);
+
+    // The manager-side location of c must follow the relocation.
+    EXPECT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 1u);
+
+    // Data is still correct after the swap-remove move.
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).x, 3.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+}
+
+
+TEST_F(ArchetypedChunksStateTest, DestroyLast_NoSwapRemove_OnlyClearsTail)
+{
+    const auto a = manager.Create<Entity>(Make2D(1.f, 0.f)); // local 0
+    const auto b = manager.Create<Entity>(Make2D(2.f, 0.f)); // local 1
+
+    manager.Destroy(b); // b is the last slot -> no relocation
+
+    const ArchetypedChunks& chunks = chunksOf(a);
+
+    EXPECT_EQ(chunks.m_chunksEntityCount[0], 1u);
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0], a.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1], INVALID_ENTITY_ID);
+
+    EXPECT_TRUE(manager.IsAlive(a));
+    EXPECT_FALSE(manager.IsAlive(b));
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(a).x, 1.f);
+}
+
+
+TEST_F(ArchetypedChunksStateTest, FillChunk_ResetsFreeBit_AndAllocatesSecondChunk)
+{
+    std::vector<Entity> entities;
+    entities.reserve(MAX_ENTITIES_IN_CHUNK + 1);
+
+    for (chunkEntityIndex_t i = 0; i < MAX_ENTITIES_IN_CHUNK; ++i)
+        entities.emplace_back(manager.Create<Entity>(Make2D(static_cast<float>(i), 0.f)));
+
+    {
+        ArchetypedChunks& chunks = chunksOf(entities[0]);
+        ASSERT_EQ(chunks.m_chunksEntityCount.size(), 1u);
+        EXPECT_EQ(chunks.m_chunksEntityCount[0], MAX_ENTITIES_IN_CHUNK);
+        // A full chunk must no longer be advertised as having free capacity.
+        EXPECT_FALSE(chunks.m_hasFreeEntityInChunk.test(0));
+    }
+
+    // One more entity forces allocation of a brand-new chunk.
+    const auto overflow = manager.Create<Entity>(Make2D(123.f, 0.f));
+
+    ArchetypedChunks& chunks = chunksOf(overflow);
+    ASSERT_EQ(chunks.m_chunksEntityCount.size(), 2u);
+    EXPECT_EQ(chunks.m_chunksEntityCount[1], 1u);
+    EXPECT_FALSE(chunks.m_hasFreeEntityInChunk.test(0));
+    EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(1));
+
+    EXPECT_EQ(getChunkByEntityIndex(locationOf(overflow).chunkEntityIndex), 1u);
+    EXPECT_EQ(getLocalEntityIndex(locationOf(overflow).chunkEntityIndex), 0u);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[1][0], overflow.id);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(overflow).x, 123.f);
+}
+
+
+TEST_F(ArchetypedChunksStateTest, Migration_UpdatesBothSourceAndDestinationChunkState)
+{
+    const auto a = manager.Create<Entity>(Make2D(1.f, 0.f)); // source local 0
+    const auto b = manager.Create<Entity>(Make2D(2.f, 0.f)); // source local 1
+    const auto c = manager.Create<Entity>(Make2D(3.f, 0.f)); // source local 2
+
+    manager.AddComponents(b, Position3d{0.f, 0.f, 7.f}); // b migrates out; c swap-removed into local 1
+
+    // --- Source archetype ({Position2d}) bookkeeping ---
+    ArchetypedChunks& source = chunksOf(a);
+    EXPECT_EQ(source.m_chunksEntityCount[0], 2u);
+    EXPECT_TRUE(source.m_hasFreeEntityInChunk.test(0));
+    EXPECT_EQ(source.m_localIndexToEntityId[0][0], a.id);
+    EXPECT_EQ(source.m_localIndexToEntityId[0][1], c.id);            // c relocated here
+    EXPECT_EQ(source.m_localIndexToEntityId[0][2], INVALID_ENTITY_ID);
+    EXPECT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 1u);
+
+    // --- Destination archetype ({Position2d, Position3d}) bookkeeping ---
+    ArchetypedChunks& dest = chunksOf(b);
+    EXPECT_EQ(dest.m_chunksEntityCount[0], 1u);
+    EXPECT_TRUE(dest.m_hasFreeEntityInChunk.test(0));
+    EXPECT_EQ(dest.m_localIndexToEntityId[0][0], b.id);
+    EXPECT_EQ(getChunkByEntityIndex(locationOf(b).chunkEntityIndex), 0u);
+    EXPECT_EQ(getLocalEntityIndex(locationOf(b).chunkEntityIndex), 0u);
+
+    // Data integrity across the migration.
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(b).x, 2.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(b).z, 7.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(c).x, 3.f);
+}

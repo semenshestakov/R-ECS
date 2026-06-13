@@ -2,10 +2,11 @@
 #include <bit>
 #include <stdexcept>
 #include "../ComponentRegistrator.hpp"
+#include "../ComponentFreeList.hpp"
 #include "ecs/utils/ComponentError.hpp"
 
 
-template<typename ComponentCls>
+template<ecs::IsComponent ComponentCls>
 ecs::RegisterComponentInfo ecs::RegisterComponentInfo::Create(const std::string& name)
 {
     return {.name = std::string(name),
@@ -14,11 +15,13 @@ ecs::RegisterComponentInfo ecs::RegisterComponentInfo::Create(const std::string&
             .constructor = [](byte* ptr) { new(ptr) ComponentCls(); },
             .destructor = [](byte* ptr) { std::bit_cast<ComponentCls*>(ptr)->~ComponentCls(); },
             .copy = [](byte* to, byte* from) { new(to) ComponentCls(*std::bit_cast<const ComponentCls*>(from)); },
-            .move = [](byte* to, byte* from) { new(to) ComponentCls(std::move(*std::bit_cast<ComponentCls*>(from)));}
+            .move = [](byte* to, byte* from) { new(to) ComponentCls(std::move(*std::bit_cast<ComponentCls*>(from)));},
+            .poolAcquire  = []() -> byte* { return ComponentFreeList<ComponentCls>::acquire(); },
+            .poolRelease  = [](byte* ptr)  { ComponentFreeList<ComponentCls>::release(ptr); }
     };
 }
 
-template<typename ComponentCls>
+template<ecs::IsComponent ComponentCls>
 ecs::componentId_t ecs::ComponentRegistrator::Register()
 {
     Super registrator = Super::Create<ComponentCls>(typeid(ComponentCls).name());
@@ -38,7 +41,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
     return Super::s_collection.at(static_cast<std::size_t>(componentId - 1)).second.value();
 }
 
-template<typename ComponentCls>
+template<ecs::IsComponent ComponentCls>
 /* static */ ecs::componentId_t ecs::ComponentRegistrator::GetСomponentId()
 {
     static componentId_t s_componentId = []()

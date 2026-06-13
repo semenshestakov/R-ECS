@@ -7,6 +7,7 @@
 #include "EntitiesArchetypeStorage.hpp"
 #include "Entity.hpp"
 #include "EntityWrapper.hpp"
+#include "common_recs/utils/ClassUtils.hpp"
 
 
 namespace ecs
@@ -186,7 +187,7 @@ namespace ecs
         template<IsComponent... ComponentCls>
         auto view();
 
-    private:
+    DEEP_TEST_PRIVATE_ACCESS:
         std::size_t m_isAliveEntitiesCount = 0;                                         ///< Number of currently alive entities
         entityId_t m_lastEntityId = INVALID_ENTITY_ID + 1;                              ///< Next ID to allocate (when free list empty)
         std::queue<Entity> m_freeEntities;                                              ///< Reusable entity IDs from destroyed entities

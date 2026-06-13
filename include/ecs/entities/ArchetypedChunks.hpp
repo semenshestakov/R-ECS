@@ -4,6 +4,7 @@
 #include "ecs/utils/ComponentUtils.hpp"
 #include "ecs/utils/EntitiesUtils.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
+#include "common_recs/utils/ClassUtils.hpp"
 
 
 namespace ecs
@@ -269,7 +270,7 @@ namespace ecs
         template<typename ValueType, IsComponent... ComponentCls>
         auto end();
 
-    private:
+    DEEP_TEST_PRIVATE_ACCESS:
         using componentChunks_t = std::vector<std::unique_ptr<byte[]>>;                             ///< Collection of memory chunks storing one component type.
 
         Archetype m_archetype;                                                                      ///< Archetype shared by all entities stored in this container.

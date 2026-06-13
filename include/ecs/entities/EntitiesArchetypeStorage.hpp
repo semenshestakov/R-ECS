@@ -9,6 +9,7 @@
 #include "ArchetypedChunks.hpp"
 #include "ecs/utils/ComponentUtils.hpp"
 #include "ecs/utils/EntitiesUtils.hpp"
+#include "common_recs/utils/ClassUtils.hpp"
 
 
 namespace ecs
@@ -259,7 +260,7 @@ namespace ecs
         template<IsComponent ComponentCls>
         [[nodiscard]] const ComponentCls& GetComponent(const ArchetypedChunkEntityLocation& location) const;
 
-    private:
+    DEEP_TEST_PRIVATE_ACCESS:
         /**
          * @brief Finds the storage index for an archetype, creating it if absent.
          * @param archetype Archetype to look up (must have an up-to-date hash)

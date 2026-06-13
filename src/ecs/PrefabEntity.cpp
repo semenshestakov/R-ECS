@@ -7,6 +7,11 @@ ecs::PrefabEntity::~PrefabEntity()
     clear();
 }
 
+void ecs::PrefabEntity::PoolDeleter::operator()(byte* ptr) const
+{
+    ComponentRegistrator::GetInfo(componentId).poolRelease(ptr);
+}
+
 void ecs::PrefabEntity::clear()
 {
     for (componentId_t componentId = 0; componentId < m_dataByComponentsIndex.size(); ++componentId)

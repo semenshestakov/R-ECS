@@ -82,6 +82,7 @@ bool ecs::SystemsManager::Init(const InitState& state)
 
 bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
 {
+    m_schedule.Build();
     const std::unordered_set<systemHash_t> disabled = effectiveDisabled();
     event::priority_t priority = event::MAX_PRIORITY;
     for(const auto& stageSystems: m_schedule)
@@ -103,6 +104,7 @@ bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
 
 void ecs::SystemsManager::Update(Registry& registry)
 {
+    m_schedule.Build();
     const std::unordered_set<systemHash_t> disabled = effectiveDisabled();
     const UpdateState state{};
     for(const auto& stageSystems: m_schedule)

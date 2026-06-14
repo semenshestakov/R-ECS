@@ -111,8 +111,10 @@ namespace ecs
          * @param system Reference to the system being added.
          * @param hash Unique hash identifier for the system.
          *
-         * @note This method invalidates any previously computed schedule.
-         *       Call Init() again after adding all systems.
+         * @note This method only records the system and marks the schedule dirty;
+         *       it does not rebuild the execution stages. The topological sort and
+         *       data-edge derivation are deferred to the next Build() call (which
+         *       SystemsManager triggers from Update()/Subscribe()).
          *
          * @warning The system must remain valid for the lifetime of the schedule
          *          if any dependencies are needed. The schedule stores only the
@@ -146,6 +148,25 @@ namespace ecs
          *
          */
         void Init();
+
+        /**
+         * @brief Rebuilds the execution stages only if the schedule is dirty.
+         *
+         * Lazy counterpart to Init(): if any system was added (or the schedule was
+         * cleared) since the last build, this derives data edges and re-runs the
+         * topological sort; otherwise it is a cheap no-op. SystemsManager calls it
+         * at the start of Update() and Subscribe(), so dependency recomputation
+         * happens at update time rather than during Add().
+         *
+         * @throws std::runtime_error if a cycle is detected in the dependency graph.
+         */
+        void Build();
+
+        /**
+         * @brief Reports whether the schedule needs rebuilding.
+         * @return true if a system was added or the schedule cleared since the last build.
+         */
+        [[nodiscard]] bool isDirty() const { return m_dirty; }
 
         /**
         * @brief Clears all systems and resets the schedule.
@@ -202,8 +223,7 @@ namespace ecs
          * @return The set of transitive hard dependents (excluding the roots themselves
          *         unless a root also depends on another root).
          */
-        [[nodiscard]] std::unordered_set<systemHash_t> CollectHardDependents(
-            const std::unordered_set<systemHash_t>& roots) const;
+        [[nodiscard]] std::unordered_set<systemHash_t> CollectHardDependents(const std::unordered_set<systemHash_t>& roots) const;
 
     private:
         /**
@@ -226,7 +246,8 @@ namespace ecs
         systemsGraph_t m_graph;                         ///< Internal dependency graph of all systems
         systemsGraph_t::stagesGraph_t m_stagesGraph;    ///< Computed execution stages after Init
         std::unordered_map<systemHash_t, std::vector<ComponentAccessEntry>> m_access; ///< Declared component access per system
-        bool m_isInit = false;                          ///< Flag indicating if schedule is initialized
+        bool m_isInit = false;                          ///< Flag indicating if schedule has been built at least once
+        bool m_dirty = false;                           ///< Set by Add()/clear(); cleared by Build()/Init()
     };
 
 } // namespace ecs

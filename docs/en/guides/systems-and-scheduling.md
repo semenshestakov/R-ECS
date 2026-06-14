@@ -93,6 +93,15 @@ Every edge in the schedule carries a kind (`ecs::SystemDep`):
 
 A single edge can be both at once (the flags are OR-ed together).
 
+### When the schedule is rebuilt
+
+Adding a system does **not** recompute the schedule. `Add` only records the
+system and marks the schedule dirty; the topological sort and data-edge
+derivation run lazily on the next `Build()`, which the systems manager triggers
+at the start of `Update()` (and `Subscribe()`). So registering systems is cheap,
+and the dependency recomputation happens once at update time rather than on every
+`Add`. A clean schedule makes `Build()` a no-op.
+
 ## Component access — `ECS_ACCESS`
 
 Instead of (or in addition to) hard edges, a system can declare which components

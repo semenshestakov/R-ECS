@@ -168,3 +168,83 @@ TEST_F(SystemsAccessAndDisableTest, IsEnabledReflectsCascade)
     EXPECT_TRUE(registry.Systems().IsEnabled<WeakSystem>());
     EXPECT_TRUE(registry.Systems().IsEnabled<ReaderSystem>());
 }
+
+
+namespace
+{
+    struct ScheduleFake final : ecs::IBaseSystem
+    {
+        DependentSystems hard{};
+        [[nodiscard]] IBaseSystem* New() const override { return new ScheduleFake(*this); }
+        void Subscribe(const SubscribeState&) override {}
+        [[nodiscard]] DependentSystems GetDependents() const override { return hard; }
+    };
+
+    int stageCount(const ecs::SystemsSchedule& s)
+    {
+        int n = 0;
+        for (const auto& stage : s) { (void)stage; ++n; }
+        return n;
+    }
+}
+
+
+TEST(SystemsScheduleDirty, AddMarksDirtyWithoutRebuilding)
+{
+    ScheduleFake a;
+    SystemsSchedule schedule;
+
+    schedule.Add(a, 1);
+
+    EXPECT_TRUE(schedule.isDirty());
+    EXPECT_EQ(stageCount(schedule), 0); // no stages until Build()
+}
+
+
+TEST(SystemsScheduleDirty, BuildClearsDirtyAndComputesStages)
+{
+    const ScheduleFake a;
+    SystemsSchedule schedule;
+    schedule.Add(a, 1);
+
+    schedule.Build();
+
+    EXPECT_FALSE(schedule.isDirty());
+    EXPECT_EQ(stageCount(schedule), 1);
+}
+
+
+TEST(SystemsScheduleDirty, AddAfterBuildDefersRecomputeUntilNextBuild)
+{
+    const ScheduleFake a;
+    ScheduleFake b;
+    SystemsSchedule schedule;
+    schedule.Add(a, 1);
+    schedule.Build();
+
+    systemHash_t bDeps[] = { 1 };
+    b.hard = { bDeps, 1 };
+    schedule.Add(b, 2);
+
+    EXPECT_TRUE(schedule.isDirty());
+    EXPECT_EQ(stageCount(schedule), 1); // still the pre-Add result
+
+    schedule.Build();
+
+    EXPECT_FALSE(schedule.isDirty());
+    EXPECT_EQ(stageCount(schedule), 2); // 1 then 2
+}
+
+
+TEST(SystemsScheduleDirty, BuildIsNoOpWhenClean)
+{
+    const ScheduleFake a;
+    SystemsSchedule schedule;
+    schedule.Add(a, 1);
+    schedule.Build();
+
+    schedule.Build();
+
+    EXPECT_FALSE(schedule.isDirty());
+    EXPECT_EQ(stageCount(schedule), 1);
+}

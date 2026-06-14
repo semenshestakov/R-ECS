@@ -80,21 +80,23 @@ void ecs::SystemsSchedule::Add(const IBaseSystem& system, const systemHash_t has
     if(access.count != 0)
         m_access[hash].assign(access.entries, access.entries + access.count);
 
-    if(m_isInit)
+    m_dirty = true;
+}
+
+void ecs::SystemsSchedule::Build()
+{
+    if(!m_isInit || m_dirty)
     {
         deriveDataEdges();
         m_stagesGraph = m_graph.build();
+        m_isInit = true;
+        m_dirty = false;
     }
 }
 
 void ecs::SystemsSchedule::Init()
 {
-    if(!m_isInit)
-    {
-        deriveDataEdges();
-        m_stagesGraph = m_graph.build();
-        m_isInit = true;
-    }
+    Build();
 }
 
 void ecs::SystemsSchedule::clear()
@@ -102,6 +104,8 @@ void ecs::SystemsSchedule::clear()
     m_graph.clear();
     m_stagesGraph.clear();
     m_access.clear();
+    m_isInit = false;
+    m_dirty = true;
 }
 
 std::unordered_set<ecs::systemHash_t> ecs::SystemsSchedule::CollectHardDependents(

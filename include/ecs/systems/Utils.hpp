@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include <typeinfo>
 #include "event/EventUtils.hpp"
 #include "common_recs/utils/BaseError.hpp"
 
@@ -143,6 +145,108 @@ namespace ecs
         const systemHash_t* systemHashes = nullptr;
         std::size_t count = 0;
     };
+
+    /**
+     * @brief Classifies a dependency edge between two systems.
+     *
+     * The scheduler stores these flags on each edge of the dependency graph.
+     * A single edge may carry several flags at once (bitwise OR).
+     *
+     * - Direct : a hard dependency declared with ECS_DEPENDENT_SYSTEMS. It both
+     *            orders execution and propagates disabling: when a system is
+     *            disabled, every system that depends on it through Direct edges
+     *            (transitively) is disabled too.
+     * - Data   : a soft dependency. It orders execution but never propagates
+     *            disabling. Data edges are derived from declared component
+     *            access (writer-before-reader) and from ECS_WEAK_DEPENDENT_SYSTEMS.
+     */
+    using systemDepFlags_t = std::uint8_t;
+    namespace SystemDep
+    {
+        inline constexpr systemDepFlags_t None   = 0;       ///< 0b00 — no relationship
+        inline constexpr systemDepFlags_t Direct = 1 << 0;  ///< 0b01 — hard, orders + cascades on disable
+        inline constexpr systemDepFlags_t Data   = 1 << 1;  ///< 0b10 — soft, orders only
+    }
+
+    /**
+     * @typedef componentHash_t
+     * @brief Type alias for a compile-time component type identifier.
+     */
+    using componentHash_t = std::size_t;
+
+    /**
+     * @brief Generates a unique compile-time hash for a component type.
+     *
+     * @tparam Component The component type to generate a hash for.
+     * @return componentHash_t A unique identifier for the component type.
+     */
+    template<class Component>
+    constexpr componentHash_t getComponentHash()
+    {
+        return typeid(Component).hash_code();
+    }
+
+    /**
+     * @brief How a system accesses a component.
+     *
+     * - Read      : read-only (RO)
+     * - Write     : write-only (WO)
+     * - ReadWrite : read and write (RW)
+     *
+     * For scheduling, anything that writes (Write or ReadWrite) is a writer and
+     * anything that reads (Read or ReadWrite) is a reader. The scheduler orders
+     * readers after writers of the same component (writer-before-reader) and
+     * orders two writers deterministically by system hash.
+     */
+    enum class AccessKind : std::uint8_t
+    {
+        Read,
+        Write,
+        ReadWrite,
+    };
+
+    /// @brief Returns true if the access reads the component (RO or RW).
+    constexpr bool accessReads(const AccessKind kind)
+    {
+        return kind == AccessKind::Read || kind == AccessKind::ReadWrite;
+    }
+
+    /// @brief Returns true if the access writes the component (WO or RW).
+    constexpr bool accessWrites(const AccessKind kind)
+    {
+        return kind == AccessKind::Write || kind == AccessKind::ReadWrite;
+    }
+
+    /**
+     * @brief A single (component, access kind) pair declared by a system.
+     */
+    struct ComponentAccessEntry
+    {
+        componentHash_t component = 0;
+        AccessKind kind = AccessKind::Read;
+    };
+
+    /**
+     * @brief A view over the component access a system declares.
+     *
+     * Mirrors DependentSystems: a non-owning pointer plus a count, so the array
+     * can live in static storage with zero per-instance overhead.
+     */
+    struct ComponentAccess
+    {
+        const ComponentAccessEntry* entries = nullptr;
+        std::size_t count = 0;
+    };
+
+    /**
+     * @brief Accessor tags used with the ECS_ACCESS macro.
+     *
+     * Wrap a component type to declare how a system touches it, e.g.
+     * `ECS_ACCESS(ecs::Read<Position>, ecs::Write<Velocity>)`.
+     */
+    template<class Component> struct Read      { using component = Component; static constexpr AccessKind kind = AccessKind::Read; };
+    template<class Component> struct Write     { using component = Component; static constexpr AccessKind kind = AccessKind::Write; };
+    template<class Component> struct ReadWrite { using component = Component; static constexpr AccessKind kind = AccessKind::ReadWrite; };
 
 
     namespace error

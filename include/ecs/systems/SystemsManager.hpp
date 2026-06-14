@@ -3,6 +3,7 @@
 
 #include <span>
 #include <unordered_map>
+#include <unordered_set>
 #include "IBaseSystem.hpp"
 #include "SystemsSchedule.hpp"
 #include "Utils.hpp"
@@ -155,6 +156,7 @@ namespace ecs
     DEEP_TEST_PRIVATE_ACCESS:
         SystemsSchedule m_schedule;                                                 ///< Schedule for update systems
         std::unordered_map<systemHash_t, baseSystemPtr_t> m_systemsMap = {};        ///< Map of type hash to system instance
+        std::unordered_set<systemHash_t> m_disabled = {};                           ///< Explicitly disabled systems (cascade is derived)
 
     public:
         /**
@@ -214,6 +216,57 @@ namespace ecs
          */
         template<typename SystemCls> [[nodiscard]] SystemCls* TryGet();
         template<typename SystemCls> [[nodiscard]] const SystemCls* TryGet() const;
+
+        /**
+         * @brief Disables a system (and everything that hard-depends on it).
+         *
+         * The system stops receiving Update() calls. Every system that depends on
+         * it through Direct (hard) edges, transitively, is also skipped. Systems
+         * linked only by component access or weak dependencies keep running.
+         *
+         * @tparam SystemCls The system type to disable.
+         */
+        template<typename SystemCls> void Disable();
+
+        /**
+         * @brief Re-enables a previously disabled system.
+         *
+         * Only clears the explicit disable for this system. A system stays inactive
+         * if it still hard-depends on another system that remains disabled.
+         *
+         * @tparam SystemCls The system type to enable.
+         */
+        template<typename SystemCls> void Enable();
+
+        /**
+         * @brief Disables a system by its hash. @see Disable()
+         * @param hash The system hash to disable.
+         */
+        void Disable(systemHash_t hash);
+
+        /**
+         * @brief Enables a system by its hash. @see Enable()
+         * @param hash The system hash to enable.
+         */
+        void Enable(systemHash_t hash);
+
+        /**
+         * @brief Reports whether a system is currently active.
+         *
+         * A system is enabled when it is neither explicitly disabled nor a
+         * transitive hard dependent of a disabled system.
+         *
+         * @tparam SystemCls The system type to query.
+         * @return true if the system will run during Update(), false otherwise.
+         */
+        template<typename SystemCls> [[nodiscard]] bool IsEnabled() const;
+
+        /**
+         * @brief Reports whether a system is currently active, by hash. @see IsEnabled()
+         * @param hash The system hash to query.
+         * @return true if the system will run during Update(), false otherwise.
+         */
+        [[nodiscard]] bool IsEnabled(systemHash_t hash) const;
 
 
         /**

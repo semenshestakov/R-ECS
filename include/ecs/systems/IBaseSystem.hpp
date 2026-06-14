@@ -99,11 +99,30 @@ namespace ecs
         [[nodiscard]] bool isInit() const { return m_isInit; }
 
         /**
-         * @brief Returns the list of systems this system depends on.
+         * @brief Returns the list of systems this system hard-depends on.
          * @return DependentSystems object containing system hashes.
-         * @note Override this method to declare system dependencies.
+         * @note Override this method (usually via ECS_DEPENDENT_SYSTEMS) to declare
+         *       hard dependencies. Hard dependencies order execution and propagate
+         *       disabling.
          */
         [[nodiscard]] virtual DependentSystems GetDependents() const { return {}; }
+
+        /**
+         * @brief Returns the list of systems this system weakly depends on.
+         * @return DependentSystems object containing system hashes.
+         * @note Override this method (usually via ECS_WEAK_DEPENDENT_SYSTEMS) to
+         *       declare soft dependencies. Weak dependencies order execution but
+         *       never propagate disabling.
+         */
+        [[nodiscard]] virtual DependentSystems GetWeakDependents() const { return {}; }
+
+        /**
+         * @brief Returns the component access this system declares.
+         * @return ComponentAccess view describing the RO/WO/RW components used.
+         * @note Override this method (usually via ECS_ACCESS) so the scheduler can
+         *       derive data ordering edges (writer-before-reader) between systems.
+         */
+        [[nodiscard]] virtual ComponentAccess GetComponentAccess() const { return {}; }
 
     private:
         bool m_isInit = false;

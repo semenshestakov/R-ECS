@@ -44,3 +44,21 @@ const SystemCls* ecs::SystemsManager::TryGet() const
 
     return dynamic_cast<const SystemCls*>(it->second.get());
 }
+
+template<typename SystemCls>
+void ecs::SystemsManager::Disable()
+{
+    Disable(getSystemHash<SystemCls>());
+}
+
+template<typename SystemCls>
+void ecs::SystemsManager::Enable()
+{
+    Enable(getSystemHash<SystemCls>());
+}
+
+template<typename SystemCls>
+bool ecs::SystemsManager::IsEnabled() const
+{
+    return IsEnabled(getSystemHash<SystemCls>());
+}

@@ -1,4 +1,7 @@
 #pragma once
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 #include "collections/DirectedAcyclicGraph.hpp"
 #include "IBaseSystem.hpp"
 
@@ -70,10 +73,11 @@ namespace ecs
         /**
          * @brief Type alias for the internal dependency graph.
          *
-         * Uses DirectedAcyclicGraph with system hashes as nodes to model
-         * dependencies between systems.
+         * Uses DirectedAcyclicGraph with system hashes as nodes. Each edge stores
+         * systemDepFlags_t (Direct and/or Data) describing how the dependency was
+         * established.
          */
-        using systemsGraph_t = collections::DirectedAcyclicGraph<systemHash_t>;
+        using systemsGraph_t = collections::DirectedAcyclicGraph<systemHash_t, systemDepFlags_t>;
 
     public:
         /**
@@ -183,9 +187,45 @@ namespace ecs
          */
         [[nodiscard]] auto end() const {return m_stagesGraph.end();}
 
+        /**
+         * @brief Collects every system that transitively hard-depends on a root.
+         *
+         * Walks the dependency graph backwards along Direct (hard) edges only,
+         * starting from each system in @p roots, and returns all systems reachable
+         * that way. Data edges are ignored, so systems coupled only through shared
+         * component access (or ECS_WEAK_DEPENDENT_SYSTEMS) are never collected.
+         *
+         * This is the primitive used to cascade disabling: disabling the roots also
+         * disables everything returned here.
+         *
+         * @param roots The systems whose hard dependents should be collected.
+         * @return The set of transitive hard dependents (excluding the roots themselves
+         *         unless a root also depends on another root).
+         */
+        [[nodiscard]] std::unordered_set<systemHash_t> CollectHardDependents(
+            const std::unordered_set<systemHash_t>& roots) const;
+
     private:
+        /**
+         * @brief Adds (or merges) a dependency edge, OR-ing the given flags in.
+         * @param node The dependent system.
+         * @param dep The system that must run before @p node.
+         * @param flags The dependency flags to add to the edge.
+         */
+        void addEdge(systemHash_t node, systemHash_t dep, systemDepFlags_t flags);
+
+        /**
+         * @brief Derives Data ordering edges from declared component access.
+         *
+         * For every component touched by more than one system: orders readers after
+         * writers, and orders two writers deterministically by system hash. Called
+         * from Init() before the topological sort.
+         */
+        void deriveDataEdges();
+
         systemsGraph_t m_graph;                         ///< Internal dependency graph of all systems
         systemsGraph_t::stagesGraph_t m_stagesGraph;    ///< Computed execution stages after Init
+        std::unordered_map<systemHash_t, std::vector<ComponentAccessEntry>> m_access; ///< Declared component access per system
         bool m_isInit = false;                          ///< Flag indicating if schedule is initialized
     };
 

@@ -81,6 +81,90 @@ between themselves; only the declared edges are enforced. The graph is a
 [`collections::DirectedAcyclicGraph`](../api/index_classes.md) and a cycle is a
 setup error.
 
+### Two kinds of dependency edge
+
+Every edge in the schedule carries a kind (`ecs::SystemDep`):
+
+- `Direct` — a **hard** dependency from `ECS_DEPENDENT_SYSTEMS`. It orders
+  execution *and* propagates disabling (see below).
+- `Data` — a **soft** dependency. It orders execution but never propagates
+  disabling. Data edges come from declared component access and from
+  `ECS_WEAK_DEPENDENT_SYSTEMS`.
+
+A single edge can be both at once (the flags are OR-ed together).
+
+## Component access — `ECS_ACCESS`
+
+Instead of (or in addition to) hard edges, a system can declare which components
+it reads and writes. The scheduler turns that into ordering automatically:
+
+```cpp
+struct MovementSystem final : ecs::ISystem<MovementSystem>
+{
+    ECS_REGISTRY("game")
+    ECS_ACCESS(ecs::ReadWrite<Position2d>, ecs::Read<Velocity2d>)
+
+    void Update(ecs::Registry&, const ecs::UpdateState&) override { /* ... */ }
+};
+```
+
+Accessor tags are `ecs::Read<C>` (RO), `ecs::Write<C>` (WO) and
+`ecs::ReadWrite<C>` (RW). From the declared access the scheduler derives `Data`
+edges so that:
+
+- every **reader** of a component runs after every **writer** of it
+  (writer-before-reader), and
+- two **writers** of the same component are ordered deterministically (the
+  smaller system hash runs first).
+
+These derived edges only constrain order — they never cause a system to be
+disabled when another is disabled.
+
+## Weak dependencies — `ECS_WEAK_DEPENDENT_SYSTEMS`
+
+Use a weak dependency when a system should run *after* another but must keep
+running even if that other system is turned off:
+
+```cpp
+struct HudSystem final : ecs::ISystem<HudSystem>
+{
+    ECS_REGISTRY("game")
+    ECS_WEAK_DEPENDENT_SYSTEMS(ScoreSystem)   // after ScoreSystem, but independent
+
+    void Update(ecs::Registry&, const ecs::UpdateState&) override { /* ... */ }
+};
+```
+
+This adds a `Data` edge: ordering is enforced, but disabling `ScoreSystem` leaves
+`HudSystem` running.
+
+## Enabling and disabling systems
+
+Systems can be turned on and off at runtime through the systems manager:
+
+```cpp
+registry.Systems().Disable<PhysicsSystem>();
+bool on = registry.Systems().IsEnabled<PhysicsSystem>();
+registry.Systems().Enable<PhysicsSystem>();
+```
+
+A disabled system stops receiving `Update()` (and `Subscribe()`) calls.
+Disabling **cascades along `Direct` edges, transitively**: every system that
+hard-depends on a disabled system — directly or through a chain — is skipped too.
+Systems linked only by component access or `ECS_WEAK_DEPENDENT_SYSTEMS` keep
+running.
+
+```
+            disable ─┐
+ResourceSystem       ▼
+InputSystem ─▶ RenderSystem ─▶ PostRenderSystem   (both skipped: hard chain)
+PhysicsSystem
+HudSystem ⇢ RenderSystem                          (weak edge: keeps running)
+```
+
+`Enable` only clears the explicit disable; a system stays inactive while it still
+hard-depends on something that is disabled. `IsEnabled` reflects the full cascade.
+
 ## Accessing other systems and shared state
 
 Inside `Update` (or anywhere with a `Registry&`):

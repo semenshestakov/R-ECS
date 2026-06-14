@@ -62,3 +62,10 @@ constexpr std::array<ecs::systemHash_t, sizeof...(SystemsArgs)> ecs::ISystem<Sys
 {
     return {ecs::getSystemHash<SystemsArgs>()...};
 }
+
+template<typename SystemCls>
+template<typename... Accessors>
+std::array<ecs::ComponentAccessEntry, sizeof...(Accessors)> ecs::ISystem<SystemCls>::GetComponentAccessArray()
+{
+    return {ecs::ComponentAccessEntry{ecs::getComponentHash<typename Accessors::component>(), Accessors::kind}...};
+}

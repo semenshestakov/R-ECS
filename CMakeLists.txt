@@ -82,6 +82,7 @@ if(TEST_ENABLE)
             test/ecs/Schedule.cpp
             test/ecs/EntityCommands.cpp
             test/ecs/SystemsManager.cpp
+            test/ecs/SystemsAccessAndDisable.cpp
     )
     target_include_directories(test_recs
         PRIVATE

@@ -22,6 +22,7 @@ void ecs::SystemsManager::copy(const SystemsManager& other)
     m_systemsMap.clear();
 
     m_schedule = other.m_schedule;
+    m_disabled = other.m_disabled;
     for(auto const& [hash, systemPtr]: other.m_systemsMap)
     {
         m_systemsMap[hash] = baseSystemPtr_t(systemPtr->New());
@@ -40,6 +41,32 @@ void ecs::SystemsManager::swap(SystemsManager& other) noexcept
 {
     std::swap(m_systemsMap, other.m_systemsMap);
     std::swap(m_schedule, other.m_schedule);
+    std::swap(m_disabled, other.m_disabled);
+}
+
+std::unordered_set<ecs::systemHash_t> ecs::SystemsManager::effectiveDisabled() const
+{
+    if(m_disabled.empty())
+        return {};
+
+    std::unordered_set<systemHash_t> disabled = m_schedule.CollectHardDependents(m_disabled);
+    disabled.insert(m_disabled.begin(), m_disabled.end());
+    return disabled;
+}
+
+void ecs::SystemsManager::Disable(const systemHash_t hash)
+{
+    m_disabled.insert(hash);
+}
+
+void ecs::SystemsManager::Enable(const systemHash_t hash)
+{
+    m_disabled.erase(hash);
+}
+
+bool ecs::SystemsManager::IsEnabled(const systemHash_t hash) const
+{
+    return !effectiveDisabled().contains(hash);
 }
 
 bool ecs::SystemsManager::Init(const InitState& state)
@@ -55,11 +82,15 @@ bool ecs::SystemsManager::Init(const InitState& state)
 
 bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
 {
+    const std::unordered_set<systemHash_t> disabled = effectiveDisabled();
     event::priority_t priority = event::MAX_PRIORITY;
     for(const auto& stageSystems: m_schedule)
     {
         for(auto& systemHash: stageSystems)
         {
+            if(disabled.contains(systemHash))
+                continue;
+
             SubscribeState localState = state;
             localState.priority = priority;
 
@@ -72,11 +103,15 @@ bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
 
 void ecs::SystemsManager::Update(Registry& registry)
 {
+    const std::unordered_set<systemHash_t> disabled = effectiveDisabled();
     const UpdateState state{};
     for(const auto& stageSystems: m_schedule)
     {
         for(auto& systemHash: stageSystems)
         {
+            if(disabled.contains(systemHash))
+                continue;
+
             m_systemsMap[systemHash]->Update(registry, state);
         }
     }

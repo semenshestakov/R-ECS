@@ -178,6 +178,21 @@ namespace ecs
         template <typename... SystemsArgs>
         static constexpr std::array<systemHash_t, sizeof...(SystemsArgs)> GetSystemsHashArray();
 
+        /**
+         * @brief Builds an array of component access entries from accessor tags.
+         *
+         * Each accessor argument is one of ecs::Read<C>, ecs::Write<C> or
+         * ecs::ReadWrite<C>. The resulting array pairs each component's hash with
+         * its access kind and is consumed by GetComponentAccess() / ECS_ACCESS.
+         *
+         * @tparam Accessors The accessor tag types (Read/Write/ReadWrite of a component).
+         * @return std::array<ComponentAccessEntry, sizeof...(Accessors)> The access entries.
+         *
+         * @see ECS_ACCESS macro
+         */
+        template <typename... Accessors>
+        static std::array<ComponentAccessEntry, sizeof...(Accessors)> GetComponentAccessArray();
+
     public:
         /**
          * @brief Returns the factory registration names for this component/system
@@ -272,6 +287,52 @@ namespace ecs
     ecs::DependentSystems GetDependents() const override {                  \
     static const auto s_dependents = GetSystemsHashArray<__VA_ARGS__>();    \
     return {s_dependents.data(), s_dependents.size() }; }
+
+
+/**
+ * @brief Macro to generate GetWeakDependents() override implementation.
+ *
+ * Declares soft dependencies on the given system types. Unlike
+ * ECS_DEPENDENT_SYSTEMS, weak dependencies only constrain execution order; they
+ * are never followed when disabling cascades through the schedule.
+ *
+ * @param ... The system types this system weakly depends on.
+ *
+ * @example
+ * @code
+ * class HudSystem : public ISystem<HudSystem> {
+ *     ECS_WEAK_DEPENDENT_SYSTEMS(ScoreSystem)   // run after ScoreSystem, but
+ *                                               // stay enabled if it is disabled
+ * };
+ * @endcode
+ */
+#define ECS_WEAK_DEPENDENT_SYSTEMS(...)                                     \
+    ecs::DependentSystems GetWeakDependents() const override {              \
+    static const auto s_weakDependents = GetSystemsHashArray<__VA_ARGS__>();\
+    return {s_weakDependents.data(), s_weakDependents.size() }; }
+
+
+/**
+ * @brief Macro to generate GetComponentAccess() override implementation.
+ *
+ * Declares the components a system reads and/or writes using accessor tags
+ * (ecs::Read<C>, ecs::Write<C>, ecs::ReadWrite<C>). The scheduler turns this
+ * into data ordering edges: a reader runs after every writer of the same
+ * component, and two writers are ordered deterministically.
+ *
+ * @param ... One or more accessor tags.
+ *
+ * @example
+ * @code
+ * class PhysicsSystem : public ISystem<PhysicsSystem> {
+ *     ECS_ACCESS(ecs::ReadWrite<Position>, ecs::Read<Velocity>)
+ * };
+ * @endcode
+ */
+#define ECS_ACCESS(...)                                                     \
+    ecs::ComponentAccess GetComponentAccess() const override {             \
+    static const auto s_access = GetComponentAccessArray<__VA_ARGS__>();    \
+    return {s_access.data(), s_access.size() }; }
 
 
 /**

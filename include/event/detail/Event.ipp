@@ -64,6 +64,41 @@ namespace event
     }
 
     template<typename... Args>
+    void Event<Args...>::setPriority(const callbackId_t callbackId, const priority_t priority)
+    {
+        if (callbackId == INVALID_CALLBACK_ID)
+            return;
+
+        const auto it = std::find_if(
+            m_callbacks.begin(),
+            m_callbacks.end(),
+            [callbackId](const Entry& e) { return e.id == callbackId; });
+
+        if (it == m_callbacks.end() || it->priority == priority)
+            return;
+
+        // During dispatch the vector must not be reordered; update in place and let
+        // the next dispatch observe the new order via a later reprioritization.
+        if (m_dispatching)
+        {
+            it->priority = priority;
+            return;
+        }
+
+        Entry entry = *it;
+        entry.priority = priority;
+        m_callbacks.erase(it);
+
+        const auto pos = std::upper_bound(
+            m_callbacks.begin(),
+            m_callbacks.end(),
+            priority,
+            [](priority_t p, const Entry& e) { return p > e.priority; });
+
+        m_callbacks.insert(pos, entry);
+    }
+
+    template<typename... Args>
     void Event<Args...>::operator()(Args... args)
     {
         m_dispatching = true;

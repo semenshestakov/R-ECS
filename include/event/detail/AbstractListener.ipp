@@ -106,6 +106,23 @@ namespace event
     }
 
     template<ValidCallbackIdType T>
+    void AbstractListener<T>::setPriority(const priority_t priority)
+    {
+        if (m_event == nullptr)
+            return;
+
+        if constexpr (std::is_same_v<T, callbackId_t>)
+        {
+            m_event->setPriority(m_callbackId, priority);
+        }
+        else
+        {
+            for (const callbackId_t callbackId : m_callbackId)
+                m_event->setPriority(callbackId, priority);
+        }
+    }
+
+    template<ValidCallbackIdType T>
     void AbstractListener<T>::unsubscribeAll()
     {
         if constexpr (std::is_same_v<T, callbackId_t>)

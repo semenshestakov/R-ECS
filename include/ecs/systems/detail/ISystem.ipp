@@ -33,6 +33,16 @@ void ecs::ISystem<SystemCls>::Subscribe(const SubscribeState& state)
 }
 
 template<typename SystemCls>
+void ecs::ISystem<SystemCls>::SetEventsPriority(const event::priority_t priority)
+{
+    for(event::AbstractListener<event::callbackId_t>* listener: m_eventListeners)
+    {
+        if(listener != nullptr)
+            listener->setPriority(priority);
+    }
+}
+
+template<typename SystemCls>
 template<class Event>
 auto ecs::ISystem<SystemCls>::RegisterEvent(
     void (SystemCls::*method)(Registry&, const Event&)
@@ -53,6 +63,7 @@ auto ecs::ISystem<SystemCls>::RegisterEvent(
             priority);
     };
     m_registerEventFunctions.emplace_back(registerFunction);
+    m_eventListeners.emplace_back(listenerPtr.get());
     return listenerPtr;
 }
 

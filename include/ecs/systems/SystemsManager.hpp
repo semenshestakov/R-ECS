@@ -268,6 +268,16 @@ namespace ecs
          */
         [[nodiscard]] bool IsEnabled(systemHash_t hash) const;
 
+        /**
+         * @brief Reports whether the schedule needs rebuilding before the next update.
+         *
+         * True when systems were added (or the schedule cleared) since the last build.
+         * Registry uses this to re-subscribe event handlers with refreshed priorities so
+         * event dispatch order stays in sync with the recomputed schedule.
+         *
+         * @return true if the schedule is dirty, false otherwise.
+         */
+        [[nodiscard]] bool isScheduleDirty() const;
 
         /**
          * @brief Creates a SystemsManager instance with pre-registered systems

@@ -102,6 +102,14 @@ at the start of `Update()` (and `Subscribe()`). So registering systems is cheap,
 and the dependency recomputation happens once at update time rather than on every
 `Add`. A clean schedule makes `Build()` a no-op.
 
+Because event-handler dispatch order is derived from the schedule (earlier stages
+get higher priority), `Registry::Update` refreshes event ordering whenever the
+schedule was recomputed. Existing handlers are **not** re-subscribed: their
+priorities are updated in place via `SetEventsPriority` (which forwards to
+`Event::setPriority`), so dispatch order tracks the new stages without churn.
+Systems registered after the initial subscription are subscribed once on the next
+refresh.
+
 ## Component access — `ECS_ACCESS`
 
 Instead of (or in addition to) hard edges, a system can declare which components
@@ -111,15 +119,14 @@ it reads and writes. The scheduler turns that into ordering automatically:
 struct MovementSystem final : ecs::ISystem<MovementSystem>
 {
     ECS_REGISTRY("game")
-    ECS_ACCESS(ecs::ReadWrite<Position2d>, ecs::Read<Velocity2d>)
+    ECS_ACCESS(ecs::Write<Position2d>, ecs::Read<Velocity2d>)
 
     void Update(ecs::Registry&, const ecs::UpdateState&) override { /* ... */ }
 };
 ```
 
-Accessor tags are `ecs::Read<C>` (RO), `ecs::Write<C>` (WO) and
-`ecs::ReadWrite<C>` (RW). From the declared access the scheduler derives `Data`
-edges so that:
+Accessor tags are `ecs::Read<C>` (read) and `ecs::Write<C>` (write). From the
+declared access the scheduler derives `Data` edges so that:
 
 - every **reader** of a component runs after every **writer** of it
   (writer-before-reader), and

@@ -24,6 +24,9 @@ void ecs::Registry::Update()
 {
     m_commandQueue.Flush({}, *this);
 
+    if (m_systemManager.isScheduleDirty())
+        m_systemManager.Subscribe({m_eventSystem}, {});
+
     m_systemManager.Update(*this, {});
     m_eventSystem.FlushEvents({});
     m_commandQueue.Flush({}, *this);

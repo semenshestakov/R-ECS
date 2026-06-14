@@ -69,6 +69,11 @@ bool ecs::SystemsManager::IsEnabled(const systemHash_t hash) const
     return !effectiveDisabled().contains(hash);
 }
 
+bool ecs::SystemsManager::isScheduleDirty() const
+{
+    return m_schedule.isDirty();
+}
+
 bool ecs::SystemsManager::Init(const InitState& state)
 {
     for(auto& system: m_systemsMap | std::views::values)
@@ -95,7 +100,8 @@ bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
             SubscribeState localState = state;
             localState.priority = priority;
 
-            m_systemsMap[systemHash]->Subscribe(localState);
+            m_systemsMap[systemHash]->Subscribe(localState);     // one-shot: subscribes new systems
+            m_systemsMap[systemHash]->SetEventsPriority(priority); // reorders existing handlers in place
         }
         --priority;
     }

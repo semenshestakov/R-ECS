@@ -98,18 +98,28 @@ namespace ecs
          * binds the system's handlers to specific events.
          *
          * After successful subscription, the internal list of registration functions
-         * is cleared to prevent duplicate subscriptions.
+         * is cleared to prevent duplicate subscriptions, so this method subscribes a
+         * given system only once. To refresh handler priorities later (e.g. after the
+         * schedule is recomputed) use SetEventsPriority(), which reorders in place
+         * rather than re-subscribing.
          *
          * @tparam SystemCls Concrete system class type used for CRTP-based system design.
          *
          * @param state Subscription state containing a reference to the EventSystem
          *              and additional subscription parameters such as priority.
-         *
-         * @note This method is typically called once during system initialization.
-         * @note After execution, m_registerEventFunctions is cleared and cannot be reused
-         *       unless re-populated explicitly.
          */
         void Subscribe(const SubscribeState& state) override;
+
+        /**
+         * @brief Updates the dispatch priority of all this system's event handlers.
+         *
+         * Applies the given priority to every listener registered by the system,
+         * reordering event dispatch in place without re-subscribing. Used by
+         * SystemsManager to keep event order aligned with the recomputed schedule.
+         *
+         * @param priority The new priority for this system's handlers.
+         */
+        void SetEventsPriority(event::priority_t priority) override;
 
     DEEP_TEST_PROTECTED_ACCESS:
         /**
@@ -136,6 +146,15 @@ namespace ecs
          * becomes available during system initialization.
          */
         std::vector<std::function<void(EventSystem&, event::priority_t)>> m_registerEventFunctions;
+
+        /**
+         * @brief Raw pointers to every listener registered by this system.
+         *
+         * Used by SetEventsPriority() to reprioritize handlers in place. The
+         * listeners themselves are owned by the system's ECS_EVENT members, so these
+         * pointers stay valid for the system's lifetime.
+         */
+        std::vector<event::AbstractListener<event::callbackId_t>*> m_eventListeners;
 
         /**
          * @brief Creates an array of system hashes for the specified system types.
@@ -316,16 +335,16 @@ namespace ecs
  * @brief Macro to generate GetComponentAccess() override implementation.
  *
  * Declares the components a system reads and/or writes using accessor tags
- * (ecs::Read<C>, ecs::Write<C>, ecs::ReadWrite<C>). The scheduler turns this
- * into data ordering edges: a reader runs after every writer of the same
- * component, and two writers are ordered deterministically.
+ * (ecs::Read<C>, ecs::Write<C>). The scheduler turns this into data ordering
+ * edges: a reader runs after every writer of the same component, and two writers
+ * are ordered deterministically.
  *
  * @param ... One or more accessor tags.
  *
  * @example
  * @code
  * class PhysicsSystem : public ISystem<PhysicsSystem> {
- *     ECS_ACCESS(ecs::ReadWrite<Position>, ecs::Read<Velocity>)
+ *     ECS_ACCESS(ecs::Write<Position>, ecs::Read<Velocity>)
  * };
  * @endcode
  */

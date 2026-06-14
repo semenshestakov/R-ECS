@@ -57,6 +57,14 @@ namespace event
         void remove(callbackId_t callbackId) override;
 
         /**
+         * Update the priority of a registered callback, keeping the callback list
+         * ordered by priority.
+         * @param callbackId ID returned by add()
+         * @param priority The new priority
+         */
+        void setPriority(callbackId_t callbackId, priority_t priority) override;
+
+        /**
          * Trigger the event, calling all registered callbacks.
          * @param args Arguments to pass to callbacks
          */

@@ -103,6 +103,16 @@ namespace event
         void addCallbackId(callbackId_t callbackId);
 
         /**
+         * @brief Updates the priority of every callback managed by this listener.
+         *
+         * Forwards to the associated event's setPriority for each stored callback id,
+         * so dispatch order can be refreshed without re-subscribing.
+         *
+         * @param priority The new priority to apply.
+         */
+        void setPriority(priority_t priority);
+
+        /**
          * @brief Unsubscribes all callbacks managed by this listener from the associated event.
          *
          * Removes all callback IDs stored in this listener from the associated event,

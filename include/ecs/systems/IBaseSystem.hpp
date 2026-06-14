@@ -81,6 +81,16 @@ namespace ecs
         virtual void Subscribe(const SubscribeState& state) = 0;
 
         /**
+         * @brief Updates the dispatch priority of this system's event handlers.
+         *
+         * Lets the scheduler refresh event ordering in place (without re-subscribing)
+         * when the schedule is recomputed. The default implementation does nothing.
+         *
+         * @param priority The new priority to apply to the system's handlers.
+         */
+        virtual void SetEventsPriority(event::priority_t priority) {}
+
+        /**
          * @brief Performs the system's main logic for a single update cycle.
          *
          * Called once per frame or update tick to execute the system's behavior.

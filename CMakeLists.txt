@@ -83,6 +83,7 @@ if(TEST_ENABLE)
             test/ecs/EntityCommands.cpp
             test/ecs/SystemsManager.cpp
             test/ecs/SystemsAccessAndDisable.cpp
+            test/ecs/SystemsResubscribe.cpp
     )
     target_include_directories(test_recs
         PRIVATE

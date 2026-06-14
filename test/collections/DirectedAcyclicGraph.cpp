@@ -1,7 +1,9 @@
 #include "collections/DirectedAcyclicGraph.hpp"
 #include <gtest/gtest.h>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
 
 using namespace collections;
@@ -812,4 +814,180 @@ TEST_F(DirectedAcyclicGraphTest, DependenciesMaintained)
         }
     }
     EXPECT_EQ(count, 2);
+}
+
+
+enum EdgeKind : std::uint8_t
+{
+    NONE   = 0b000,
+    DIRECT = 0b010,
+    DATA   = 0b100,
+};
+
+using FlagGraph = DirectedAcyclicGraph<int, std::uint8_t>;
+
+
+TEST_F(DirectedAcyclicGraphTest, EdgeReturnsNullWhenNoEdgeExists)
+{
+    graph.emplace(1);
+    graph.emplace(2);
+
+    EXPECT_EQ(graph.edge(2, 1), nullptr);
+}
+
+
+TEST_F(DirectedAcyclicGraphTest, EdgeReturnsNullWhenSourceMissing)
+{
+    graph.emplace(2, 1);
+
+    EXPECT_EQ(graph.edge(42, 1), nullptr);
+}
+
+
+TEST_F(DirectedAcyclicGraphTest, EdgeExistsWithDefaultPayload)
+{
+    graph.emplace(2, 1);
+
+    EXPECT_NE(graph.edge(2, 1), nullptr);
+    EXPECT_EQ(graph.edge(1, 2), nullptr);
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, EmplaceWithPayloadStoresIt)
+{
+    FlagGraph graph;
+    graph.emplace(2, 1, EdgeKind::DIRECT);
+
+    ASSERT_NE(graph.edge(2, 1), nullptr);
+    EXPECT_EQ(*graph.edge(2, 1), EdgeKind::DIRECT);
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, EmplaceWithoutPayloadDoesNotClobberExisting)
+{
+    FlagGraph graph;
+    graph.emplace(2, 1, EdgeKind::DATA);
+    graph.emplace(2, 1);
+
+    ASSERT_NE(graph.edge(2, 1), nullptr);
+    EXPECT_EQ(*graph.edge(2, 1), EdgeKind::DATA);
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, EmplaceWithPayloadOverwritesExisting)
+{
+    FlagGraph graph;
+    graph.emplace(2, 1, EdgeKind::DIRECT);
+    graph.emplace(2, 1, EdgeKind::DATA);
+
+    ASSERT_NE(graph.edge(2, 1), nullptr);
+    EXPECT_EQ(*graph.edge(2, 1), EdgeKind::DATA);
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, DistinctEdgesKeepDistinctPayloads)
+{
+    FlagGraph graph;
+    graph.emplace(3, 1, EdgeKind::DIRECT);
+    graph.emplace(3, 2, EdgeKind::DATA);
+
+    ASSERT_NE(graph.edge(3, 1), nullptr);
+    ASSERT_NE(graph.edge(3, 2), nullptr);
+    EXPECT_EQ(*graph.edge(3, 1), EdgeKind::DIRECT);
+    EXPECT_EQ(*graph.edge(3, 2), EdgeKind::DATA);
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, EdgesAccessorExposesPayloads)
+{
+    FlagGraph graph;
+    graph.emplace(3, 1, EdgeKind::DIRECT);
+    graph.emplace(3, 2, EdgeKind::DATA);
+
+    int seen = 0;
+    for (const auto& [node, nodeData] : graph)
+    {
+        if (node != 3)
+            continue;
+
+        for (const auto& [dep, kind] : nodeData.edges())
+        {
+            if (dep == 1)
+                EXPECT_EQ(kind, EdgeKind::DIRECT);
+            if (dep == 2)
+                EXPECT_EQ(kind, EdgeKind::DATA);
+            ++seen;
+        }
+    }
+    EXPECT_EQ(seen, 2);
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, KeyIterationStillYieldsDependencyNodes)
+{
+    FlagGraph graph;
+    graph.emplace(3, 1, EdgeKind::DIRECT);
+    graph.emplace(3, 2, EdgeKind::DATA);
+
+    std::unordered_set<int> deps;
+    for (const auto& [node, nodeData] : graph)
+    {
+        if (node != 3)
+            continue;
+
+        for (auto dep : nodeData)
+            deps.insert(dep);
+    }
+
+    EXPECT_EQ(deps, (std::unordered_set<int>{1, 2}));
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, BuildIgnoresEdgePayload)
+{
+    FlagGraph graph;
+    graph.emplace(2, 1, EdgeKind::DIRECT);
+    graph.emplace(3, 2, EdgeKind::DATA);
+
+    auto stages = graph.build();
+
+    ASSERT_EQ(stages.size(), 3);
+    ASSERT_EQ(stages[0].size(), 1);
+    EXPECT_EQ(stages[0][0], 1);
+    EXPECT_EQ(stages[1][0], 2);
+    EXPECT_EQ(stages[2][0], 3);
+}
+
+
+TEST(DirectedAcyclicGraphEdgeData, ClearRemovesEdges)
+{
+    FlagGraph graph;
+    graph.emplace(2, 1, EdgeKind::DIRECT);
+
+    graph.clear();
+
+    EXPECT_TRUE(graph.empty());
+    EXPECT_EQ(graph.edge(2, 1), nullptr);
+}
+
+
+struct AccessMask
+{
+    bool read = false;
+    bool write = false;
+
+    bool operator==(const AccessMask& other) const
+    {
+        return read == other.read && write == other.write;
+    }
+};
+
+TEST(DirectedAcyclicGraphEdgeData, SupportsStructPayload)
+{
+    DirectedAcyclicGraph<int, AccessMask> graph;
+    graph.emplace(2, 1, AccessMask{true, false});
+
+    ASSERT_NE(graph.edge(2, 1), nullptr);
+    EXPECT_EQ(*graph.edge(2, 1), (AccessMask{true, false}));
+    EXPECT_EQ(graph.build().size(), 2);
 }

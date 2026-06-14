@@ -118,7 +118,7 @@ namespace ecs
 
         /**
          * @brief Returns the component access this system declares.
-         * @return ComponentAccess view describing the RO/WO/RW components used.
+         * @return ComponentAccess view describing the RO/W components used.
          * @note Override this method (usually via ECS_ACCESS) so the scheduler can
          *       derive data ordering edges (writer-before-reader) between systems.
          */

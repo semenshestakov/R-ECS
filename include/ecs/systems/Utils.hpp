@@ -161,12 +161,12 @@ namespace ecs
      *            access (writer-before-reader) and from ECS_WEAK_DEPENDENT_SYSTEMS.
      */
     using systemDepFlags_t = std::uint8_t;
-    namespace SystemDep
+    struct SystemDep
     {
-        inline constexpr systemDepFlags_t None   = 0;       ///< 0b00 — no relationship
-        inline constexpr systemDepFlags_t Direct = 1 << 0;  ///< 0b01 — hard, orders + cascades on disable
-        inline constexpr systemDepFlags_t Data   = 1 << 1;  ///< 0b10 — soft, orders only
-    }
+        static constexpr systemDepFlags_t None   = 0;       ///< 0b00 — no relationship
+        static constexpr systemDepFlags_t Direct = 1 << 0;  ///< 0b01 — hard, orders + cascades on disable
+        static constexpr systemDepFlags_t Data   = 1 << 1;  ///< 0b10 — soft, orders only
+    };
 
     /**
      * @typedef componentHash_t
@@ -190,11 +190,10 @@ namespace ecs
      * @brief How a system accesses a component.
      *
      * - Read      : read-only (RO)
-     * - Write     : write-only (WO)
-     * - ReadWrite : read and write (RW)
+     * - Write     : write (W)
      *
-     * For scheduling, anything that writes (Write or ReadWrite) is a writer and
-     * anything that reads (Read or ReadWrite) is a reader. The scheduler orders
+     * For scheduling, anything that writes (Write) is a writer and
+     * anything that reads (Read) is a reader. The scheduler orders
      * readers after writers of the same component (writer-before-reader) and
      * orders two writers deterministically by system hash.
      */
@@ -202,20 +201,8 @@ namespace ecs
     {
         Read,
         Write,
-        ReadWrite,
     };
 
-    /// @brief Returns true if the access reads the component (RO or RW).
-    constexpr bool accessReads(const AccessKind kind)
-    {
-        return kind == AccessKind::Read || kind == AccessKind::ReadWrite;
-    }
-
-    /// @brief Returns true if the access writes the component (WO or RW).
-    constexpr bool accessWrites(const AccessKind kind)
-    {
-        return kind == AccessKind::Write || kind == AccessKind::ReadWrite;
-    }
 
     /**
      * @brief A single (component, access kind) pair declared by a system.
@@ -246,18 +233,15 @@ namespace ecs
      */
     template<class Component> struct Read      { using component = Component; static constexpr AccessKind kind = AccessKind::Read; };
     template<class Component> struct Write     { using component = Component; static constexpr AccessKind kind = AccessKind::Write; };
-    template<class Component> struct ReadWrite { using component = Component; static constexpr AccessKind kind = AccessKind::ReadWrite; };
 
 
     namespace error
     {
-
         inline constexpr char g_systemsErrorName[] = "SystemsError: ";
         using BaseSystemsError = recs::error::BaseNamedError<g_systemsErrorName>;
 
         /// @brief Thrown when a system is initialized more than once.
         struct DoubleInitialization final : BaseSystemsError { using BaseSystemsError::BaseSystemsError;};
-
     }
 
 

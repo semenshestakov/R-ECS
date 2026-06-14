@@ -28,8 +28,8 @@ void ecs::SystemsSchedule::deriveDataEdges()
         for(const auto& entry: entries)
         {
             AccessFlags& flags = byComponent[entry.component][system];
-            flags.reads  = flags.reads  || accessReads(entry.kind);
-            flags.writes = flags.writes || accessWrites(entry.kind);
+            flags.reads  = flags.reads || entry.kind == AccessKind::Read;
+            flags.writes = flags.writes || entry.kind == AccessKind::Write;
         }
     }
 

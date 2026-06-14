@@ -1,6 +1,8 @@
 #pragma once
+#include <ranges>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 namespace collections
@@ -34,6 +36,10 @@ namespace collections
      *
      * @tparam NodeType The type of node identifiers used in the graph.
      *                  Must support equality comparison and hash operations.
+     * @tparam EdgeData Optional payload stored on each dependency edge. Defaults to
+     *                  std::monostate (no payload), so existing single-argument
+     *                  instantiations behave exactly as before. Use it to annotate
+     *                  edges (e.g. dependency kind, access flags).
      *
      * @note The graph ensures acyclic property through runtime checks during topological sorting.
      * @warning Adding a dependency that creates a cycle will only be detected during build()
@@ -52,7 +58,7 @@ namespace collections
      *
      * @endcode
      */
-    template <typename NodeType>
+    template <typename NodeType, typename EdgeData = std::monostate>
     struct DirectedAcyclicGraph
     {
     private:
@@ -66,10 +72,10 @@ namespace collections
         struct Node
         {
         private:
-            NodeType data;                              ///< The actual node identifier/value
-            std::unordered_set<NodeType> dependencies;  ///< Set of nodes this node depends on
+            NodeType data;                                       ///< The actual node identifier/value
+            std::unordered_map<NodeType, EdgeData> dependencies; ///< Nodes this node depends on, mapped to their edge payload
 
-            friend class DirectedAcyclicGraph<NodeType>;
+            friend struct DirectedAcyclicGraph<NodeType, EdgeData>;
 
         public:
             /**
@@ -87,22 +93,30 @@ namespace collections
             /**
              * @brief Constructs a node with data and initial dependencies.
              * @param d The node identifier/value to store.
-             * @param deps The set of initial dependencies.
+             * @param deps The map of initial dependencies to their edge payloads.
              */
-            Node(const NodeType& d, std::unordered_set<NodeType> deps)
+            Node(const NodeType& d, std::unordered_map<NodeType, EdgeData> deps)
                 : data(d), dependencies(std::move(deps)) {}
 
             /**
-             * @brief Returns an iterator to the beginning of the dependencies set.
-             * @return Iterator to the first dependency.
+             * @brief Returns an iterator to the first dependency node.
+             * @return Iterator yielding dependency node identifiers (keys only).
+             * @note Iterates node identifiers only, preserving the original key-based
+             *       traversal. Use edges() to access edge payloads.
              */
-            auto begin() const { return dependencies.begin(); }
+            auto begin() const { return std::views::keys(dependencies).begin(); }
 
             /**
-             * @brief Returns an iterator to the end of the dependencies set.
-             * @return Iterator to one past the last dependency.
+             * @brief Returns an iterator past the last dependency node.
+             * @return Iterator yielding dependency node identifiers (keys only).
              */
-            auto end() const { return dependencies.end(); }
+            auto end() const { return std::views::keys(dependencies).end(); }
+
+            /**
+             * @brief Returns the dependency map, exposing edges and their payloads.
+             * @return Const reference to the (dependency node -> edge payload) map.
+             */
+            [[nodiscard]] const std::unordered_map<NodeType, EdgeData>& edges() const { return dependencies; }
         };
 
         std::unordered_map<NodeType, Node> m_nodes;  ///< Storage container mapping node identifiers to their node objects
@@ -159,6 +173,27 @@ namespace collections
          * @endcode
          */
         void emplace(const NodeType& nodeData, const NodeType& dep);
+
+        /**
+         * @brief Adds a dependency edge carrying an explicit payload.
+         *
+         * Behaves like emplace(nodeData, dep) but stores the supplied edge payload on
+         * the edge. If the edge already exists, its payload is overwritten.
+         *
+         * @param nodeData The node that depends on the dependency.
+         * @param dep The node that must be processed before nodeData.
+         * @param edge The payload to associate with this dependency edge.
+         */
+        void emplace(const NodeType& nodeData, const NodeType& dep, const EdgeData& edge);
+
+        /**
+         * @brief Retrieves the payload stored on a dependency edge.
+         *
+         * @param nodeData The dependent node (edge source).
+         * @param dep The dependency node (edge target).
+         * @return Pointer to the edge payload, or nullptr if the edge does not exist.
+         */
+        [[nodiscard]] const EdgeData* edge(const NodeType& nodeData, const NodeType& dep) const;
 
         /**
          * @brief Performs a topological sort of the graph, producing execution stages.

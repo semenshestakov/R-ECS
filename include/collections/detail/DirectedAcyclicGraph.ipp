@@ -1,18 +1,19 @@
 #pragma once
 #include <queue>
 #include <stdexcept>
+#include <unordered_set>
 #include "../DirectedAcyclicGraph.hpp"
 
 
-template<typename NodeType>
-void collections::DirectedAcyclicGraph<NodeType>::emplace(const NodeType& nodeData)
+template<typename NodeType, typename EdgeData>
+void collections::DirectedAcyclicGraph<NodeType, EdgeData>::emplace(const NodeType& nodeData)
 {
     if(!m_nodes.contains(nodeData))
         m_nodes[nodeData] = Node(nodeData);
 }
 
-template<typename NodeType>
-void collections::DirectedAcyclicGraph<NodeType>::emplace(const NodeType& nodeData, const NodeType& dep)
+template<typename NodeType, typename EdgeData>
+void collections::DirectedAcyclicGraph<NodeType, EdgeData>::emplace(const NodeType& nodeData, const NodeType& dep)
 {
     // Ensure the node exists
     if(!m_nodes.contains(nodeData))
@@ -22,12 +23,39 @@ void collections::DirectedAcyclicGraph<NodeType>::emplace(const NodeType& nodeDa
     if(!m_nodes.contains(dep))
         m_nodes[dep] = Node(dep);
 
-    // Add the dependency
-    m_nodes[nodeData].dependencies.insert(dep);
+    // Add the dependency, keeping any existing edge payload
+    m_nodes[nodeData].dependencies.try_emplace(dep);
 }
 
-template<typename NodeType>
-std::vector<std::vector<NodeType>> collections::DirectedAcyclicGraph<NodeType>::build() const
+template<typename NodeType, typename EdgeData>
+void collections::DirectedAcyclicGraph<NodeType, EdgeData>::emplace(const NodeType& nodeData, const NodeType& dep, const EdgeData& edge)
+{
+    // Ensure the node exists
+    if(!m_nodes.contains(nodeData))
+        m_nodes[nodeData] = Node(nodeData);
+
+    // Ensure the dependency exists
+    if(!m_nodes.contains(dep))
+        m_nodes[dep] = Node(dep);
+
+    // Add the dependency, overwriting any existing edge payload
+    m_nodes[nodeData].dependencies.insert_or_assign(dep, edge);
+}
+
+template<typename NodeType, typename EdgeData>
+const EdgeData* collections::DirectedAcyclicGraph<NodeType, EdgeData>::edge(const NodeType& nodeData, const NodeType& dep) const
+{
+    const auto nodeIt = m_nodes.find(nodeData);
+    if(nodeIt == m_nodes.end())
+        return nullptr;
+
+    const auto& deps = nodeIt->second.dependencies;
+    const auto depIt = deps.find(dep);
+    return depIt == deps.end() ? nullptr : &depIt->second;
+}
+
+template<typename NodeType, typename EdgeData>
+std::vector<std::vector<NodeType>> collections::DirectedAcyclicGraph<NodeType, EdgeData>::build() const
 {
     std::unordered_map<NodeType, int> inDegree;
 
@@ -35,7 +63,7 @@ std::vector<std::vector<NodeType>> collections::DirectedAcyclicGraph<NodeType>::
         inDegree[node] = 0;
 
     for(auto const& [node, n]: m_nodes)
-        for(auto dep: n.dependencies)
+        for(auto const& [dep, edge]: n.dependencies)
             ++inDegree[node];
 
     std::queue<NodeType> ready;

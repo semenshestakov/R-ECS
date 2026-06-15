@@ -84,6 +84,23 @@ The backend lives in its **own** target and links TBB; the ECS core is built and
 tested without it. This is plain dependency inversion: the core depends on the
 port, the backend depends on both the core and its threading library.
 
+## Parallel system execution
+
+`SystemsManager::Update` dispatches each schedule **stage** through
+`Registry::Scheduler().ParallelFor`. A stage is a set of systems with no
+ordering edges between them — exactly the systems that are safe to run at the
+same time — so their `Update` calls are handed to the scheduler and may run on
+several workers at once. Because `ParallelFor` blocks until the stage finishes,
+the end of every stage is an implicit barrier, and stage *N+1* (which may depend
+on stage *N*) only starts once stage *N* has fully completed. With the default
+`SerialJobScheduler` everything still runs inline, so behaviour is unchanged
+until you install a real backend.
+
+This is the per-frame ("frame") work. Long-lived, non-frame jobs a backend may
+own (dedicated network/render threads, background streaming) live outside the
+update loop; because the `Registry` owns the scheduler, those jobs are torn down
+in the backend's destructor when the `Registry` dies.
+
 ## Threading rules
 
 Backends must be safe to call from the main thread; worker-thread safety is

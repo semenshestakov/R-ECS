@@ -1,6 +1,8 @@
 #include <ranges>
 #include "event/EventUtils.hpp"
 #include "ecs/systems/SystemsManager.hpp"
+
+#include "ecs/Registry.hpp"
 #include "ecs/systems/SystemRegistrator.hpp"
 
 
@@ -113,15 +115,22 @@ void ecs::SystemsManager::Update(Registry& registry)
     m_schedule.Build();
     const std::unordered_set<systemHash_t> disabled = effectiveDisabled();
     const UpdateState state{};
+    IJobScheduler& scheduler = registry.Scheduler();
+
     for(const auto& stageSystems: m_schedule)
     {
-        for(auto& systemHash: stageSystems)
-        {
-            if(disabled.contains(systemHash))
-                continue;
+        scheduler.ParallelFor(
+            0, stageSystems.size(), 1, [&](const std::size_t first, const std::size_t last)
+            {
+                for(std::size_t i = first; i < last; ++i)
+                {
+                    const systemHash_t systemHash = stageSystems[i];
+                    if(disabled.contains(systemHash))
+                        continue;
 
-            m_systemsMap[systemHash]->Update(registry, state);
-        }
+                    m_systemsMap.at(systemHash)->Update(registry, state);
+                }
+            });
     }
 }
 

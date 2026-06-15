@@ -207,7 +207,11 @@ registry.Systems().Register<RenderSystem>();
 registry.Init();
 ```
 
+Systems within one stage are dispatched through the job scheduler and may run
+in parallel; see [Jobs & threading](./jobs.md#parallel-system-execution).
+
 ## See also
 
+- [Jobs & threading](./jobs.md) — how stages are dispatched in parallel.
 - [Events](./events.md) — system event handlers also follow the DAG order.
 - [Getting started](./getting-started.md#the-frame-loop) — where `Update` sits in the frame.

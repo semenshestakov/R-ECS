@@ -25,11 +25,28 @@ void ecs::ISystem<SystemCls>::Init(const InitState& state)
 template<typename SystemCls>
 void ecs::ISystem<SystemCls>::Subscribe(const SubscribeState& state)
 {
+    if(m_subscribed)
+        return;
+
     for(const auto& registerFunction: m_registerEventFunctions)
     {
         registerFunction(state.eventSystem, state.priority);
     }
-    m_registerEventFunctions.clear();
+    m_subscribed = true;
+}
+
+template<typename SystemCls>
+void ecs::ISystem<SystemCls>::Unsubscribe()
+{
+    if(!m_subscribed)
+        return;
+
+    for(event::AbstractListener<event::callbackId_t>* listener: m_eventListeners)
+    {
+        if(listener != nullptr)
+            listener->clear();   // also resets the listener's event ptr so Subscribe() can re-attach
+    }
+    m_subscribed = false;
 }
 
 template<typename SystemCls>

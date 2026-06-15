@@ -86,6 +86,7 @@ if(TEST_ENABLE)
             test/ecs/SystemsManager.cpp
             test/ecs/SystemsAccessAndDisable.cpp
             test/ecs/SystemsResubscribe.cpp
+            test/ecs/SystemsToggleEvents.cpp
     )
     target_include_directories(test_recs
         PRIVATE

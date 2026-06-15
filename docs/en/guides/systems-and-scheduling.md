@@ -164,9 +164,12 @@ bool on = registry.Systems().IsEnabled<PhysicsSystem>();
 registry.Systems().Enable<PhysicsSystem>();
 ```
 
-A disabled system stops receiving `Update()` (and `Subscribe()`) calls.
+A disabled system stops receiving `Update()` calls **and** its event handlers
+are detached, so it no longer reacts to events either; re-enabling re-subscribes
+them. The reconciliation happens at the start of the next `Update()`.
 Disabling **cascades along `Direct` edges, transitively**: every system that
-hard-depends on a disabled system — directly or through a chain — is skipped too.
+hard-depends on a disabled system — directly or through a chain — is skipped too,
+and is unsubscribed from events along with it.
 Systems linked only by component access or `ECS_WEAK_DEPENDENT_SYSTEMS` keep
 running.
 
@@ -180,6 +183,11 @@ HudSystem ⇢ RenderSystem                          (weak edge: keeps running)
 
 `Enable` only clears the explicit disable; a system stays inactive while it still
 hard-depends on something that is disabled. `IsEnabled` reflects the full cascade.
+
+These calls are main-thread-only. To toggle a system from inside another system
+running on a worker thread, defer it through the command queue with
+[`DisableSystemCmd` / `EnableSystemCmd`](./commands.md#disablesystemcmd--enablesystemcmd),
+which apply the change on the Registry's thread at the next flush.
 
 ## Accessing other systems and shared state
 

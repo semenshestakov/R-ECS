@@ -26,6 +26,7 @@ void ecs::SystemsManager::copy(const SystemsManager& other)
 
     m_schedule = other.m_schedule;
     m_disabled = other.m_disabled;
+    m_subscriptionsDirty = true;
     for(auto const& [hash, systemPtr]: other.m_systemsMap)
     {
         m_systemsMap[hash] = baseSystemPtr_t(systemPtr->New());
@@ -45,6 +46,7 @@ void ecs::SystemsManager::swap(SystemsManager& other) noexcept
     std::swap(m_systemsMap, other.m_systemsMap);
     std::swap(m_schedule, other.m_schedule);
     std::swap(m_disabled, other.m_disabled);
+    std::swap(m_subscriptionsDirty, other.m_subscriptionsDirty);
 }
 
 std::unordered_set<ecs::systemHash_t> ecs::SystemsManager::effectiveDisabled() const
@@ -60,13 +62,15 @@ std::unordered_set<ecs::systemHash_t> ecs::SystemsManager::effectiveDisabled() c
 void ecs::SystemsManager::Disable(const systemHash_t hash)
 {
     ECS_ASSERT_MAIN_THREAD("SystemsManager::Disable");
-    m_disabled.insert(hash);
+    if(m_disabled.insert(hash).second)
+        m_subscriptionsDirty = true;
 }
 
 void ecs::SystemsManager::Enable(const systemHash_t hash)
 {
     ECS_ASSERT_MAIN_THREAD("SystemsManager::Enable");
-    m_disabled.erase(hash);
+    if(m_disabled.erase(hash) != 0)
+        m_subscriptionsDirty = true;
 }
 
 bool ecs::SystemsManager::IsEnabled(const systemHash_t hash) const
@@ -77,6 +81,11 @@ bool ecs::SystemsManager::IsEnabled(const systemHash_t hash) const
 bool ecs::SystemsManager::isScheduleDirty() const
 {
     return m_schedule.isDirty();
+}
+
+bool ecs::SystemsManager::needsResubscribe() const
+{
+    return m_subscriptionsDirty;
 }
 
 bool ecs::SystemsManager::Init(const InitState& state)
@@ -100,16 +109,19 @@ bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
         for(auto& systemHash: stageSystems)
         {
             if(disabled.contains(systemHash))
+            {
+                m_systemsMap[systemHash]->Unsubscribe();         // detach handlers of disabled systems (cascade included)
                 continue;
+            }
 
             SubscribeState localState = state;
             localState.priority = priority;
 
             m_systemsMap[systemHash]->Subscribe(localState);     // one-shot: subscribes new systems
-            m_systemsMap[systemHash]->SetEventsPriority(priority); // reorders existing handlers in place
         }
         --priority;
     }
+    m_subscriptionsDirty = false;
     return true;
 }
 

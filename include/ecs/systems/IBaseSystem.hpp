@@ -81,6 +81,16 @@ namespace ecs
         virtual void Subscribe(const SubscribeState& state) = 0;
 
         /**
+         * @brief Detaches this system's event handlers from the event system.
+         *
+         * Called by SystemsManager when a system becomes disabled (directly or
+         * through a Direct-edge cascade) so a disabled system stops receiving
+         * events as well as Update(). Re-enabling the system subscribes its
+         * handlers again. The default implementation does nothing.
+         */
+        virtual void Unsubscribe() {}
+
+        /**
          * @brief Updates the dispatch priority of this system's event handlers.
          *
          * Lets the scheduler refresh event ordering in place (without re-subscribing)

@@ -144,6 +144,55 @@ namespace ecs
 
 
     /**
+     * @brief Typed command for deferred disabling of a system.
+     *
+     * Queued via Registry::Commands().Push() and executed during Flush() on the
+     * Registry's thread. Lets a system running on a worker thread toggle another
+     * system without violating the main-thread affinity of SystemsManager::Disable
+     * or racing the schedule: the change lands deterministically at the next flush.
+     * Disabling cascades along Direct edges and also detaches the affected systems'
+     * event handlers.
+     *
+     * @tparam System The system type to disable.
+     *
+     * @note Usage: registry.Commands().Push(ecs::DisableSystemCmd<PhysicsSystem>{});
+     */
+    template<typename System>
+    struct DisableSystemCmd
+    {
+        /**
+         * @brief Executes the command — disables the system. @see SystemsManager::Disable
+         * @param registry Reference to the ECS registry
+         */
+        void operator()(Registry& registry) const;
+    };
+
+
+    /**
+     * @brief Typed command for deferred re-enabling of a system.
+     *
+     * Queued via Registry::Commands().Push() and executed during Flush() on the
+     * Registry's thread. The deferred counterpart of DisableSystemCmd, safe to
+     * push from worker threads. Re-enabling clears the explicit disable and
+     * re-attaches the system's event handlers, subject to the usual cascade (a
+     * system stays inactive while it still hard-depends on a disabled one).
+     *
+     * @tparam System The system type to enable.
+     *
+     * @note Usage: registry.Commands().Push(ecs::EnableSystemCmd<PhysicsSystem>{});
+     */
+    template<typename System>
+    struct EnableSystemCmd
+    {
+        /**
+         * @brief Executes the command — re-enables the system. @see SystemsManager::Enable
+         * @param registry Reference to the ECS registry
+         */
+        void operator()(Registry& registry) const;
+    };
+
+
+    /**
      * @brief Concept for a Recipe — anything with apply(PrefabEntity&).
      */
     template<typename T>

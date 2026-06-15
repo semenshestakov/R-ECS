@@ -95,6 +95,25 @@ prefab events. Covered in [Recipes & cooking](./recipes-and-cooking.md):
 registry.Commands().Push(ecs::CookCmd<Player, PlayerRecipe>{ PlayerRecipe{} });
 ```
 
+## DisableSystemCmd / EnableSystemCmd
+
+Defers toggling a system on or off. `SystemsManager::Enable` / `Disable` are
+main-thread-only, so a system running on a worker thread cannot call them
+directly; it pushes one of these commands instead (`CommandQueue::Push` is
+thread-safe). The toggle is applied on the Registry's thread at the next flush,
+so it lands deterministically rather than racing the running schedule:
+
+```cpp
+registry.Commands().Push(ecs::DisableSystemCmd<PhysicsSystem>{});
+registry.Commands().Push(ecs::EnableSystemCmd<PhysicsSystem>{});
+registry.Update();   // toggle applied during the flush
+```
+
+Behaviour mirrors the immediate calls: disabling cascades along `Direct` edges
+and also unsubscribes the affected systems' event handlers; enabling clears the
+explicit disable and re-subscribes them (subject to the same cascade). See
+[Enabling and disabling systems](./systems-and-scheduling.md#enabling-and-disabling-systems).
+
 ## Inspecting the queue
 
 ```cpp

@@ -33,7 +33,7 @@ void ecs::Registry::Update()
 {
     m_commandQueue.Flush({}, *this);
 
-    if (m_systemManager.isScheduleDirty())
+    if (m_systemManager.isScheduleDirty() || m_systemManager.needsResubscribe())
         m_systemManager.Subscribe({m_eventSystem}, {});
 
     m_systemManager.Update(*this, {});

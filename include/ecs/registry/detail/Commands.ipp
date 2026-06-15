@@ -39,6 +39,18 @@ void ecs::RemoveComponentsCmd<Args...>::operator()(Registry& registry) const
     registry.Entities().RemoveComponents<Args...>(entity);
 }
 
+template<typename System>
+void ecs::DisableSystemCmd<System>::operator()(Registry& registry) const
+{
+    registry.Systems().Disable<System>();
+}
+
+template<typename System>
+void ecs::EnableSystemCmd<System>::operator()(Registry& registry) const
+{
+    registry.Systems().Enable<System>();
+}
+
 inline ecs::CookFeedback operator|(ecs::CookFeedback v1, ecs::CookFeedback v2)
 {
     return static_cast<ecs::CookFeedback>(static_cast<std::uint8_t>(v1) | static_cast<std::uint8_t>(v2));

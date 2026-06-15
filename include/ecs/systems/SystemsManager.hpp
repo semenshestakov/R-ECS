@@ -15,7 +15,6 @@ namespace ecs
 
     class SystemsManager final
     {
-
     public:
         SystemsManager();                    ///< @brief Constructs an empty SystemsManager with no registered systems
         ~SystemsManager();                   ///< @brief Destructor that cleans up all managed systems
@@ -157,7 +156,7 @@ namespace ecs
         SystemsSchedule m_schedule;                                                 ///< Schedule for update systems
         std::unordered_map<systemHash_t, baseSystemPtr_t> m_systemsMap = {};        ///< Map of type hash to system instance
         std::unordered_set<systemHash_t> m_disabled = {};                           ///< Explicitly disabled systems (cascade is derived)
-
+        bool m_subscriptionsDirty = false;
     public:
         /**
          * @brief Registers a new system type with the manager.
@@ -278,6 +277,18 @@ namespace ecs
          * @return true if the schedule is dirty, false otherwise.
          */
         [[nodiscard]] bool isScheduleDirty() const;
+
+        /**
+         * @brief Reports whether event subscriptions must be reconciled before the next update.
+         *
+         * Set when Enable() or Disable() changed which systems are effectively
+         * disabled, so Registry re-runs Subscribe() to detach handlers of newly
+         * disabled systems (cascade included) and re-attach those of re-enabled
+         * ones. Cleared by Subscribe().
+         *
+         * @return true if a resubscribe pass is pending, false otherwise.
+         */
+        [[nodiscard]] bool needsResubscribe() const;
 
         /**
          * @brief Creates a SystemsManager instance with pre-registered systems

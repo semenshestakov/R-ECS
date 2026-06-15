@@ -97,11 +97,12 @@ namespace ecs
          * and attaches them to the given EventSystem instance. Each function typically
          * binds the system's handlers to specific events.
          *
-         * After successful subscription, the internal list of registration functions
-         * is cleared to prevent duplicate subscriptions, so this method subscribes a
-         * given system only once. To refresh handler priorities later (e.g. after the
-         * schedule is recomputed) use SetEventsPriority(), which reorders in place
-         * rather than re-subscribing.
+         * Subscription is guarded by an internal flag so this method attaches the
+         * handlers only once while the system stays enabled; the registration
+         * functions are retained so Unsubscribe()/Subscribe() can detach and
+         * re-attach them when the system is toggled. To refresh handler priorities
+         * later (e.g. after the schedule is recomputed) use SetEventsPriority(),
+         * which reorders in place rather than re-subscribing.
          *
          * @tparam SystemCls Concrete system class type used for CRTP-based system design.
          *
@@ -109,6 +110,16 @@ namespace ecs
          *              and additional subscription parameters such as priority.
          */
         void Subscribe(const SubscribeState& state) override;
+
+        /**
+         * @brief Detaches every handler this system registered from the event system.
+         *
+         * Calls clear() on each owned listener (detaching the callbacks and
+         * resetting the listener's event pointer) and marks the system as not
+         * subscribed, so a later Subscribe() re-attaches the handlers cleanly.
+         * Safe to call when the system is already unsubscribed (no-op).
+         */
+        void Unsubscribe() override;
 
         /**
          * @brief Updates the dispatch priority of all this system's event handlers.
@@ -155,6 +166,15 @@ namespace ecs
          * pointers stay valid for the system's lifetime.
          */
         std::vector<event::AbstractListener<event::callbackId_t>*> m_eventListeners;
+
+        /**
+         * @brief Whether this system's handlers are currently attached to the event system.
+         *
+         * Guards Subscribe() so registration runs once while enabled, and lets
+         * Unsubscribe() skip work when already detached. Toggled by Subscribe()
+         * and Unsubscribe().
+         */
+        bool m_subscribed = false;
 
         /**
          * @brief Creates an array of system hashes for the specified system types.

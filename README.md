@@ -143,7 +143,7 @@ The full docs — guides plus a generated API reference — live under
 | 🇷🇺 Русский | [`docs/ru/README.md`](docs/ru/README.md) |
 
 The API reference is generated from the source docstrings with **Doxygen +
-[doxybook2](https://github.com/matusnovak/doxybook2)**:
+[moxygen2](https://github.com/matusnovak/moxygen2)**:
 
 ```bash
 docs/scripts/generate-docs.sh        # builds docs/en/api and docs/ru/api

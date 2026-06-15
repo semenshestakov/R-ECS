@@ -59,11 +59,13 @@ std::unordered_set<ecs::systemHash_t> ecs::SystemsManager::effectiveDisabled() c
 
 void ecs::SystemsManager::Disable(const systemHash_t hash)
 {
+    ECS_ASSERT_MAIN_THREAD("SystemsManager::Disable");
     m_disabled.insert(hash);
 }
 
 void ecs::SystemsManager::Enable(const systemHash_t hash)
 {
+    ECS_ASSERT_MAIN_THREAD("SystemsManager::Enable");
     m_disabled.erase(hash);
 }
 

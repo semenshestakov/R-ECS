@@ -1,6 +1,7 @@
 #ifndef COMPONENTS_REGISTRATOR_HPP
 #define COMPONENTS_REGISTRATOR_HPP
 
+#include <mutex>
 #include "Utils.hpp"
 #include "reg/Registrator.hpp"
 
@@ -115,6 +116,14 @@ namespace ecs
          */
         template<IsComponent ComponentCls>
         static componentId_t GetComponentId();
+
+    private:
+        /// Serializes first-time registration of distinct component types, which
+        /// mutates the shared collection. The per-type magic static in
+        /// GetComponentId() guarantees Register() runs at most once per type; this
+        /// mutex guards two *different* types registering concurrently (e.g. both
+        /// first touched inside a parallel view iteration).
+        inline static std::mutex s_registrationMutex;
     };
 
 }

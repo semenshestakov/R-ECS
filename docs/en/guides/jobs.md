@@ -118,12 +118,30 @@ policy is the application's, not the `Registry`'s) — for example at the top of
 are called from that thread:
 
 - entities — `EntitiesManager::Create` / `Destroy` / `AddComponents` / `RemoveComponents`;
-- systems — `SystemsManager::Register`;
+- systems — `SystemsManager::Register` / `Enable` / `Disable`;
 - events — `EventSystem::OnEvent` / `PushEvent` / `FlushEvents`;
 - context — `Context::emplace` / `getOrEmplace` / `remove`.
 
-Calling one from a worker — e.g. directly mutating entities inside a parallel
-system instead of queuing a command — trips the assert. Until
+Two adjacent operations are instead made **thread-safe by design**, so they
+carry no main-thread restriction:
+
+- **Command queue.** `CommandQueue::Push` is the deferral channel for systems
+  and is callable from any thread: concurrent pushes are serialized by an
+  internal mutex. A parallel system queues its structural changes here, and they
+  run on the Registry's thread at the next `Flush()`, which takes that same mutex
+  only to swap the pending commands out, then executes them without the lock (so
+  it can't race a concurrent `Push`, never holds the lock across user code, and a
+  command may itself `Push` without deadlock).
+- **Component registration.** `ComponentRegistrator::Register` runs lazily the
+  first time `GetComponentId<T>()` is reached — which can be deep inside a
+  `view<...>` iteration. The per-type magic static bounds it to once per type,
+  and a mutex serializes two *different* types registering concurrently, so it
+  is safe even when first touched in parallel. Registration is rare; warming up
+  components on the main thread during setup simply avoids paying the lock at
+  all on the hot path.
+
+Calling a guarded operation from a worker — e.g. directly mutating entities
+inside a parallel system instead of queuing a command — trips the assert. Until
 `ecs::MarkMainThread()` runs, the checks stay inactive (they report success), so
 forgetting to call it never produces a false positive — only a missed check. The
 check compiles to nothing under `NDEBUG`, so release builds pay nothing.

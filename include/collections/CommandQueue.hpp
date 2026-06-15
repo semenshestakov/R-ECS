@@ -78,7 +78,7 @@ namespace collections
          */
         [[nodiscard]] size_t size() const;
 
-    private:
+    protected:
         std::vector<func_t> m_queue; ///< FIFO storage of pending commands.
     };
 

@@ -13,6 +13,8 @@ ReturnType ecs::EntitiesManager::Create(PrefabRef&& prefabEntity)
         "ReturnType must be Entity or an EntityWrapper subclass without data members. "
         "Use components for state, not wrapper fields.");
 
+    ECS_ASSERT_MAIN_THREAD("EntitiesManager::Create");
+
     Entity entity{};
 
     if(!m_freeEntities.empty())
@@ -51,6 +53,8 @@ template<typename... Args>
 void ecs::EntitiesManager::AddComponents(const Entity& entity, Args&&... args)
 {
     static_assert(sizeof...(Args) > 0, "AddComponents requires at least one component");
+
+    ECS_ASSERT_MAIN_THREAD("EntitiesManager::AddComponents");
 
     if (!IsAlive(entity))
         return;
@@ -103,6 +107,8 @@ void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
 {
     static_assert(sizeof...(Args) > 0, "RemoveComponents requires at least one component");
 
+    ECS_ASSERT_MAIN_THREAD("EntitiesManager::RemoveComponents");
+
     if (!IsAlive(entity))
         return;
 
@@ -135,6 +141,8 @@ void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
 template<ecs::EntityConcept InputEntityType>
 void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
 {
+    ECS_ASSERT_MAIN_THREAD("EntitiesManager::Destroy");
+
     if(!IsAlive(entity))
         return;
 

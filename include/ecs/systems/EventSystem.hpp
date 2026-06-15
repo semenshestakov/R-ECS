@@ -1,5 +1,6 @@
 #pragma once
 #include "Utils.hpp"
+#include "ecs/jobs/ThreadAffinity.hpp"
 #include "event/EventSystem.hpp"
 
 
@@ -123,12 +124,14 @@ namespace ecs
     template<class Event>
     void EventSystem::OnEvent(const Event& event)
     {
+        ECS_ASSERT_MAIN_THREAD("EventSystem::OnEvent");
         Super::OnEvent<Registry&, const Event&>(GetEventKey<Event>(), m_registryRef.get(), event);
     }
 
     template<class Event>
     void EventSystem::PushEvent(Event&& event)
     {
+        ECS_ASSERT_MAIN_THREAD("EventSystem::PushEvent");
         using Decayed = std::decay_t<Event>;
         m_commandQueue.Push(
             [this, ev = std::forward<Event>(event)]() mutable
@@ -139,6 +142,7 @@ namespace ecs
 
     inline void EventSystem::FlushEvents(FlushEventsToken _)
     {
+        ECS_ASSERT_MAIN_THREAD("EventSystem::FlushEvents");
         Super::FlushEvents();
     }
 

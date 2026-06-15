@@ -3,6 +3,7 @@
 #include "ecs/systems/SystemsManager.hpp"
 
 #include "ecs/Registry.hpp"
+#include "ecs/jobs/ThreadAffinity.hpp"
 #include "ecs/systems/SystemRegistrator.hpp"
 
 
@@ -136,6 +137,8 @@ void ecs::SystemsManager::Update(Registry& registry)
 
 bool ecs::SystemsManager::Register(const std::size_t systemRegIndex)
 {
+    ECS_ASSERT_MAIN_THREAD("SystemsManager::Register");
+
     const auto& systemInfo = SystemRegistrator::Get(systemRegIndex);
     if(m_systemsMap.contains(systemInfo.hash))
         return false;

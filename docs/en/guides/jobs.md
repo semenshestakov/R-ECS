@@ -105,10 +105,38 @@ in the backend's destructor when the `Registry` dies.
 
 Backends must be safe to call from the main thread; worker-thread safety is
 backend-defined. As elsewhere in R-ECS, **structural changes** (creating or
-destroying entities, adding or removing components) must not happen from worker
-threads — funnel them through the deferred [command queue](./commands.md), which
-is flushed on the main thread. Reading and writing component values of disjoint
-entities in parallel is safe.
+destroying entities, adding or removing components, registering systems) must
+not happen from worker threads — funnel them through the deferred
+[command queue](./commands.md), which is flushed on the main thread. Reading and
+writing component values of disjoint entities in parallel is safe.
+
+These rules are enforced in debug builds. The application designates its main
+thread by calling `ecs::MarkMainThread()` once at startup (the owning of this
+policy is the application's, not the `Registry`'s) — for example at the top of
+`main`, before creating the registry and running the frame loop. The structural
+/ single-threaded entry points then assert via `ECS_ASSERT_MAIN_THREAD` that they
+are called from that thread:
+
+- entities — `EntitiesManager::Create` / `Destroy` / `AddComponents` / `RemoveComponents`;
+- systems — `SystemsManager::Register`;
+- events — `EventSystem::OnEvent` / `PushEvent` / `FlushEvents`;
+- context — `Context::emplace` / `getOrEmplace` / `remove`.
+
+Calling one from a worker — e.g. directly mutating entities inside a parallel
+system instead of queuing a command — trips the assert. Until
+`ecs::MarkMainThread()` runs, the checks stay inactive (they report success), so
+forgetting to call it never produces a false positive — only a missed check. The
+check compiles to nothing under `NDEBUG`, so release builds pay nothing.
+
+R-ECS's own test and benchmark runners call `ecs::MarkMainThread()` at the very
+start of `main`, so the affinity checks are live throughout the suite.
+
+`ecs::Context` is a thin ECS-layer adapter over the generic
+`collections::Context` (the same way `ecs::EventSystem` wraps the generic event
+dispatcher): it guards only the mutating operations, while read-only `get` /
+`has` are inherited unchanged and remain safe to call concurrently from workers
+on entries that already exist. Create shared resources on the main thread, then
+read them with `get<T>()` from parallel systems.
 
 ## See also
 

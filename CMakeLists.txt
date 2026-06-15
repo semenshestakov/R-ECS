@@ -21,6 +21,7 @@ add_library(R-ECS
         src/ecs/SystemsManager.cpp
         src/ecs/SystemsSchedule.cpp
         src/ecs/Commands.cpp
+        src/ecs/ThreadAffinity.cpp
 )
 
 target_include_directories(R-ECS
@@ -67,6 +68,7 @@ if(TEST_ENABLE)
 
     # Target
     add_executable(test_recs
+            test/main.cpp
             test/reg/Registrator.cpp
             test/event/Event.cpp
             test/event/Listener.cpp
@@ -91,8 +93,8 @@ if(TEST_ENABLE)
     )
     target_link_libraries(test_recs
         PRIVATE
-            gtest_main
-            gmock_main
+            gtest
+            gmock
             R-ECS
     )
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
@@ -149,6 +151,7 @@ if (BENCHMARK_ENABLE)
 
     # Target
     add_executable(recs_bench
+            benchmarks/main.cpp
             benchmarks/entities/ecs.cpp
             benchmarks/entities/entt.cpp
             benchmarks/entities/flecs.cpp
@@ -162,7 +165,6 @@ if (BENCHMARK_ENABLE)
     target_link_libraries(recs_bench
         PRIVATE
             benchmark::benchmark
-            benchmark::benchmark_main
             R-ECS
             EnTT::EnTT
             flecs::flecs

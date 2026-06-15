@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
+#include "Context.hpp"
 #include "collections/CommandQueue.hpp"
-#include "collections/Context.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 #include "entities/EntitiesManager.hpp"
 #include "jobs/IJobScheduler.hpp"
@@ -74,7 +74,7 @@ namespace ecs
         EntitiesManager m_entitiesManager;          ///< Underlying entity storage
         EventSystem m_eventSystem;                  ///< Local Event System
         SystemsManager m_systemManager;             ///< Underlying entity storage
-        collections::Context m_context;             ///< Context (Data storage)
+        Context m_context;                          ///< Context (Data storage)
         CommandQueue m_commandQueue;                ///< Deferred command queue (flushed each frame)
         std::unique_ptr<IJobScheduler> m_scheduler; ///< Threading backend (never null; defaults to SerialJobScheduler)
 
@@ -119,13 +119,13 @@ namespace ecs
          * @brief Gets mutable reference to context storage.
          * @return Reference to Context for accessing shared data
          */
-        [[nodiscard]] collections::Context& ctx() { return m_context; }
+        [[nodiscard]] Context& ctx() { return m_context; }
 
         /**
          * @brief Gets const reference to context storage.
          * @return Const reference to Context for read-only shared data access
          */
-        [[nodiscard]] const collections::Context& ctx() const { return m_context; }
+        [[nodiscard]] const Context& ctx() const { return m_context; }
 
         /**
          * @brief Gets mutable reference to the deferred command queue.

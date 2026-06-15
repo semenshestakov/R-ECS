@@ -7,6 +7,7 @@
 #include "EntitiesArchetypeStorage.hpp"
 #include "Entity.hpp"
 #include "EntityWrapper.hpp"
+#include "ecs/jobs/ThreadAffinity.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 
 

@@ -37,6 +37,7 @@ Generated from the source docstrings (run
 |--------|------|-------|
 | `ecs/Registry.hpp` | Central hub: owns entities, events, systems, context, command queue | [Getting started](./guides/getting-started.md) |
 | `ecs/ISystem.hpp` | CRTP base for systems + the `ECS_*` macros | [Systems & scheduling](./guides/systems-and-scheduling.md) |
+| `ecs/Context.hpp` | Main-thread-guarded adapter over `collections::Context` | [Jobs & threading](./guides/jobs.md) |
 
 ### `include/ecs/entities` — entities & storage
 
@@ -76,6 +77,7 @@ Generated from the source docstrings (run
 | `jobs/SerialJobScheduler.hpp` | Default inline backend; core works with no threads | [Jobs & threading](./guides/jobs.md) |
 | `jobs/JobHandle.hpp` | Opaque value handle to in-flight work | [Jobs & threading](./guides/jobs.md) |
 | `jobs/FunctionRef.hpp` | Non-owning, allocation-free callable ref for hot loop bodies | [Jobs & threading](./guides/jobs.md) |
+| `jobs/ThreadAffinity.hpp` | `ECS_ASSERT_MAIN_THREAD` — debug main-thread checks for structural ops | [Jobs & threading](./guides/jobs.md) |
 
 ### `include/ecs/registry` — registry-level features
 

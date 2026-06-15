@@ -7,7 +7,7 @@
 #  For every language listed in LANGUAGES the script:
 #    1. renders docs/doxygen/Doxyfile.in with the language-specific values,
 #    2. runs Doxygen to emit XML into docs/.build/<lang>/xml,
-#    3. runs doxybook2 to turn that XML into Markdown under docs/<lang>/api.
+#    3. runs moxygen to turn that XML into Markdown under docs/<lang>/api.
 #
 #  The hand-written landing pages and guides under docs/<lang>/ are NOT
 #  touched — only the generated docs/<lang>/api/ tree is (re)built.

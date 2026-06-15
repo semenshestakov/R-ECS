@@ -1,8 +1,10 @@
 #pragma once
+#include <memory>
 #include "collections/CommandQueue.hpp"
 #include "collections/Context.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 #include "entities/EntitiesManager.hpp"
+#include "jobs/IJobScheduler.hpp"
 #include "registry/CommandQueue.hpp"
 #include "systems/EventSystem.hpp"
 #include "systems/SystemsManager.hpp"
@@ -74,6 +76,7 @@ namespace ecs
         SystemsManager m_systemManager;             ///< Underlying entity storage
         collections::Context m_context;             ///< Context (Data storage)
         CommandQueue m_commandQueue;                ///< Deferred command queue (flushed each frame)
+        std::unique_ptr<IJobScheduler> m_scheduler; ///< Threading backend (never null; defaults to SerialJobScheduler)
 
     public:
         /**
@@ -135,6 +138,31 @@ namespace ecs
          * @return Const reference to CommandQueue
          */
         [[nodiscard]] const CommandQueue& Commands() const { return m_commandQueue; }
+
+        /**
+         * @brief Gets the active job scheduler (threading backend).
+         * @return Reference to the IJobScheduler used for parallel work.
+         * @note Always valid: defaults to SerialJobScheduler until SetScheduler is called.
+         */
+        [[nodiscard]] IJobScheduler& Scheduler() { return *m_scheduler; }
+
+        /**
+         * @brief Gets const reference to the active job scheduler.
+         * @return Const reference to the IJobScheduler.
+         */
+        [[nodiscard]] const IJobScheduler& Scheduler() const { return *m_scheduler; }
+
+        /**
+         * @brief Installs a threading backend, replacing the current one.
+         *
+         * Inject a concrete scheduler (e.g. a TBB- or std::thread-backed pool)
+         * to enable real parallelism without changing any system code. Passing
+         * nullptr restores the default SerialJobScheduler so the registry never
+         * holds a null scheduler.
+         *
+         * @param scheduler Owning pointer to the new scheduler, or nullptr to reset to serial.
+         */
+        void SetScheduler(std::unique_ptr<IJobScheduler> scheduler);
 
         /**
          * @brief Initializes all registered systems.

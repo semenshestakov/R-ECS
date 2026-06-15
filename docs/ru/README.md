@@ -19,6 +19,7 @@ C++ (C++20). Сущности хранятся в плотных чанках, �
 | [События](./guides/events.md) | `ECS_EVENT`, `OnEvent` против `PushEvent`, приоритет                     |
 | [Команды](./guides/commands.md) | Отложенные `CreateEntityCmd` / `DeleteEntityCmd` / `AddComponentsCmd` / `RemoveComponentsCmd` |
 | [Рецепты и «готовка»](./guides/recipes-and-cooking.md) | `Recipe`, `CookCmd`, `PrefabEvt` / `CreatedEntityEvt`                    |
+| [Джобы и многопоточность](./guides/jobs.md) | `IJobScheduler`, `SetScheduler`, подключаемые параллельные бэкенды        |
 
 ## 📚 Справочник API
 
@@ -67,6 +68,15 @@ C++ (C++20). Сущности хранятся в плотных чанках, �
 | `systems/EventSystem.hpp` | Мост событий ECS: `OnEvent` / `PushEvent` / `FlushEvents` | [События](./guides/events.md) |
 | `systems/SystemRegistrator.hpp` | Статическая авто-регистрация типов систем | [Системы и планирование](./guides/systems-and-scheduling.md) |
 | `systems/IBaseSystem.hpp` | Нешаблонный интерфейс системы | — |
+
+### `include/ecs/jobs` — порт многопоточности
+
+| Заголовок | Назначение | Руководство |
+|-----------|------------|-------------|
+| `jobs/IJobScheduler.hpp` | Абстрактный потоковый бэкенд (`ParallelFor`, `Run`, `Wait`) | [Джобы и многопоточность](./guides/jobs.md) |
+| `jobs/SerialJobScheduler.hpp` | Дефолтный синхронный бэкенд; ядро работает без потоков | [Джобы и многопоточность](./guides/jobs.md) |
+| `jobs/JobHandle.hpp` | Opaque value-хэндл выполняемой работы | [Джобы и многопоточность](./guides/jobs.md) |
+| `jobs/FunctionRef.hpp` | Невладеющая ссылка на callable без аллокаций для тел горячих циклов | [Джобы и многопоточность](./guides/jobs.md) |
 
 ### `include/ecs/registry` — возможности уровня реестра
 

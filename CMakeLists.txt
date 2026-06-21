@@ -9,7 +9,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+if(NOT MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+endif()
 
 add_library(R-ECS
     STATIC
@@ -85,8 +87,16 @@ if(TEST_ENABLE)
             gmock_main
             R-ECS
     )
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
+        target_compile_options(test_recs PRIVATE -fbracket-depth=1024)
+    endif()
+    # MinGW/PE-COFF: stress tests generate >65535 sections due to 1000 template
+    if(MINGW)
+        target_compile_options(test_recs PRIVATE -Wa,-mbig-obj)
+    endif()
+
     include(GoogleTest)
-    gtest_discover_tests(test_recs)
+    gtest_discover_tests(test_recs DISCOVERY_MODE PRE_TEST)
 else ()
     message("[R-ECS] TEST disable")
 endif()

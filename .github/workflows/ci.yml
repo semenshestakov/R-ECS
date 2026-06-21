@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── Linux ──────────────────────────────────────────────────────────
+          - os: ubuntu-24.04
+            compiler: GCC-14
+            cc: gcc-14
+            cxx: g++-14
+
+          - os: ubuntu-24.04
+            compiler: Clang-18
+            cc: clang-18
+            cxx: clang++-18
+
+          # ── macOS ──────────────────────────────────────────────────────────
+          - os: macos-15
+            compiler: AppleClang
+            cc: clang
+            cxx: clang++
+
+          # ── Windows ────────────────────────────────────────────────────────
+          - os: windows-2025
+            compiler: MSVC
+            is_msvc: true
+
+          - os: windows-2025
+            compiler: Clang
+            cc: clang
+            cxx: clang++
+            is_msvc: false
+
+          - os: windows-2025
+            compiler: GCC
+            cc: gcc
+            cxx: g++
+            is_msvc: false
+            setup_mingw: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # CMake 4.x  (project requires cmake_minimum_required VERSION 4.0)
+      - name: Install CMake 4
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~4"
+
+      # MinGW — ensure gcc/g++ are in PATH (only for the GCC-on-Windows job)
+      - name: Setup MinGW
+        if: matrix.setup_mingw
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja
+          path-type: inherit
+
+      # ── Linux / macOS ──────────────────────────────────────────────────────
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTEST_ENABLE=ON \
+            -DBENCHMARK_ENABLE=OFF
+
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        run: cmake --build build --parallel
+
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
+        working-directory: build
+        run: ctest --output-on-failure --parallel 4
+
+      # ── Windows / MSVC ─────────────────────────────────────────────────────
+      - name: Configure (Windows MSVC)
+        if: runner.os == 'Windows' && matrix.is_msvc
+        run: |
+          cmake -S . -B build `
+            -DTEST_ENABLE=ON `
+            -DBENCHMARK_ENABLE=OFF
+
+      - name: Build (Windows MSVC)
+        if: runner.os == 'Windows' && matrix.is_msvc
+        run: cmake --build build --config Release --parallel
+
+      - name: Test (Windows MSVC)
+        if: runner.os == 'Windows' && matrix.is_msvc
+        working-directory: build
+        run: ctest -C Release --output-on-failure --parallel 4
+
+      # ── Windows / Clang or GCC (Ninja single-config) ───────────────────────
+      - name: Configure (Windows non-MSVC)
+        if: runner.os == 'Windows' && !matrix.is_msvc
+        run: |
+          cmake -S . -B build `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_C_COMPILER=${{ matrix.cc }} `
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} `
+            -DTEST_ENABLE=ON `
+            -DBENCHMARK_ENABLE=OFF
+
+      - name: Build (Windows non-MSVC)
+        if: runner.os == 'Windows' && !matrix.is_msvc
+        run: cmake --build build --parallel
+
+      - name: Test (Windows non-MSVC)
+        if: runner.os == 'Windows' && !matrix.is_msvc
+        working-directory: build
+        run: ctest --output-on-failure --parallel 4

@@ -307,7 +307,8 @@ namespace ecs
 #define ECS_REGISTRY(...)                                                                                   \
 public:                                                                                                     \
 static constexpr auto GetRegistryNames() {                                                                  \
-return std::array<std::string, sizeof((const char*[]){__VA_ARGS__}) / sizeof(const char*)>{__VA_ARGS__};}
+constexpr const char* _arr[] = {__VA_ARGS__};                                                              \
+return std::array<std::string, sizeof(_arr) / sizeof(_arr[0])>{__VA_ARGS__};}
 
 #endif
 #include "systems/detail/ISystem.ipp"

@@ -47,6 +47,7 @@ endif ()
 
 # Test executable
 if(TEST_ENABLE)
+    enable_testing()
     message("= = = = = = = = = R-ECS TEST enable = = = = = = = = =")
     include(FetchContent)
 

@@ -156,7 +156,20 @@ namespace ecs
         SystemsSchedule m_schedule;                                                 ///< Schedule for update systems
         std::unordered_map<systemHash_t, baseSystemPtr_t> m_systemsMap = {};        ///< Map of type hash to system instance
         std::unordered_set<systemHash_t> m_disabled = {};                           ///< Explicitly disabled systems (cascade is derived)
-        bool m_subscriptionsDirty = false;
+        bool m_subscriptionsDirty = false;                                          ///< Set when Enable/Disable changed the effective-disabled set; cleared by Subscribe
+
+        /**
+         * @brief Computes the full set of systems that are currently inactive.
+         *
+         * Combines the explicitly disabled systems with every system that
+         * transitively hard-depends on them (via the schedule's Direct edges).
+         * Systems coupled only through component access or weak dependencies are
+         * not included.
+         *
+         * @return The set of system hashes that must be skipped during Update/Subscribe.
+         */
+        [[nodiscard]] std::unordered_set<systemHash_t> effectiveDisabled() const;
+
     public:
         /**
          * @brief Registers a new system type with the manager.

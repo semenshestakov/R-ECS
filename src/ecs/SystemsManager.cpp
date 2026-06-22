@@ -88,7 +88,7 @@ bool ecs::SystemsManager::needsResubscribe() const
     return m_subscriptionsDirty;
 }
 
-bool ecs::SystemsManager::Init(const InitState& state)
+bool ecs::SystemsManager::Init(const InitState& state, RegistryToken)
 {
     for(auto& system: m_systemsMap | std::views::values)
     {
@@ -99,7 +99,7 @@ bool ecs::SystemsManager::Init(const InitState& state)
     return true;
 }
 
-bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
+bool ecs::SystemsManager::Subscribe(const SubscribeState& state, RegistryToken)
 {
     m_schedule.Build();
     const std::unordered_set<systemHash_t> disabled = effectiveDisabled();
@@ -125,7 +125,7 @@ bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
     return true;
 }
 
-void ecs::SystemsManager::Update(Registry& registry)
+void ecs::SystemsManager::Update(Registry& registry, RegistryToken)
 {
     m_schedule.Build();
     const std::unordered_set<systemHash_t> disabled = effectiveDisabled();

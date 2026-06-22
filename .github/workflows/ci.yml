@@ -21,6 +21,7 @@ jobs:
             compiler: GCC-14
             cc: gcc-14
             cxx: g++-14
+            sanitize: "-fsanitize=address,undefined -fno-omit-frame-pointer"
 
           - os: ubuntu-24.04
             compiler: Clang-18
@@ -77,9 +78,11 @@ jobs:
           CXX: ${{ matrix.cxx }}
         run: |
           cmake -S . -B build \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DTEST_ENABLE=ON \
-            -DBENCHMARK_ENABLE=OFF
+            -DBENCHMARK_ENABLE=OFF \
+            -DCMAKE_CXX_FLAGS="${{ matrix.sanitize }}" \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.sanitize }}"
 
       - name: Build (Unix)
         if: runner.os != 'Windows'
@@ -88,7 +91,9 @@ jobs:
       - name: Test (Unix)
         if: runner.os != 'Windows'
         working-directory: build
-        run: ctest --output-on-failure --parallel 4
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: ctest --output-on-failure --parallel ${{ matrix.sanitize && '1' || '4' }}
 
       # ── Windows / MSVC ─────────────────────────────────────────────────────
       - name: Configure (Windows MSVC)

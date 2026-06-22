@@ -12,29 +12,29 @@ constexpr collections::BitSet::const_iterator::const_iterator(const BitSet* bs, 
     findNext();
 }
 
-inline std::size_t collections::BitSet::const_iterator::operator*() const noexcept
+constexpr std::size_t collections::BitSet::const_iterator::operator*() const noexcept
 {
     return m_pos;
 }
 
-inline collections::BitSet::const_iterator& collections::BitSet::const_iterator::operator++()
+constexpr collections::BitSet::const_iterator& collections::BitSet::const_iterator::operator++()
 {
     ++m_pos;
     findNext();
     return *this;
 }
 
-inline bool collections::BitSet::const_iterator::operator==(const const_iterator& other) const noexcept
+constexpr bool collections::BitSet::const_iterator::operator==(const const_iterator& other) const noexcept
 {
     return m_pos == other.m_pos && m_bs == other.m_bs;
 }
 
-inline bool collections::BitSet::const_iterator::operator!=(const const_iterator& other) const noexcept
+constexpr bool collections::BitSet::const_iterator::operator!=(const const_iterator& other) const noexcept
 {
     return !(*this == other);
 }
 
-inline void collections::BitSet::const_iterator::findNext()
+constexpr void collections::BitSet::const_iterator::findNext()
 {
     while (m_pos < m_bs->size() && !m_bs->test(m_pos))
     {
@@ -42,12 +42,12 @@ inline void collections::BitSet::const_iterator::findNext()
     }
 }
 
-inline collections::BitSet::const_iterator collections::BitSet::begin() const noexcept
+constexpr collections::BitSet::const_iterator collections::BitSet::begin() const noexcept
 {
     return {this, 0};
 }
 
-inline collections::BitSet::const_iterator collections::BitSet::end() const noexcept
+constexpr collections::BitSet::const_iterator collections::BitSet::end() const noexcept
 {
     return {this, m_size};
 }
@@ -61,21 +61,21 @@ constexpr collections::BitSet::BitSet(const std::size_t size) :
 {
 }
 
-inline void collections::BitSet::set(const std::size_t pos) noexcept
+constexpr void collections::BitSet::set(const std::size_t pos) noexcept
 {
     if (pos >= m_size)
         resize(pos + 1);
     m_data[getIdx(pos)] |= getBit(pos);
 }
 
-inline void collections::BitSet::reset(const std::size_t pos) noexcept
+constexpr void collections::BitSet::reset(const std::size_t pos) noexcept
 {
     if (pos >= m_size)
         return;
     m_data[getIdx(pos)] &= ~getBit(pos);
 }
 
-inline void collections::BitSet::resize(const std::size_t pos) noexcept
+constexpr void collections::BitSet::resize(const std::size_t pos) noexcept
 {
     const auto oldSize = m_size;
     m_size = pos;
@@ -98,7 +98,7 @@ inline void collections::BitSet::resize(const std::size_t pos) noexcept
     }
 }
 
-inline bool collections::BitSet::test(const std::size_t pos) const noexcept
+constexpr bool collections::BitSet::test(const std::size_t pos) const noexcept
 {
     if (pos >= m_size)
         return false;
@@ -106,12 +106,12 @@ inline bool collections::BitSet::test(const std::size_t pos) const noexcept
     return (m_data[getIdx(pos)] & getBit(pos)) != 0;
 }
 
-inline bool collections::BitSet::operator[](const std::size_t pos) const noexcept
+constexpr bool collections::BitSet::operator[](const std::size_t pos) const noexcept
 {
     return test(pos);
 }
 
-inline void collections::BitSet::setAll() noexcept
+constexpr void collections::BitSet::setAll() noexcept
 {
     std::ranges::fill(m_data, ~dataItem_t{0});
 
@@ -119,12 +119,12 @@ inline void collections::BitSet::setAll() noexcept
         m_data.back() &= (static_cast<dataItem_t>(1) << last_bits) - 1;
 }
 
-inline void collections::BitSet::reset() noexcept
+constexpr void collections::BitSet::reset() noexcept
 {
     std::ranges::fill(m_data, 0);
 }
 
-inline std::size_t collections::BitSet::max() const
+constexpr std::size_t collections::BitSet::max() const
 {
     if (empty())
         return INVALID_INDEX;
@@ -142,7 +142,7 @@ inline std::size_t collections::BitSet::max() const
     return INVALID_INDEX;
 }
 
-inline std::size_t collections::BitSet::min() const
+constexpr std::size_t collections::BitSet::min() const
 {
     if (empty())
         return INVALID_INDEX;
@@ -159,22 +159,22 @@ inline std::size_t collections::BitSet::min() const
     return INVALID_INDEX;
 }
 
-inline std::size_t collections::BitSet::size() const noexcept
+constexpr std::size_t collections::BitSet::size() const noexcept
 {
     return m_size;
 }
 
-inline const collections::BitSet::data_t& collections::BitSet::data() const noexcept
+constexpr const collections::BitSet::data_t& collections::BitSet::data() const noexcept
 {
     return m_data;
 }
 
-inline bool collections::BitSet::empty() const noexcept
+constexpr bool collections::BitSet::empty() const noexcept
 {
     return m_size == 0;
 }
 
-inline collections::BitSet& collections::BitSet::flip() noexcept
+constexpr collections::BitSet& collections::BitSet::flip() noexcept
 {
     for (auto& word : m_data)
         word = ~word;
@@ -185,28 +185,28 @@ inline collections::BitSet& collections::BitSet::flip() noexcept
     return *this;
 }
 
-inline collections::BitSet collections::BitSet::operator&(const BitSet& other) const
+constexpr collections::BitSet collections::BitSet::operator&(const BitSet& other) const
 {
     BitSet result = *this;
     result &= other;
     return result;
 }
 
-inline collections::BitSet collections::BitSet::operator|(const BitSet& other) const
+constexpr collections::BitSet collections::BitSet::operator|(const BitSet& other) const
 {
     BitSet result = *this;
     result |= other;
     return result;
 }
 
-inline collections::BitSet collections::BitSet::operator^(const BitSet& other) const
+constexpr collections::BitSet collections::BitSet::operator^(const BitSet& other) const
 {
     BitSet result = *this;
     result ^= other;
     return result;
 }
 
-inline collections::BitSet& collections::BitSet::operator&=(const BitSet& other)
+constexpr collections::BitSet& collections::BitSet::operator&=(const BitSet& other)
 {
     const auto sharedWords = std::min(m_data.size(), other.m_data.size());
 
@@ -222,7 +222,7 @@ inline collections::BitSet& collections::BitSet::operator&=(const BitSet& other)
     return *this;
 }
 
-inline collections::BitSet& collections::BitSet::operator|=(const BitSet& other)
+constexpr collections::BitSet& collections::BitSet::operator|=(const BitSet& other)
 {
     if (m_size < other.m_size)
         resize(other.m_size);
@@ -233,7 +233,7 @@ inline collections::BitSet& collections::BitSet::operator|=(const BitSet& other)
     return *this;
 }
 
-inline collections::BitSet& collections::BitSet::operator^=(const BitSet& other)
+constexpr collections::BitSet& collections::BitSet::operator^=(const BitSet& other)
 {
     if (m_size < other.m_size)
         resize(other.m_size);
@@ -247,26 +247,26 @@ inline collections::BitSet& collections::BitSet::operator^=(const BitSet& other)
     return *this;
 }
 
-inline collections::BitSet collections::BitSet::operator~() const
+constexpr collections::BitSet collections::BitSet::operator~() const
 {
     BitSet result = *this;
     result.flip();
     return result;
 }
 
-inline bool collections::BitSet::operator==(const BitSet& other) const
+constexpr bool collections::BitSet::operator==(const BitSet& other) const
 {
     if (m_size != other.m_size)
         return false;
     return m_data == other.m_data;
 }
 
-inline bool collections::BitSet::operator!=(const BitSet& other) const
+constexpr bool collections::BitSet::operator!=(const BitSet& other) const
 {
     return !(*this == other);
 }
 
-inline bool collections::BitSet::isSubsetOf(const BitSet& other) const
+constexpr bool collections::BitSet::isSubsetOf(const BitSet& other) const
 {
     if (m_size == 0)
         return true;

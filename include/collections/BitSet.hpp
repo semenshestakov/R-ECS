@@ -42,21 +42,21 @@ namespace collections
              * @brief Returns current set bit position.
              * @return Index of current bit.
              */
-            std::size_t operator*() const noexcept;
+            constexpr std::size_t operator*() const noexcept;
 
             /**
              * @brief Advances to the next set bit.
              * @return Reference to this iterator.
              */
-            const_iterator& operator++();
+            constexpr const_iterator& operator++();
 
             /**
              * @brief Checks whether two iterators refer to the same position.
              * @param other Iterator to compare against.
              * @return true if they point to the same position in the same BitSet.
              */
-            [[nodiscard]] bool operator==(const const_iterator& other) const noexcept;
-            [[nodiscard]] bool operator!=(const const_iterator& other) const noexcept;
+            [[nodiscard]] constexpr bool operator==(const const_iterator& other) const noexcept;
+            [[nodiscard]] constexpr bool operator!=(const const_iterator& other) const noexcept;
 
         private:
             const BitSet* m_bs = nullptr;   ///< Owning BitSet being iterated.
@@ -66,7 +66,7 @@ namespace collections
              * @brief Skips forward to the next set bit.
              * Advances m_pos until a set bit is found or end is reached.
              */
-            void findNext();
+            constexpr void findNext();
         };
 
         using dataItem_t = std::uint64_t;                                           ///< Internal word type.
@@ -95,100 +95,100 @@ namespace collections
          * @brief Sets bit at position to 1. Auto-resizes if needed.
          * @param pos Bit index to set.
          */
-        void set(std::size_t pos) noexcept;
+        constexpr void set(std::size_t pos) noexcept;
 
         /**
          * @brief Sets bit at position to 0. No-op if pos >= size.
          * @param pos Bit index to clear.
          */
-        void reset(std::size_t pos) noexcept;
+        constexpr void reset(std::size_t pos) noexcept;
 
         /**
          * @brief Resizes storage to accommodate at least pos bits.
          * @param pos Minimum required bit capacity.
          */
-        void resize(std::size_t pos) noexcept;
+        constexpr void resize(std::size_t pos) noexcept;
 
         /**
          * @brief Tests whether bit at position is set.
          * @param pos Bit index to test.
          * @return true if bit is set, false if pos >= size or bit is 0.
          */
-        [[nodiscard]] bool test(std::size_t pos) const noexcept;
+        [[nodiscard]] constexpr bool test(std::size_t pos) const noexcept;
 
         /**
          * @brief Alias for test(pos).
          * @param pos Bit index to test.
          * @return true if bit is set.
          */
-        [[nodiscard]] bool operator[](std::size_t pos) const noexcept;
+        [[nodiscard]] constexpr bool operator[](std::size_t pos) const noexcept;
 
         /**
          * @brief Sets all bits to 1 within current capacity.
          * Spare bits in the last word are masked out.
          */
-        void setAll() noexcept;
+        constexpr void setAll() noexcept;
 
         /**
          * @brief Clears all bits to 0.
          */
-        void reset() noexcept;
+        constexpr void reset() noexcept;
 
         /**
          * @brief Returns iterator to the first set bit.
          * @return Iterator positioned at the first set bit, or end() if none.
          */
-        [[nodiscard]] const_iterator begin() const noexcept;
+        [[nodiscard]] constexpr const_iterator begin() const noexcept;
 
         /**
          * @brief Returns past-the-end iterator.
          * @return Iterator with position equal to size().
          */
-        [[nodiscard]] const_iterator end() const noexcept;
+        [[nodiscard]] constexpr const_iterator end() const noexcept;
 
         /**
          * @brief Returns index of the highest set bit.
          * @return Bit index, or INVALID_INDEX if empty.
          */
-        [[nodiscard]] std::size_t max() const;
+        [[nodiscard]] constexpr std::size_t max() const;
 
         /**
          * @brief Returns index of the lowest set bit.
          * @return Bit index, or INVALID_INDEX if empty.
          */
-        [[nodiscard]] std::size_t min() const;
+        [[nodiscard]] constexpr std::size_t min() const;
 
         /**
          * @brief Returns current bit capacity.
          * @return Number of bits allocated.
          */
-        [[nodiscard]] std::size_t size() const noexcept;
+        [[nodiscard]] constexpr std::size_t size() const noexcept;
 
         /**
          * @brief Returns const reference to internal word storage.
          * @return Underlying vector of 64-bit words.
          */
-        [[nodiscard]] const data_t& data() const noexcept;
+        [[nodiscard]] constexpr const data_t& data() const noexcept;
 
         /**
          * @brief Checks whether the BitSet has zero capacity.
          * @return true if size() == 0.
          */
-        [[nodiscard]] bool empty() const noexcept;
+        [[nodiscard]] constexpr bool empty() const noexcept;
 
         /**
          * @brief Inverts all bits in-place.
          * Spare bits in the last word are masked out.
          * @return Reference to this BitSet.
          */
-        [[maybe_unused]] BitSet& flip() noexcept;
+        [[maybe_unused]] constexpr BitSet& flip() noexcept;
 
         /**
          * @brief Bitwise AND of two BitSets.
          * @param other Right-hand operand.
          * @return New BitSet containing result.
          */
-        [[nodiscard]] BitSet operator&(const BitSet& other) const;
+        [[nodiscard]] constexpr BitSet operator&(const BitSet& other) const;
 
         /**
          * @brief Bitwise OR of two BitSets.
@@ -196,7 +196,7 @@ namespace collections
          * @param other Right-hand operand.
          * @return New BitSet containing result.
          */
-        [[nodiscard]] BitSet operator|(const BitSet& other) const;
+        [[nodiscard]] constexpr BitSet operator|(const BitSet& other) const;
 
         /**
          * @brief Bitwise XOR of two BitSets.
@@ -204,14 +204,14 @@ namespace collections
          * @param other Right-hand operand.
          * @return New BitSet containing result.
          */
-        [[nodiscard]] BitSet operator^(const BitSet& other) const;
+        [[nodiscard]] constexpr BitSet operator^(const BitSet& other) const;
 
         /**
          * @brief Compound bitwise AND assignment.
          * @param other Right-hand operand.
          * @return Reference to this BitSet.
          */
-        BitSet& operator&=(const BitSet& other);
+        constexpr BitSet& operator&=(const BitSet& other);
 
         /**
          * @brief Compound bitwise OR assignment.
@@ -219,7 +219,7 @@ namespace collections
          * @param other Right-hand operand.
          * @return Reference to this BitSet.
          */
-        BitSet& operator|=(const BitSet& other);
+        constexpr BitSet& operator|=(const BitSet& other);
 
         /**
          * @brief Compound bitwise XOR assignment.
@@ -227,34 +227,34 @@ namespace collections
          * @param other Right-hand operand.
          * @return Reference to this BitSet.
          */
-        BitSet& operator^=(const BitSet& other);
+        constexpr BitSet& operator^=(const BitSet& other);
 
         /**
          * @brief Returns a copy with all bits inverted.
          * @return New BitSet containing flipped result.
          */
-        [[nodiscard]] BitSet operator~() const;
+        [[nodiscard]] constexpr BitSet operator~() const;
 
         /**
          * @brief Checks whether two BitSets have the same size and bits.
          * @param other BitSet to compare against.
          * @return true if identical.
          */
-        [[nodiscard]] bool operator==(const BitSet& other) const;
+        [[nodiscard]] constexpr bool operator==(const BitSet& other) const;
 
         /**
          * @brief Checks whether two BitSets differ.
          * @param other BitSet to compare against.
          * @return true if not identical.
          */
-        [[nodiscard]] bool operator!=(const BitSet& other) const;
+        [[nodiscard]] constexpr bool operator!=(const BitSet& other) const;
 
         /**
          * @brief Checks whether all set bits of this are also set in other.
          * @param other BitSet to check against.
          * @return true if this is a subset of other.
          */
-        [[nodiscard]] bool isSubsetOf(const BitSet& other) const;
+        [[nodiscard]] constexpr bool isSubsetOf(const BitSet& other) const;
 
     DEEP_TEST_PRIVATE_ACCESS:
         /**

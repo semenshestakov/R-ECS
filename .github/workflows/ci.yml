@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - '**.ipp'
+      - '**.cmake'
+      - '**/CMakeLists.txt'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - '**.ipp'
+      - '**.cmake'
+      - '**/CMakeLists.txt'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── Linux ──────────────────────────────────────────────────────────
+          - os: ubuntu-24.04
+            compiler: GCC-14
+            cc: gcc-14
+            cxx: g++-14
+            build_type: Debug
+            sanitize: "-fsanitize=address,undefined -fno-omit-frame-pointer"
+
+          - os: ubuntu-24.04
+            compiler: GCC-14
+            cc: gcc-14
+            cxx: g++-14
+            build_type: Release
+
+          - os: ubuntu-24.04
+            compiler: Clang-18
+            cc: clang-18
+            cxx: clang++-18
+            build_type: Debug
+
+          - os: ubuntu-24.04
+            compiler: Clang-18
+            cc: clang-18
+            cxx: clang++-18
+            build_type: Release
+
+          # ── macOS ──────────────────────────────────────────────────────────
+          - os: macos-15
+            compiler: AppleClang
+            cc: clang
+            cxx: clang++
+            build_type: Debug
+
+          - os: macos-15
+            compiler: AppleClang
+            cc: clang
+            cxx: clang++
+            build_type: Release
+
+          # ── Windows ────────────────────────────────────────────────────────
+          - os: windows-2025
+            compiler: MSVC
+            is_msvc: true
+            build_type: Debug
+
+          - os: windows-2025
+            compiler: MSVC
+            is_msvc: true
+            build_type: Release
+
+          - os: windows-2025
+            compiler: Clang
+            cc: clang
+            cxx: clang++
+            is_msvc: false
+            build_type: Debug
+
+          - os: windows-2025
+            compiler: Clang
+            cc: clang
+            cxx: clang++
+            is_msvc: false
+            build_type: Release
+
+          - os: windows-2025
+            compiler: GCC
+            cc: gcc
+            cxx: g++
+            is_msvc: false
+            setup_mingw: true
+            build_type: Debug
+
+          - os: windows-2025
+            compiler: GCC
+            cc: gcc
+            cxx: g++
+            is_msvc: false
+            setup_mingw: true
+            build_type: Release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # CMake 4.x  (project requires cmake_minimum_required VERSION 4.0)
+      - name: Install CMake 4
+        uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: "~4"
+
+      # MinGW — ensure gcc/g++ are in PATH (only for the GCC-on-Windows job)
+      - name: Setup MinGW
+        if: matrix.setup_mingw
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-ninja
+          path-type: inherit
+
+      # ── Linux / macOS ──────────────────────────────────────────────────────
+      - name: Configure (Unix)
+        if: runner.os != 'Windows'
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DTEST_ENABLE=ON \
+            -DBENCHMARK_ENABLE=OFF \
+            -DCMAKE_CXX_FLAGS="${{ matrix.sanitize }}" \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.sanitize }}"
+
+      - name: Build (Unix)
+        if: runner.os != 'Windows'
+        run: cmake --build build --parallel
+
+      - name: Test (Unix)
+        if: runner.os != 'Windows'
+        working-directory: build
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+        run: ctest --output-on-failure --parallel ${{ matrix.sanitize && '1' || '4' }}
+
+      # ── Windows / MSVC ─────────────────────────────────────────────────────
+      - name: Configure (Windows MSVC)
+        if: runner.os == 'Windows' && matrix.is_msvc
+        run: |
+          cmake -S . -B build `
+            -DTEST_ENABLE=ON `
+            -DBENCHMARK_ENABLE=OFF
+
+      - name: Build (Windows MSVC)
+        if: runner.os == 'Windows' && matrix.is_msvc
+        run: cmake --build build --config ${{ matrix.build_type }} --parallel
+
+      - name: Test (Windows MSVC)
+        if: runner.os == 'Windows' && matrix.is_msvc
+        working-directory: build
+        run: ctest -C ${{ matrix.build_type }} --output-on-failure --parallel 4
+
+      # ── Windows / Clang or GCC (Ninja single-config) ───────────────────────
+      - name: Configure (Windows non-MSVC)
+        if: runner.os == 'Windows' && !matrix.is_msvc
+        run: |
+          cmake -S . -B build `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+            -DCMAKE_C_COMPILER=${{ matrix.cc }} `
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} `
+            -DTEST_ENABLE=ON `
+            -DBENCHMARK_ENABLE=OFF
+
+      - name: Build (Windows non-MSVC)
+        if: runner.os == 'Windows' && !matrix.is_msvc
+        run: cmake --build build --parallel
+
+      - name: Test (Windows non-MSVC)
+        if: runner.os == 'Windows' && !matrix.is_msvc
+        working-directory: build
+        run: ctest --output-on-failure --parallel 4

@@ -30,7 +30,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
     Super::setIndex(registrator, Super::INVALID_INDEX);
 
     const auto componentId = static_cast<componentId_t>(index + 1);
-    Super::s_collection[index].second->componentId = componentId;
+    Super::collection()[index].second->componentId = componentId;
     return componentId;
 }
 
@@ -38,7 +38,7 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
 {
     if(componentId == INVALID_COMPONENT_ID)
         throw error::InvalidComponentId("ComponentRegistrator::GetInfo; componentId == INVALID_COMPONENT_ID");
-    return Super::s_collection.at(static_cast<std::size_t>(componentId - 1)).second.value();
+    return Super::collection().at(static_cast<std::size_t>(componentId - 1)).second.value();
 }
 
 template<ecs::IsComponent ComponentCls>

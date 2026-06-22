@@ -129,7 +129,6 @@ namespace ecs
         template <class Event>
         auto RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<EventListener<Event>>;
 
-    DEEP_TEST_PRIVATE_ACCESS:
         /**
          * @brief Collection of event registration functions
          *
@@ -312,3 +311,4 @@ return std::array<std::string, sizeof(_arr) / sizeof(_arr[0])>{__VA_ARGS__};}
 
 #endif
 #include "systems/detail/ISystem.ipp"
+#include "systems/detail/SystemsManagerImpl.ipp"

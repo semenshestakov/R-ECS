@@ -55,8 +55,7 @@ struct PlayerSpawnLogger final : ecs::ISystem<PlayerSpawnLogger>
     void OnCreated(ecs::Registry&, const ecs::CreatedEntityEvt<Player>& e)
     {
         assert(e.entity.IsAlive());
-        std::cout << "[Logger] player spawned with health "
-                  << e.entity.GetHealth() << "\n";
+        std::cout << "[Logger] player spawned with health " << e.entity.GetHealth() << "\n";
     }
     ECS_EVENT(OnCreated, ecs::CreatedEntityEvt<Player>)
 };

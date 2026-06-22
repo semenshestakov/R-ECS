@@ -1,8 +1,9 @@
 #include <cstddef>
+#include <iostream>
+#include <ostream>
 
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
-#include "ecs/entities/PrefabEntity.hpp"
 
 
 struct Vel2d
@@ -31,7 +32,22 @@ struct MoveSystem final : ecs::ISystem<MoveSystem>
             vel2d.y *= 0.98f;
         }
     }
+};
 
+struct LogMoveSystem final : ecs::ISystem<LogMoveSystem>
+{
+    ECS_DEPENDENT_SYSTEMS(MoveSystem)
+    ECS_REGISTRY("MyName")
+
+    void Update(ecs::Registry& registry, const ecs::UpdateState& state) override
+    {
+        std::cout << "[Logger] Move system started\n";
+        std::size_t i = 0;
+        for (auto [pos2d, vel2d] : registry.Entities().view<Position2d, Vel2d>())
+        {
+            std::cout << "[" << ++i << "] \t"<< pos2d.x << ", " << pos2d.y << std::endl;
+        }
+    }
 };
 
 
@@ -52,5 +68,9 @@ int main()
         entity.GetComponent<Position2d>().y = -static_cast<float>(i);
     }
 
-    registry.Update();
+    for (std::size_t i = 0; i < 100; i++)
+    {
+        std::cout << "Frame:" << i << std::endl;
+        registry.Update();
+    }
 }

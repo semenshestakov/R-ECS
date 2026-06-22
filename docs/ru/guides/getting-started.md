@@ -4,8 +4,8 @@
 
 ## Подключение R-ECS к сборке
 
-R-ECS — статическая библиотека с интерфейсом через CMake. Поместите репозиторий
-в проект (submodule, `FetchContent` или vendored-папка) и слинкуйте:
+R-ECS — **header-only** библиотека с интерфейсом через CMake. Поместите
+репозиторий в проект (submodule, `FetchContent` или vendored-папка) и слинкуйте:
 
 ```cmake
 add_subdirectory(R-ECS)
@@ -33,50 +33,78 @@ C++20.
 ## Первая программа
 
 ```cpp
+#include <cstddef>
+#include <iostream>
+
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
 
+struct Vel2d      { float x, y; };
 struct Position2d { float x, y; };
-struct Velocity2d { float x, y; };
 
-// Система: регистрируем под именем и реализуем Update().
+// Первая система: интегрирует скорость и применяет затухание.
 struct MoveSystem final : ecs::ISystem<MoveSystem>
 {
-    ECS_REGISTRY("game")          // связывает систему с реестром "game"
+    ECS_REGISTRY("MyName")
 
     void Update(ecs::Registry& registry, const ecs::UpdateState&) override
     {
-        for (auto [pos, vel] : registry.Entities().view<Position2d, Velocity2d>())
+        for (auto [pos, vel] : registry.Entities().view<Position2d, Vel2d>())
         {
             pos.x += vel.x;
             pos.y += vel.y;
+
+            vel.x *= 0.98f;
+            vel.y *= 0.98f;
         }
+    }
+};
+
+// Вторая система: логирует позиции — гарантированно запускается после MoveSystem.
+struct LogMoveSystem final : ecs::ISystem<LogMoveSystem>
+{
+    ECS_DEPENDENT_SYSTEMS(MoveSystem)
+    ECS_REGISTRY("MyName")
+
+    void Update(ecs::Registry& registry, const ecs::UpdateState&) override
+    {
+        std::cout << "[Logger] Move system started\n";
+        std::size_t i = 0;
+        for (auto [pos, vel] : registry.Entities().view<Position2d, Vel2d>())
+            std::cout << "[" << ++i << "] \t" << pos.x << ", " << pos.y << "\n";
     }
 };
 
 int main()
 {
-    // Реестр, заранее заполненный всеми системами с именем "game".
-    ecs::Registry registry = ecs::Registry::Create("game");
+    // Реестр, заранее заполненный всеми системами с именем "MyName".
+    auto registry = ecs::Registry::Create("MyName");
     registry.Init();
 
-    // Собираем сущность из префаба.
+    // Собираем сущности из префаба, затем переопределяем позицию каждой.
     ecs::PrefabEntity prefab;
     prefab.AddComponent<Position2d>(0.f, 0.f);
-    prefab.AddComponent<Velocity2d>(1.f, 2.f);
+    prefab.AddComponent<Vel2d>(100.f, 100.f);
 
-    for (int i = 0; i < 100; ++i)
-        registry.Entities().Create(prefab);
+    for (std::size_t i = 0; i < 100; ++i)
+    {
+        ecs::EntityWrapper entity = registry.Entities().Create(prefab);
+        entity.GetComponent<Position2d>().x =  static_cast<float>(i);
+        entity.GetComponent<Position2d>().y = -static_cast<float>(i);
+    }
 
     // Главный цикл.
-    for (int frame = 0; frame < 60; ++frame)
+    for (std::size_t i = 0; i < 100; ++i)
+    {
+        std::cout << "Frame:" << i << "\n";
         registry.Update();
+    }
 }
 ```
 
-> **Два способа создать `Registry`.** `Registry::Create("game")` находит все
-> системы с меткой `ECS_REGISTRY("game")` и связывает их автоматически. Можно
+> **Два способа создать `Registry`.** `Registry::Create("MyName")` находит все
+> системы с меткой `ECS_REGISTRY("MyName")` и связывает их автоматически. Можно
 > также создать пустой `ecs::Registry registry;` и регистрировать системы
 > вручную через `registry.Systems()`.
 

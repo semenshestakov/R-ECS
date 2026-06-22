@@ -2,28 +2,41 @@
 
 <p align="center">
   <b>Replication · Entities · Components · Systems</b><br>
-  An archetype-based Entity-Component-System framework for modern C++.
+  A fast, header-only <b>archetype-based Entity-Component-System</b> framework for modern C++20.
 </p>
 
 <p align="center">
-  <img alt="C++20"   src="https://img.shields.io/badge/C%2B%2B-20-00599C?logo=c%2B%2B&logoColor=white">
-  <img alt="CMake"   src="https://img.shields.io/badge/build-CMake-064F8C?logo=cmake&logoColor=white">
-  <img alt="Tests"   src="https://img.shields.io/badge/tests-GoogleTest-34A853">
-  <img alt="Benchmarks" src="https://img.shields.io/badge/benchmarks-Google%20Benchmark-EA4335">
-  <img alt="License" src="https://img.shields.io/badge/license-see%20LICENSE.md-blue">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.11.3-orange">
+  <a href="https://github.com/semenshestakov/R-ECS/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/semenshestakov/R-ECS/actions/workflows/ci.yml/badge.svg?branch=master"></a>
+  <a href="https://github.com/semenshestakov/R-ECS/actions/workflows/docs.yml"><img alt="Docs" src="https://github.com/semenshestakov/R-ECS/actions/workflows/docs.yml/badge.svg?branch=master"></a>
   <a href="https://semenshestakov.github.io/R-ECS/"><img alt="Docs site" src="https://img.shields.io/badge/docs-online-success?logo=readthedocs&logoColor=white"></a>
+  <a href="LICENSE.md"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="C++20" src="https://img.shields.io/badge/C%2B%2B-20-00599C?logo=c%2B%2B&logoColor=white">
+  <img alt="Header-only" src="https://img.shields.io/badge/header--only-yes-brightgreen">
+  <a href="https://github.com/semenshestakov/R-ECS/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/semenshestakov/R-ECS?style=social"></a>
 </p>
 
 <p align="center">
   🌐 <a href="https://semenshestakov.github.io/R-ECS/"><b>Live docs site</b></a> &nbsp;·&nbsp;
-  📖 <a href="docs/README.md">Documentation</a> &nbsp;·&nbsp;
   🚀 <a href="examples/README.md">Examples</a> &nbsp;·&nbsp;
   🇬🇧 <a href="docs/en/README.md">English docs</a> &nbsp;·&nbsp;
   🇷🇺 <a href="docs/ru/README.md">Русская документация</a>
 </p>
 
 ---
+
+## Contents
+
+- [What is R-ECS?](#-what-is-r-ecs)
+- [Why R-ECS?](#-why-r-ecs)
+- [Quick start](#-quick-start)
+- [Install](#-install)
+- [Core concepts](#-core-concepts)
+- [Examples](#-examples)
+- [Benchmarks](#-benchmarks)
+- [Documentation](#-documentation)
+- [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ## ⚡ What is R-ECS?
 
@@ -41,12 +54,12 @@ for (auto [pos, vel] : registry.Entities().view<Position2d, Velocity2d>())
 }
 ```
 
-## ✨ Highlights
+## 🆚 Why R-ECS?
 
 - **Archetype storage** — dense, packed chunks with swap-remove; views walk
-  contiguous memory.
+  contiguous memory for cache-friendly iteration.
 - **Declarative systems** — inherit `ISystem<T>`, tag with `ECS_REGISTRY`, and
-  the framework auto-registers and schedules them.
+  the framework auto-registers and schedules them. No manual wiring.
 - **DAG scheduling** — declare ordering with `ECS_DEPENDENT_SYSTEMS`; systems
   (and their event handlers) run in deterministic topological order.
 - **Type-safe events** — subscribe with one `ECS_EVENT` line; dispatch
@@ -56,32 +69,17 @@ for (auto [pos, vel] : registry.Entities().view<Position2d, Velocity2d>())
 - **Prefabs, recipes & cooking** — assemble entities from reusable recipes and
   let systems enrich them via `PrefabEvt` / `CreatedEntityEvt`.
 - **Shared context** — a type-indexed singleton store for resources and services.
-- **Benchmarked** — compared against [EnTT](https://github.com/skypjack/entt) and
-  [flecs](https://github.com/SanderMertens/flecs) with Google Benchmark.
-
-## 🧩 Architecture at a glance
-
-```mermaid
-flowchart TD
-    R["ecs::Registry — façade"]
-    R --> EM["EntitiesManager<br/>archetype storage + views"]
-    R --> SM["SystemsManager<br/>DAG schedule"]
-    R --> ES["EventSystem<br/>OnEvent / PushEvent"]
-    R --> CQ["CommandQueue<br/>deferred structural edits"]
-    R --> CX["Context<br/>shared singletons"]
-    EM --> AR["Archetype + ArchetypedChunks"]
-    SM --> DAG["DirectedAcyclicGraph"]
-```
-
-`Registry::Update()` runs one frame: flush pre-frame commands → update systems
-in DAG order → flush queued events → flush commands queued during the frame.
+- **Header-only & easy to drop in** — one `add_subdirectory` or `FetchContent`,
+  no link step, no external runtime dependencies.
+- **Benchmarked** — measured against [EnTT](https://github.com/skypjack/entt) and
+  [flecs](https://github.com/SanderMertens/flecs) with Google Benchmark
+  (see [Benchmarks](#-benchmarks)).
 
 ## 🚀 Quick start
 
 ```cpp
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
-#include "ecs/entities/PrefabEntity.hpp"
 
 struct Position2d { float x, y; };
 struct Velocity2d { float x, y; };
@@ -117,32 +115,91 @@ int main()
 }
 ```
 
-More runnable programs live in [`examples/`](examples/README.md):
-[systems & DAG](examples/systems_with_dependencies.cpp),
-[events](examples/events.cpp),
-[commands](examples/commands.cpp),
-[recipes & cooking](examples/recipes_and_cooking.cpp).
+## 📦 Install
 
-## 🛠 Building
+R-ECS is a **header-only** CMake library requiring a **C++20** compiler.
 
-R-ECS is a CMake static library requiring a **C++20** compiler.
+**Option A — `FetchContent` (no checkout needed):**
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    R-ECS
+    GIT_REPOSITORY https://github.com/semenshestakov/R-ECS.git
+    GIT_TAG        master   # or pin a release tag
+)
+FetchContent_MakeAvailable(R-ECS)
+
+target_link_libraries(my_game PRIVATE R-ECS)
+```
+
+**Option B — vendored as a subdirectory:**
 
 ```cmake
 add_subdirectory(R-ECS)
 target_link_libraries(my_game PRIVATE R-ECS)
 ```
 
+**Option C — compile a single file directly** (since it's header-only):
+
+```bash
+c++ -std=c++20 -I include examples/Simple.cpp -o /tmp/sim && /tmp/sim
+```
+
+## 🧩 Core concepts
+
+| Term | What it is |
+|------|------------|
+| **Registry** | The world. Owns entities, systems, events, context, and the command queue. Drive it with `Update()`. |
+| **Entity** | A lightweight `{id, version}` handle. Holds no data itself. |
+| **Component** | A plain struct of data attached to an entity. |
+| **Archetype** | The set of component types an entity has; entities with the same archetype are stored together. |
+| **System** | Logic that runs each frame (`ISystem<T>`), registered via `ECS_REGISTRY` and ordered via `ECS_DEPENDENT_SYSTEMS`. |
+| **View** | A typed iterator (`view<A, B>()`) over all entities holding the requested components. |
+| **Event** | A type-safe message; handlers subscribe with `ECS_EVENT` and run immediately or deferred. |
+| **Command** | A deferred structural change (create/destroy/add/remove) flushed at the frame boundary. |
+| **Recipe / Cooking** | A reusable blueprint (`Recipe`) cooked into an entity, with hooks to enrich it. |
+
+## 🛠 Examples
+
+Small, runnable programs in [`examples/`](examples/README.md), each mapped to a guide:
+
+| Example | Shows |
+|---------|-------|
+| [`Simple.cpp`](examples/Simple.cpp) | Components, prefab, a movement system, the frame loop |
+| [`SystemsWithDependencies.cpp`](examples/SystemsWithDependencies.cpp) | `ECS_DEPENDENT_SYSTEMS` and DAG ordering |
+| [`Events.cpp`](examples/Events.cpp) | `ECS_EVENT`, `OnEvent` vs `PushEvent` |
+| [`Commands.cpp`](examples/Commands.cpp) | Deferred create / add / remove / destroy |
+| [`RecipesAndCooking.cpp`](examples/RecipesAndCooking.cpp) | `Recipe`, `CookCmd`, prefab/created events |
+
+## 📊 Benchmarks
+
+R-ECS ships a benchmark suite that pits it against **EnTT** and **flecs** on
+create / view / delete workloads using Google Benchmark. The sources live in
+[`benchmarks/entities/`](benchmarks/entities) so you can reproduce the numbers
+on your own hardware and compiler:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBENCHMARK_ENABLE=ON
+cmake --build build
+./build/recs_bench
+```
+
+> Benchmark results are hardware-, compiler-, and flag-dependent — run them
+> locally rather than trusting a single published figure.
+
 ## 📚 Documentation
 
 The full docs — guides plus a generated API reference — live under
-[`docs/`](docs/README.md) and are available in **English** and **Russian**.
+[`docs/`](docs/README.md) and are available in **English** and **Russian**, and
+online at the [**live docs site**](https://semenshestakov.github.io/R-ECS/).
 
 | | |
 |---|---|
 | 🇬🇧 English | [`docs/en/README.md`](docs/en/README.md) |
 | 🇷🇺 Русский | [`docs/ru/README.md`](docs/ru/README.md) |
 
-The API reference is generated from the source docstrings with **Doxygen +
+The API reference is generated from source docstrings with **Doxygen +
 [moxygen2](https://github.com/matusnovak/moxygen2)**:
 
 ```bash
@@ -167,8 +224,26 @@ language.
 | Event System: PushEvent / FlushEvents / priority | v0.9.0 ✅ | ✅ |
 | Benchmarks vs EnTT & flecs (create / view / delete) | v0.10.0 ✅ | ✅ |
 | Cooking: Cooker, Recipe (PrefabEntity hierarchy) | v0.11.0 ✅ | ✅ |
-| Multithreading: ThreadPool, job queues, priority jobs, JobManager, safe parallel updates | v0.12.0 ❌ | ❌ |
+| Multithreading: ThreadPool, job queues, priority jobs, JobManager, safe parallel updates | v0.12.0 🚧 | 🚧 |
+| Replication core: delta compression, RPC, pluggable network transport in `Registry` (virtual hooks — bring your own transport) | v0.13.0 📝 | 📝 |
+
+<sub>✅ done · 🚧 in progress · 📝 planned · ⚠️ deprecated · ❌ not started</sub>
+
+The **replication core** stays transport-agnostic: R-ECS provides the
+delta-compression and RPC machinery, while the actual sockets are yours — plug a
+network transport into `Registry` through virtual hooks and drive replication
+over whatever protocol your project already uses.
+
+## 🤝 Contributing
+
+Contributions, bug reports, and feature ideas are welcome.
+
+1. Read the guides under [`docs/en/`](docs/en/README.md) — they are the source of truth for current behavior.
+2. Open an [issue](https://github.com/semenshestakov/R-ECS/issues) to discuss larger changes first.
+3. Keep diffs small, follow the existing patterns, and update the matching guide when you change public APIs or macros.
+
+If R-ECS is useful to you, **⭐ star the repo** — it genuinely helps others find it.
 
 ## 📄 License
 
-See [LICENSE.md](LICENSE.md).
+Released under the **MIT License** — see [LICENSE.md](LICENSE.md).

@@ -198,3 +198,4 @@ namespace ecs
     };
 
 } // namespace ecs
+#include "detail/Registry.ipp"

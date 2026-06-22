@@ -21,6 +21,7 @@ namespace ecs
 
     public:
         using Super::Push;
+        using Super::size;
 
         /**
          * @brief Restricted token used to control command flushing.

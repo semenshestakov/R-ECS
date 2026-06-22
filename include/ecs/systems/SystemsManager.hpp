@@ -14,6 +14,7 @@ namespace ecs
 
     class SystemsManager final
     {
+
     public:
         SystemsManager();                    ///< @brief Constructs an empty SystemsManager with no registered systems
         ~SystemsManager();                   ///< @brief Destructor that cleans up all managed systems
@@ -84,23 +85,40 @@ namespace ecs
          */
         void swap(SystemsManager& other) noexcept;
 
-    DEEP_TEST_PRIVATE_ACCESS:
-        SystemsSchedule m_schedule;                                                 ///< Schedule for update systems
-        std::unordered_map<systemHash_t, baseSystemPtr_t> m_systemsMap = {};        ///< Map of type hash to system instance
+        /**
+         * @brief Passkey token that restricts lifecycle method calls to Registry only.
+         *
+         * Only `Registry` can construct this token (its constructor is private, with
+         * `Registry` declared as a friend). Passing `RegistryToken{}` as an argument
+         * to `Init`, `Subscribe`, and `Update` therefore acts as a compile-time
+         * capability check: any call site that is not `Registry` will fail to compile
+         * because it cannot construct the token.
+         *
+         * This is intentionally more precise than `friend class Registry`: instead of
+         * granting `Registry` unrestricted access to all private members of
+         * `SystemsManager`, only the three methods that accept `RegistryToken` are
+         * accessible, while the rest of the private interface remains truly private.
+         */
+        struct RegistryToken
+        {
+            friend class Registry;
+            RegistryToken() = default;
+        };
 
         /**
-         * @brief Initializes all registered systems with the given state
+         * @brief Initializes all registered systems with the given state.
          *
          * Calls the Init method on every registered system, passing the provided
          * initialization state. The order of initialization respects system
          * registration order.
          *
-         * @param state The initialization state to pass to systems
-         * @return true if all systems initialized successfully, false otherwise
+         * @param state The initialization state to pass to systems.
+         * @param      Passkey token — only `Registry` can supply this argument.
+         * @return true if all systems initialized successfully, false otherwise.
          *
-         * @note Systems must implement the Init method as per IBaseSystem interface
+         * @note Systems must implement the Init method as per IBaseSystem interface.
          */
-        [[maybe_unused]] bool Init(const InitState &state);
+        [[maybe_unused]] bool Init(const InitState &state, RegistryToken);
 
         /**
          * @brief Subscribes all registered systems to the event system with stage-based priority.
@@ -115,11 +133,11 @@ namespace ecs
          * This ensures deterministic ordering of system callbacks during event dispatch.
          *
          * @param state Subscription state containing the EventSystem reference and base configuration.
-         *               A local copy is created for each system with an assigned priority.
-         *
+         *              A local copy is created for each system with an assigned priority.
+         * @param       Passkey token — only `Registry` can supply this argument.
          * @return true Always returns true after successful subscription of all systems.
          */
-        [[maybe_unused]] bool Subscribe(const SubscribeState& state);
+        [[maybe_unused]] bool Subscribe(const SubscribeState& state, RegistryToken);
 
         /**
          * @brief Updates all systems or systems with a specific update tag.
@@ -129,9 +147,14 @@ namespace ecs
          * otherwise, all systems are updated. The update order respects the registration
          * order within each tag group.
          *
-         * @param registry Reference to the main Registry for system operations
+         * @param registry Reference to the main Registry for system operations.
+         * @param          Passkey token — only `Registry` can supply this argument.
          */
-        void Update(Registry& registry);
+        void Update(Registry& registry, RegistryToken);
+
+    DEEP_TEST_PRIVATE_ACCESS:
+        SystemsSchedule m_schedule;                                                 ///< Schedule for update systems
+        std::unordered_map<systemHash_t, baseSystemPtr_t> m_systemsMap = {};        ///< Map of type hash to system instance
 
     public:
         /**

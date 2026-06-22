@@ -1,6 +1,7 @@
 #pragma once
 #include "ecs/Registry.hpp"
 #include "ecs/registry/RegistryRegistrator.hpp"
+#include "ecs/systems/detail/SystemsManagerImpl.ipp"
 
 inline ecs::Registry::Registry(SystemsManager systemManager) :
     m_systemManager(std::move(systemManager)),

@@ -4,7 +4,7 @@
 
 
 template<typename T>
-ecs::SystemRegistrator::RegisterSystemInfo ecs::SystemRegistrator::RegisterSystemInfo::Create(const std::string& name)
+/* static */ ecs::SystemRegistrator::RegisterSystemInfo ecs::SystemRegistrator::RegisterSystemInfo::Create(const std::string& name)
 {
     return {
         .name = name,

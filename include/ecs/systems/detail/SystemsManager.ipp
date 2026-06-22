@@ -2,7 +2,6 @@
 #include <cassert>
 #include <ranges>
 #include "ecs/systems/SystemsManager.hpp"
-#include "ecs/systems/SystemRegistrator.hpp"
 
 inline ecs::SystemsManager::SystemsManager() = default;
 inline ecs::SystemsManager::~SystemsManager() = default;
@@ -76,28 +75,9 @@ inline void ecs::SystemsManager::Update(Registry& registry)
     }
 }
 
-inline bool ecs::SystemsManager::Register(const std::size_t systemRegIndex)
-{
-    const auto& systemInfo = SystemRegistrator::Get(systemRegIndex);
-    if (m_systemsMap.contains(systemInfo.hash))
-        return false;
-
-    m_systemsMap[systemInfo.hash] = systemInfo.makeNew();
-    m_schedule.Add(*m_systemsMap[systemInfo.hash].get(), systemInfo.hash);
-    return true;
-}
-
 inline std::size_t ecs::SystemsManager::size() const
 {
     return m_systemsMap.size();
-}
-
-inline ecs::SystemsManager ecs::SystemsManager::Create(const std::span<const std::size_t> systemRegIndexes)
-{
-    SystemsManager systemsManager;
-    for (const std::size_t systemIndex : systemRegIndexes)
-        systemsManager.Register(systemIndex);
-    return systemsManager;
 }
 
 template<typename SystemCls>

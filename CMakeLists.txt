@@ -13,10 +13,18 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 endif()
 
-add_library(R-ECS INTERFACE)
+add_library(R-ECS
+    STATIC
+        src/ecs/Registry.cpp
+        src/ecs/PrefabEntity.cpp
+        src/ecs/EntityWrapper.cpp
+        src/ecs/SystemsManager.cpp
+        src/ecs/SystemsSchedule.cpp
+        src/ecs/Commands.cpp
+)
 
 target_include_directories(R-ECS
-    INTERFACE
+    PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 

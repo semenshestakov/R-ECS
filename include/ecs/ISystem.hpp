@@ -311,4 +311,3 @@ return std::array<std::string, sizeof(_arr) / sizeof(_arr[0])>{__VA_ARGS__};}
 
 #endif
 #include "systems/detail/ISystem.ipp"
-#include "systems/detail/SystemsManagerImpl.ipp"

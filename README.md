@@ -69,7 +69,7 @@ for (auto [pos, vel] : registry.Entities().view<Position2d, Velocity2d>())
 - **Prefabs, recipes & cooking** — assemble entities from reusable recipes and
   let systems enrich them via `PrefabEvt` / `CreatedEntityEvt`.
 - **Shared context** — a type-indexed singleton store for resources and services.
-- **Header-only & easy to drop in** — one `add_subdirectory` or `FetchContent`,
+- **static & easy to drop in** — one `add_subdirectory` or `FetchContent`,
   no link step, no external runtime dependencies.
 - **Benchmarked** — measured against [EnTT](https://github.com/skypjack/entt) and
   [flecs](https://github.com/SanderMertens/flecs) with Google Benchmark
@@ -117,7 +117,7 @@ int main()
 
 ## 📦 Install
 
-R-ECS is a **header-only** CMake library requiring a **C++20** compiler.
+R-ECS is a CMake static library requiring a **C++20** compiler.
 
 **Option A — `FetchContent` (no checkout needed):**
 

@@ -207,4 +207,3 @@ namespace ecs
 } // namespace ecs
 #endif
 #include "detail/EntitiesManager.ipp"
-#include "detail/EntityWrapperImpl.ipp"

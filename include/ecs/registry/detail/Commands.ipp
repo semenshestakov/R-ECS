@@ -3,24 +3,6 @@
 #include "../Events.hpp"
 #include "ecs/Registry.hpp"
 
-inline void ecs::CreateEntityCmd::operator()(Registry& registry) const
-{
-    const auto entity = registry.Entities().Create<Entity>(std::move(*prefab));
-    if (onCreated)
-        onCreated(entity);
-}
-
-inline void ecs::DeleteEntityCmd::operator()(Registry& registry) const
-{
-    if (!registry.Entities().IsAlive(entity))
-        return;
-
-    if (onDeleted)
-        onDeleted(entity);
-
-    registry.Entities().Destroy(entity);
-}
-
 template <typename E, ecs::Recipe R>
 void ecs::CookCmd<E, R>::operator()(Registry& registry) const
 {

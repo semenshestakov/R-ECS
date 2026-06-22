@@ -82,7 +82,7 @@ namespace ecs
          * Creates an empty schedule with no systems. The schedule is uninitialized
          * and must be populated with Add() calls before calling Init().
          */
-        SystemsSchedule();
+        SystemsSchedule() = default;
 
         /**
          * @brief Destructor.
@@ -90,7 +90,7 @@ namespace ecs
          * Cleans up all internal resources. All stored system references and
          * dependency information are properly destroyed.
          */
-        ~SystemsSchedule();
+        ~SystemsSchedule() = default;
 
         /**
          * @brief Adds a system and its dependencies to the schedule.
@@ -158,7 +158,7 @@ namespace ecs
         * @note This invalidates any previously computed schedule stages.
         *       Iterators obtained before calling clear() become invalid.
         */
-        void clear();
+        void clear() { m_graph.clear(); m_stagesGraph.clear(); }
 
         /**
           * @brief Returns an iterator to the beginning of the execution stages.
@@ -190,3 +190,29 @@ namespace ecs
     };
 
 } // namespace ecs
+
+inline void ecs::SystemsSchedule::Add(const IBaseSystem& system, const systemHash_t hash)
+{
+    const DependentSystems dependentSystems = system.GetDependents();
+    if (dependentSystems.count != 0)
+    {
+        for (std::size_t i = 0; i < dependentSystems.count; ++i)
+            m_graph.emplace(hash, *(dependentSystems.systemHashes + i));
+    }
+    else
+    {
+        m_graph.emplace(hash);
+    }
+
+    if (m_isInit)
+        m_stagesGraph = m_graph.build();
+}
+
+inline void ecs::SystemsSchedule::Init()
+{
+    if (!m_isInit)
+    {
+        m_stagesGraph = m_graph.build();
+        m_isInit = true;
+    }
+}

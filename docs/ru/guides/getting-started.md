@@ -4,8 +4,8 @@
 
 ## Подключение R-ECS к сборке
 
-R-ECS — статическая библиотека с интерфейсом через CMake. Поместите репозиторий
-в проект (submodule, `FetchContent` или vendored-папка) и слинкуйте:
+R-ECS — **header-only** библиотека с интерфейсом через CMake. Поместите
+репозиторий в проект (submodule, `FetchContent` или vendored-папка) и слинкуйте:
 
 ```cmake
 add_subdirectory(R-ECS)

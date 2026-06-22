@@ -59,22 +59,6 @@ for (auto [pos, vel] : registry.Entities().view<Position2d, Velocity2d>())
 - **Benchmarked** — compared against [EnTT](https://github.com/skypjack/entt) and
   [flecs](https://github.com/SanderMertens/flecs) with Google Benchmark.
 
-## 🧩 Architecture at a glance
-
-```mermaid
-flowchart TD
-    R["ecs::Registry — façade"]
-    R --> EM["EntitiesManager<br/>archetype storage + views"]
-    R --> SM["SystemsManager<br/>DAG schedule"]
-    R --> ES["EventSystem<br/>OnEvent / PushEvent"]
-    R --> CQ["CommandQueue<br/>deferred structural edits"]
-    R --> CX["Context<br/>shared singletons"]
-    EM --> AR["Archetype + ArchetypedChunks"]
-    SM --> DAG["DirectedAcyclicGraph"]
-```
-
-`Registry::Update()` runs one frame: flush pre-frame commands → update systems
-in DAG order → flush queued events → flush commands queued during the frame.
 
 ## 🚀 Quick start
 
@@ -118,14 +102,14 @@ int main()
 ```
 
 More runnable programs live in [`examples/`](examples/README.md):
-[systems & DAG](examples/systems_with_dependencies.cpp),
-[events](examples/events.cpp),
-[commands](examples/commands.cpp),
-[recipes & cooking](examples/recipes_and_cooking.cpp).
+[systems & DAG](examples/SystemsWithDependencies.cpp),
+[events](examples/Events.cpp),
+[commands](examples/Commands.cpp),
+[recipes & cooking](examples/RecipesAndCooking.cpp).
 
 ## 🛠 Building
 
-R-ECS is a CMake static library requiring a **C++20** compiler.
+R-ECS is a **header-only** CMake library requiring a **C++20** compiler.
 
 ```cmake
 add_subdirectory(R-ECS)

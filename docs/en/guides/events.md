@@ -9,7 +9,7 @@ event.
 ## Declaring a handler with ECS_EVENT
 
 ```cpp
-struct PlayerDiedEvent { ecs::entityId_t who; };
+struct PlayerDiedEvent { ecs::Entity who; };
 
 struct ScoreSystem final : ecs::ISystem<ScoreSystem>
 {
@@ -80,7 +80,7 @@ event handling as deterministic as the update schedule
 ## Worked example — several subscribers
 
 ```cpp
-struct DamageEvent { ecs::entityId_t target; float amount; };
+struct DamageEvent { ecs::Entity target; float amount; };
 
 struct HealthSystem final : ecs::ISystem<HealthSystem>
 {

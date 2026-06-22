@@ -1,6 +1,27 @@
 #pragma once
 #include "../PrefabEntity.hpp"
 
+inline ecs::PrefabEntity::~PrefabEntity()
+{
+    clear();
+}
+
+inline void ecs::PrefabEntity::PoolDeleter::operator()(byte* ptr) const
+{
+    ComponentRegistrator::GetInfo(componentId).poolRelease(ptr);
+}
+
+inline void ecs::PrefabEntity::clear()
+{
+    for (componentId_t componentId = 0; componentId < m_dataByComponentsIndex.size(); ++componentId)
+    {
+        if (m_dataByComponentsIndex[componentId] == nullptr)
+            continue;
+
+        ComponentRegistrator::GetInfo(componentId).destructor(m_dataByComponentsIndex[componentId].get());
+    }
+    m_dataByComponentsIndex.clear();
+}
 
 template<ecs::IsComponent ComponentCls, typename... Args>
 void ecs::PrefabEntity::AddComponent(Args&&... args)

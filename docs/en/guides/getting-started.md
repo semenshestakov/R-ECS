@@ -4,8 +4,8 @@
 
 ## Add R-ECS to your build
 
-R-ECS is a static library exposed through CMake. Drop the repository into your
-project (submodule, `FetchContent`, or vendored folder) and link it:
+R-ECS is a **header-only** library exposed through CMake. Drop the repository
+into your project (submodule, `FetchContent`, or vendored folder) and link it:
 
 ```cmake
 add_subdirectory(R-ECS)

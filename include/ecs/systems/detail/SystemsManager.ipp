@@ -38,9 +38,9 @@ inline void ecs::SystemsManager::swap(SystemsManager& other) noexcept
     std::swap(m_schedule, other.m_schedule);
 }
 
-inline bool ecs::SystemsManager::Init(const InitState& state)
+inline bool ecs::SystemsManager::Init(const InitState& state, RegistryToken)
 {
-    for (auto& system : m_systemsMap | std::views::values)
+    for (const auto& system : m_systemsMap | std::views::values)
     {
         if (!system->isInit())
             system->Init(state);
@@ -49,7 +49,7 @@ inline bool ecs::SystemsManager::Init(const InitState& state)
     return true;
 }
 
-inline bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
+inline bool ecs::SystemsManager::Subscribe(const SubscribeState& state, RegistryToken)
 {
     event::priority_t priority = event::MAX_PRIORITY;
     for (const auto& stageSystems : m_schedule)
@@ -65,7 +65,7 @@ inline bool ecs::SystemsManager::Subscribe(const SubscribeState& state)
     return true;
 }
 
-inline void ecs::SystemsManager::Update(Registry& registry)
+inline void ecs::SystemsManager::Update(Registry& registry, RegistryToken)
 {
     const UpdateState state{};
     for (const auto& stageSystems : m_schedule)

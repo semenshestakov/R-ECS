@@ -12,7 +12,7 @@
 #include "ecs/Registry.hpp"
 
 // ── Event payloads (plain structs) ──────────────────────────────────────
-struct DamageEvent { ecs::Entity target; float amount; };
+struct DamageEvent { ecs::Entity target; float amount{}; };
 struct PlayerDiedEvent { ecs::Entity who; };
 
 // ── Two systems that subscribe to the same event ───────────────────────
@@ -22,8 +22,7 @@ struct HealthSystem final : ecs::ISystem<HealthSystem>
 
     void OnDamage(ecs::Registry&, const DamageEvent& e)
     {
-        std::cout << "[Health] entity " << e.target.id
-                  << " takes " << e.amount << " damage\n";
+        std::cout << "[Health] entity " << e.target.id << " takes " << e.amount << " damage\n";
     }
     ECS_EVENT(OnDamage, DamageEvent)
 

@@ -129,7 +129,6 @@ namespace ecs
         template <class Event>
         auto RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<EventListener<Event>>;
 
-    DEEP_TEST_PRIVATE_ACCESS:
         /**
          * @brief Collection of event registration functions
          *

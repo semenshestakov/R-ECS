@@ -32,50 +32,78 @@ R-ECS has four moving parts, all owned by a single `ecs::Registry`:
 ## Your first program
 
 ```cpp
+#include <cstddef>
+#include <iostream>
+
 #include "ecs/ISystem.hpp"
 #include "ecs/Registry.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
 
+struct Vel2d      { float x, y; };
 struct Position2d { float x, y; };
-struct Velocity2d { float x, y; };
 
-// A system: register it under a name and implement Update().
+// First system: integrate velocity and apply drag.
 struct MoveSystem final : ecs::ISystem<MoveSystem>
 {
-    ECS_REGISTRY("game")          // associates this system with registry "game"
+    ECS_REGISTRY("MyName")
 
     void Update(ecs::Registry& registry, const ecs::UpdateState&) override
     {
-        for (auto [pos, vel] : registry.Entities().view<Position2d, Velocity2d>())
+        for (auto [pos, vel] : registry.Entities().view<Position2d, Vel2d>())
         {
             pos.x += vel.x;
             pos.y += vel.y;
+
+            vel.x *= 0.98f;
+            vel.y *= 0.98f;
         }
+    }
+};
+
+// Second system: log positions — runs strictly after MoveSystem.
+struct LogMoveSystem final : ecs::ISystem<LogMoveSystem>
+{
+    ECS_DEPENDENT_SYSTEMS(MoveSystem)
+    ECS_REGISTRY("MyName")
+
+    void Update(ecs::Registry& registry, const ecs::UpdateState&) override
+    {
+        std::cout << "[Logger] Move system started\n";
+        std::size_t i = 0;
+        for (auto [pos, vel] : registry.Entities().view<Position2d, Vel2d>())
+            std::cout << "[" << ++i << "] \t" << pos.x << ", " << pos.y << "\n";
     }
 };
 
 int main()
 {
-    // Build a registry pre-populated with every system registered as "game".
-    ecs::Registry registry = ecs::Registry::Create("game");
+    // Build a registry pre-populated with every system registered as "MyName".
+    auto registry = ecs::Registry::Create("MyName");
     registry.Init();
 
-    // Assemble an entity from a prefab.
+    // Assemble entities from a prefab, then override each position individually.
     ecs::PrefabEntity prefab;
     prefab.AddComponent<Position2d>(0.f, 0.f);
-    prefab.AddComponent<Velocity2d>(1.f, 2.f);
+    prefab.AddComponent<Vel2d>(100.f, 100.f);
 
-    for (int i = 0; i < 100; ++i)
-        registry.Entities().Create(prefab);
+    for (std::size_t i = 0; i < 100; ++i)
+    {
+        ecs::EntityWrapper entity = registry.Entities().Create(prefab);
+        entity.GetComponent<Position2d>().x =  static_cast<float>(i);
+        entity.GetComponent<Position2d>().y = -static_cast<float>(i);
+    }
 
     // Main loop.
-    for (int frame = 0; frame < 60; ++frame)
+    for (std::size_t i = 0; i < 100; ++i)
+    {
+        std::cout << "Frame:" << i << "\n";
         registry.Update();
+    }
 }
 ```
 
-> **Two ways to build a `Registry`.** `Registry::Create("game")` looks up every
-> system tagged with `ECS_REGISTRY("game")` and wires them in automatically.
+> **Two ways to build a `Registry`.** `Registry::Create("MyName")` looks up every
+> system tagged with `ECS_REGISTRY("MyName")` and wires them in automatically.
 > You can also default-construct `ecs::Registry registry;` and register systems
 > by hand through `registry.Systems()`.
 

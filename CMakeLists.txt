@@ -21,11 +21,16 @@ target_include_directories(R-ECS
 )
 
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark = = = = = = = = = = = = = = = = = = = = = = = = =
+# = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark && Examples = = = = = = = = = = = = = = = = = = = = = = = = =
 
 option(IS_DOCS_GEN "Configure for documentation generation only (skip tests/benchmarks)" OFF)
+option(EXAMPLES_ENABLE "Build R-ECS examples (skip tests/benchmarks)" OFF)
+option(TEST_ENABLE "Configure for tests" OFF)
+option(BENCHMARK_ENABLE "Configure for benchmarks" OFF)
 
-if (TEST_ENABLE OR BENCHMARK_ENABLE)
+if (EXAMPLES_ENABLE)
+
+elseif (TEST_ENABLE OR BENCHMARK_ENABLE)
     add_compile_definitions(DEEP_TEST_ENABLE)
 elseif (NOT IS_DOCS_GEN AND CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     SET(TEST_ENABLE ON)
@@ -159,4 +164,24 @@ if (BENCHMARK_ENABLE)
 
 else ()
     message("[R-ECS] BENCHMARK disable")
+endif()
+
+
+if(EXAMPLES_ENABLE)
+    message("= = = = = = = = = R-ECS EXAMPLES enable = = = = = = = = =")
+
+    set(RECS_EXAMPLES
+        Commands
+        Events
+        RecipesAndCooking
+        Simple
+        SystemsWithDependencies
+    )
+
+    foreach(EXAMPLE ${RECS_EXAMPLES})
+        add_executable(example_${EXAMPLE} examples/${EXAMPLE}.cpp)
+        target_link_libraries(example_${EXAMPLE} PRIVATE R-ECS)
+    endforeach()
+else()
+    message("[R-ECS] EXAMPLES disable")
 endif()

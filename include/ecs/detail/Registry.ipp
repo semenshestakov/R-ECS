@@ -14,16 +14,16 @@ inline ecs::Registry::Registry() :
 
 inline bool ecs::Registry::Init(void* args)
 {
-    const bool result = m_systemManager.Init({"", args});
+    const bool result = m_systemManager.Init({"", args}, {});
     if (result)
-        return result & m_systemManager.Subscribe({m_eventSystem});
+        return result & m_systemManager.Subscribe({m_eventSystem}, {});
     return result;
 }
 
 inline void ecs::Registry::Update()
 {
     m_commandQueue.Flush({}, *this);
-    m_systemManager.Update(*this);
+    m_systemManager.Update(*this, {});
     m_eventSystem.FlushEvents({});
     m_commandQueue.Flush({}, *this);
 }

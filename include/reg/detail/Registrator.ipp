@@ -7,6 +7,14 @@ namespace reg
 {
 
     template <typename FactoryCls, RegistrationStrategy Strategy>
+    std::vector<typename Registrator<FactoryCls, Strategy>::vectorItem_t>&
+    Registrator<FactoryCls, Strategy>::collection() noexcept
+    {
+        static std::vector<vectorItem_t> instance;
+        return instance;
+    }
+
+    template <typename FactoryCls, RegistrationStrategy Strategy>
     Registrator<FactoryCls, Strategy>::~Registrator() noexcept
     {
         if (m_index == INVALID_INDEX)
@@ -14,21 +22,21 @@ namespace reg
 
         if constexpr (Strategy == RegistrationStrategy::DEFAULT)
         {
-            s_collection[m_index] = std::nullopt;
+            collection()[m_index] = std::nullopt;
             --s_size;
         }
         else if constexpr (Strategy == RegistrationStrategy::UNIQUE)
         {
-            --s_collection[m_index].first;
-            if (s_collection[m_index].first == 0)
+            --collection()[m_index].first;
+            if (collection()[m_index].first == 0)
             {
-                s_collection[m_index].second = std::nullopt;
+                collection()[m_index].second = std::nullopt;
                 --s_size;
             }
         }
 
         if (s_size == 0)
-            s_collection.clear();
+            collection().clear();
     }
 
     template <typename FactoryCls, RegistrationStrategy Strategy>
@@ -55,16 +63,16 @@ namespace reg
     template <typename FactoryCls, RegistrationStrategy Strategy>
     std::size_t Registrator<FactoryCls, Strategy>::getIndex(const std::string& name)
     {
-        for (std::size_t i = 0; i < s_collection.size(); ++i)
+        for (std::size_t i = 0; i < collection().size(); ++i)
         {
             if constexpr (Strategy == RegistrationStrategy::DEFAULT)
             {
-                if (s_collection[i].has_value() && s_collection[i]->name == name)
+                if (collection()[i].has_value() && collection()[i]->name == name)
                     return i;
             }
             else if constexpr (Strategy == RegistrationStrategy::UNIQUE)
             {
-                if (s_collection[i].second.has_value() && s_collection[i].second->name == name)
+                if (collection()[i].second.has_value() && collection()[i].second->name == name)
                     return i;
             }
         }
@@ -91,28 +99,28 @@ namespace reg
         std::size_t key;
         if constexpr (Strategy == RegistrationStrategy::DEFAULT)
         {
-            key = s_collection.size();
-            s_collection.emplace_back(FactoryCls::template Create<T>(name));
+            key = collection().size();
+            collection().emplace_back(FactoryCls::template Create<T>(name));
             ++s_size;
         }
         else if constexpr (Strategy == RegistrationStrategy::UNIQUE)
         {
-            auto it = std::find_if(s_collection.begin(), s_collection.end(), [&name](const auto& entry) {
+            auto it = std::find_if(collection().begin(), collection().end(), [&name](const auto& entry) {
                 if (entry.second.has_value())
                     return entry.second->name == name;
                 return false;
             });
 
-            if (it != s_collection.end())
+            if (it != collection().end())
             {
-                key = std::distance(s_collection.begin(), it);
+                key = std::distance(collection().begin(), it);
                 ++(it->first);
             }
             else
             {
-                key = s_collection.size();
+                key = collection().size();
                 ++s_size;
-                s_collection.emplace_back(std::pair{1u, FactoryCls::template Create<T>(name)});
+                collection().emplace_back(std::pair{1u, FactoryCls::template Create<T>(name)});
             }
         }
 
@@ -147,11 +155,11 @@ namespace reg
 
         if constexpr (Strategy == RegistrationStrategy::DEFAULT)
         {
-            return &s_collection[key].value();
+            return &collection()[key].value();
         }
         else if constexpr (Strategy == RegistrationStrategy::UNIQUE)
         {
-            return &s_collection[key].second.value();
+            return &collection()[key].second.value();
         }
         return nullptr;
     }

@@ -107,7 +107,7 @@ namespace reg
             >;
 
         inline static std::size_t s_size = 0;                                           ///< Current active registration count
-        inline static std::vector<vectorItem_t> s_collection;                           ///< Storage for all registrations
+        static std::vector<vectorItem_t>& collection() noexcept;                        ///< Storage for all registrations (Meyers singleton)
         static constexpr std::size_t INVALID_INDEX = ~0u;                               ///< Sentinel for invalid index
         std::size_t m_index = INVALID_INDEX;                                            ///< This object's index in s_collection
 
@@ -190,13 +190,13 @@ namespace reg
         {
             if constexpr (Strategy == RegistrationStrategy::DEFAULT)
             {
-                return s_collection
+                return collection()
                     | std::views::filter([](auto&& ptr) { return ptr.has_value(); })
                     | std::views::transform([](auto&& ptr) { return ptr.value(); });
             }
             else if constexpr (Strategy == RegistrationStrategy::UNIQUE)
             {
-                return s_collection
+                return collection()
                     | std::views::filter([](auto&& pairObj) { return pairObj.second.has_value(); })
                     | std::views::transform([](auto&& ptr) { return ptr.second.value(); });
             }

@@ -158,8 +158,11 @@ namespace ecs
          *
          * @param job Work to execute asynchronously. Ownership is transferred to the scheduler.
          * @return The job handle; empty when no scheduler is attached or @p job is null.
+         * @note Not [[nodiscard]]: the sink joins the work for you, so discarding the
+         *       handle (fire-and-forget) is the common, intended use. Capture it only
+         *       when you want to Wait early.
          */
-        [[nodiscard]] JobHandle Run(std::function<void()> job) const
+        JobHandle Run(std::function<void()> job) const
         {
             if (!scheduler)
                 return JobHandle{};

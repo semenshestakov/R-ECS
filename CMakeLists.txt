@@ -235,6 +235,7 @@ endif()
 if(EXAMPLES_ENABLE)
     message("= = = = = = = = = R-ECS EXAMPLES enable = = = = = = = = =")
 
+    # Core examples run on the default SerialJobScheduler — link only R-ECS.
     set(RECS_EXAMPLES
         Commands
         Events
@@ -247,6 +248,21 @@ if(EXAMPLES_ENABLE)
         add_executable(example_${EXAMPLE} examples/${EXAMPLE}.cpp)
         target_link_libraries(example_${EXAMPLE} PRIVATE R-ECS)
     endforeach()
+
+    # Jobs/Services install TbbJobScheduler — they need the oneTBB backend.
+    set(RECS_TBB_EXAMPLES
+        Jobs
+        Services
+    )
+
+    if(TARGET R-ECS::back_oneTBB)
+        foreach(EXAMPLE ${RECS_TBB_EXAMPLES})
+            add_executable(example_${EXAMPLE} examples/${EXAMPLE}.cpp)
+            target_link_libraries(example_${EXAMPLE} PRIVATE R-ECS R-ECS::back_oneTBB)
+        endforeach()
+    else()
+        message("[R-ECS] Examples ${RECS_TBB_EXAMPLES} need -DRECS_BACKEND_ONETBB=ON — skipped")
+    endif()
 else()
     message("[R-ECS] EXAMPLES disable")
 endif()

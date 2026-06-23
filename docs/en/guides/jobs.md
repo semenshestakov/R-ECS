@@ -198,9 +198,10 @@ ticks short so cancellation stays responsive.
 **Cooperative cancellation.** `SpawnService` returns a
 [`ServiceHandle`](../../../include/recs/ecs/jobs/ServiceHandle.hpp) carrying a
 [`StopSource`](../../../include/recs/ecs/jobs/StopToken.hpp); the service observes the
-matching read-only `StopToken`. `StopService` requests the stop and joins
-(a no-op join on the serial backend, which simply drops the service on its next
-pump).
+matching read-only `StopToken`. `StopService` requests the stop, then drops the
+service so it stops ticking; both shipped backends simply remove it (there is no
+worker thread to join). A custom backend that runs a service on its own thread
+would additionally join that thread here.
 
 **Dies with the registry.** The `Registry` owns the scheduler by `unique_ptr`,
 and the scheduler owns its services. When the registry dies, the scheduler's
@@ -285,3 +286,5 @@ read them with `get<T>()` from parallel systems.
   declares the read/write component sets the scheduler uses to derive data
   ordering; the same information is what drives parallel system execution.
 - [Commands](./commands.md) — the main-thread sync point for structural changes.
+- Examples: [`Jobs.cpp`](../../../examples/Jobs.cpp) (frame work) and
+  [`Services.cpp`](../../../examples/Services.cpp) (out-of-frame services).

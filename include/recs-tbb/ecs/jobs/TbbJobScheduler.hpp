@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include "IJobScheduler.hpp"
+#include "../../../recs/ecs/jobs/IJobScheduler.hpp"
 
 
 namespace ecs

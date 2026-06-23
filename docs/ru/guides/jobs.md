@@ -9,7 +9,7 @@ R-ECS не поставляет пул потоков и **не** привяза
 
 ## Порт
 
-[`ecs/jobs/IJobScheduler.hpp`](../../../include/ecs/jobs/IJobScheduler.hpp) —
+[`ecs/jobs/IJobScheduler.hpp`](../../../include/recs/ecs/jobs/IJobScheduler.hpp) —
 единственная завязка ядра на многопоточность. Ни один заголовок из
 `include/ecs` не включает потоковую библиотеку.
 
@@ -38,14 +38,14 @@ public:
 Интерфейс **намеренно крупнозернистый**: каждый метод — точка входа уровня
 система/кадр, поэтому единственный виртуальный вызов на запуск ничтожен на фоне
 запускаемой работы. Поэлементная работа едет в `RangeBody` —
-[`FunctionRef`](../../../include/ecs/jobs/FunctionRef.hpp), невладеющая ссылка на
+[`FunctionRef`](../../../include/recs/ecs/jobs/FunctionRef.hpp), невладеющая ссылка на
 callable без аллокаций, — и выполняется без дополнительной косвенности.
 
 Порт покрывает **две модели исполнения**. Первые четыре метода — *кадровая
 работа*, которая стартует и джойнится внутри кадра. Остальные — *сервисы*:
 долгоживущая работа, переживающая отдельный кадр (см.
 [Сервисы](#сервисы-внекадровая-работа) ниже). `Run` возвращает
-[`JobHandle`](../../../include/ecs/jobs/JobHandle.hpp) — opaque value-тип. Ядро в
+[`JobHandle`](../../../include/recs/ecs/jobs/JobHandle.hpp) — opaque value-тип. Ядро в
 него не заглядывает: бэкенд кладёт за типобезопасное состояние всё, что ему нужно
 (task group, future, latch), и приводит обратно в своём `Wait`.
 
@@ -53,7 +53,7 @@ callable без аллокаций, — и выполняется без доп�
 
 У каждого `Registry` всегда есть валидный, не-null планировщик. Если ничего не
 установлено — используется
-[`SerialJobScheduler`](../../../include/ecs/jobs/SerialJobScheduler.hpp), который
+[`SerialJobScheduler`](../../../include/recs/ecs/jobs/SerialJobScheduler.hpp), который
 выполняет всю работу синхронно в текущем потоке. Поэтому ядро полностью
 работоспособно без бэкенда, а однопоточные сборки не платят ничего.
 
@@ -147,7 +147,7 @@ registry.Scheduler().StopService(svc);
 **Тик, а не цикл.** `SpawnService` принимает один короткий возобновляемый шаг, а
 не собственный `while`-цикл. Циклом владеет *планировщик* и проверяет отмену
 между тиками. Именно это позволяет беспоточному
-[`SerialJobScheduler`](../../../include/ecs/jobs/SerialJobScheduler.hpp)
+[`SerialJobScheduler`](../../../include/recs/ecs/jobs/SerialJobScheduler.hpp)
 соблюсти тот же контракт: он хранит сервис и тикает его раз за вызов
 `PumpServices()` — который `Registry::Update` зовёт каждый кадр, — так что на
 серийном бэкенде сервис деградирует до кооперативного тика в главном потоке, ровно
@@ -156,8 +156,8 @@ registry.Scheduler().StopService(svc);
 короткими, чтобы отмена оставалась отзывчивой.
 
 **Кооперативная отмена.** `SpawnService` возвращает
-[`ServiceHandle`](../../../include/ecs/jobs/ServiceHandle.hpp) с
-[`StopSource`](../../../include/ecs/jobs/StopToken.hpp); сервис наблюдает
+[`ServiceHandle`](../../../include/recs/ecs/jobs/ServiceHandle.hpp) с
+[`StopSource`](../../../include/recs/ecs/jobs/StopToken.hpp); сервис наблюдает
 парный read-only `StopToken`. `StopService` запрашивает стоп и джойнит (на
 серийном бэкенде джойн — no-op: сервис просто отбрасывается на следующем пампе).
 

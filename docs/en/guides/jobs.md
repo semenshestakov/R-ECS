@@ -9,7 +9,7 @@ pool, or your own scheduler without touching ECS or system code.
 
 ## The port
 
-[`ecs/jobs/IJobScheduler.hpp`](../../../include/ecs/jobs/IJobScheduler.hpp)
+[`ecs/jobs/IJobScheduler.hpp`](../../../include/recs/ecs/jobs/IJobScheduler.hpp)
 declares the only multithreading dependency the core has. No header under
 `include/ecs` includes a threading library.
 
@@ -38,13 +38,13 @@ public:
 The interface is **coarse by design**: every method is a per-system / per-frame
 entry point, so the one virtual dispatch per call is negligible against the work
 it launches. The per-element work travels in the `RangeBody`, a
-[`FunctionRef`](../../../include/ecs/jobs/FunctionRef.hpp) — a non-owning,
+[`FunctionRef`](../../../include/recs/ecs/jobs/FunctionRef.hpp) — a non-owning,
 allocation-free callable reference — and runs without further indirection.
 
 The port spans **two execution models**. The first four methods are *frame work*
 — started and joined inside a frame. The rest are *services*: long-lived work
 that outlives any single frame (see [Services](#services-out-of-frame-work)
-below). `Run` returns a [`JobHandle`](../../../include/ecs/jobs/JobHandle.hpp):
+below). `Run` returns a [`JobHandle`](../../../include/recs/ecs/jobs/JobHandle.hpp):
 an opaque value type. The core never inspects it; the backend stores whatever it
 needs (a task group, a future, a latch) behind type-erased state and casts it
 back in its own `Wait`.
@@ -52,7 +52,7 @@ back in its own `Wait`.
 ## The default backend
 
 Every `Registry` always has a valid, non-null scheduler. With nothing installed
-it uses [`SerialJobScheduler`](../../../include/ecs/jobs/SerialJobScheduler.hpp),
+it uses [`SerialJobScheduler`](../../../include/recs/ecs/jobs/SerialJobScheduler.hpp),
 which runs all work inline on the calling thread. The core is therefore fully
 functional with no backend attached, and single-threaded builds pay nothing.
 
@@ -146,7 +146,7 @@ Three properties make services portable and safe:
 **A tick, not a loop.** `SpawnService` takes one short, resumable step, not its
 own `while` loop. The *scheduler* owns the loop and checks for cancellation
 between ticks. This is what lets the threadless
-[`SerialJobScheduler`](../../../include/ecs/jobs/SerialJobScheduler.hpp) honour
+[`SerialJobScheduler`](../../../include/recs/ecs/jobs/SerialJobScheduler.hpp) honour
 the same contract: it stores the service and ticks it once per
 `PumpServices()` — which `Registry::Update` calls every frame — so on the serial
 backend a service degrades to cooperative main-thread ticking, exactly as
@@ -155,8 +155,8 @@ backend a service degrades to cooperative main-thread ticking, exactly as
 short so cancellation stays responsive.
 
 **Cooperative cancellation.** `SpawnService` returns a
-[`ServiceHandle`](../../../include/ecs/jobs/ServiceHandle.hpp) carrying a
-[`StopSource`](../../../include/ecs/jobs/StopToken.hpp); the service observes the
+[`ServiceHandle`](../../../include/recs/ecs/jobs/ServiceHandle.hpp) carrying a
+[`StopSource`](../../../include/recs/ecs/jobs/StopToken.hpp); the service observes the
 matching read-only `StopToken`. `StopService` requests the stop and joins
 (a no-op join on the serial backend, which simply drops the service on its next
 pump).

@@ -25,7 +25,7 @@ add_library(R-ECS
 
 target_include_directories(R-ECS
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/recs
 )
 
 

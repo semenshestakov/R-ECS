@@ -39,7 +39,7 @@ struct ecs::TbbJobScheduler::Impl
     {
         std::lock_guard<std::mutex> lock(mutex);
         for (const auto& s : services)
-            s->source.request_stop();
+            s->source.requestStop();
         services.clear();
     }
 
@@ -118,7 +118,7 @@ void ecs::TbbJobScheduler::StopService(const ServiceHandle& handle)
     if (!handle.valid())
         return;
 
-    handle.request_stop();
+    handle.requestStop();
     const auto rec = std::static_pointer_cast<ServiceRec>(handle.state());
 
     std::lock_guard<std::mutex> lock(m_impl->mutex);
@@ -138,7 +138,7 @@ void ecs::TbbJobScheduler::PumpServices()
         m_impl->arena.execute([&] {
             tbb::task_group group;
             for (const auto& s : live)
-                if (!s->source.stop_requested() && s->tick)
+                if (!s->source.stopRequested() && s->tick)
                     group.run([s] { s->tick(); });
             group.wait();
         });
@@ -148,6 +148,6 @@ void ecs::TbbJobScheduler::PumpServices()
     std::erase_if(
         m_impl->services,
         [](const std::shared_ptr<ServiceRec>& s) {
-            return s->source.stop_requested();
+            return s->source.stopRequested();
         });
 }

@@ -38,25 +38,19 @@ namespace ecs
          * @tparam F Callable type invocable as R(Args...).
          * @param callable The callable to reference. Must outlive this FunctionRef.
          */
-        template <typename F,
-                  typename = std::enable_if_t<
-                      !std::is_same_v<std::decay_t<F>, FunctionRef> &&
-                      std::is_invocable_r_v<R, F &, Args...>>>
-        FunctionRef(F &&callable) noexcept :
-            m_obj(const_cast<void *>(static_cast<const void *>(std::addressof(callable)))),
-            m_thunk([](void *obj, Args... args) -> R {
-                return (*static_cast<std::remove_reference_t<F> *>(obj))(
-                    std::forward<Args>(args)...);
+        template <typename F, typename = std::enable_if_t<!std::is_same_v<std::decay_t<F>, FunctionRef> && std::is_invocable_r_v<R, F&, Args...>>>
+        FunctionRef(F&& callable) noexcept :
+            m_obj(const_cast<void*>(static_cast<const void*>(std::addressof(callable)))),
+            m_thunk([](void* obj, Args... args) -> R {
+                return (*static_cast<std::remove_reference_t<F>*>(obj))(std::forward<Args>(args)...);
             })
-        {}
+        {
+        }
 
         /**
          * @brief Invokes the referenced callable.
          */
-        R operator()(Args... args) const
-        {
-            return m_thunk(m_obj, std::forward<Args>(args)...);
-        }
+        R operator()(Args... args) const { return m_thunk(m_obj, std::forward<Args>(args)...); }
 
         /**
          * @brief Whether the reference is bound to a callable.
@@ -64,8 +58,8 @@ namespace ecs
         [[nodiscard]] explicit operator bool() const noexcept { return m_thunk != nullptr; }
 
     private:
-        void *m_obj = nullptr;                       ///< Erased pointer to the referenced callable
-        R (*m_thunk)(void *, Args...) = nullptr;     ///< Thunk that casts back and invokes
+        void* m_obj = nullptr;                  ///< Erased pointer to the referenced callable
+        R (*m_thunk)(void*, Args...) = nullptr; ///< Thunk that casts back and invokes
     };
 
 } // namespace ecs

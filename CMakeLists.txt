@@ -21,6 +21,7 @@ add_library(R-ECS
         src/recs/SystemsSchedule.cpp
         src/recs/Commands.cpp
         src/recs/ThreadAffinity.cpp
+        src/recs/SerialJobScheduler.cpp
 )
 
 target_include_directories(R-ECS
@@ -208,6 +209,7 @@ if (BENCHMARK_ENABLE)
             benchmarks/entities/ecs.cpp
             benchmarks/entities/entt.cpp
             benchmarks/entities/flecs.cpp
+            benchmarks/jobs/serial.cpp
     )
 
     target_include_directories(recs_bench
@@ -222,6 +224,16 @@ if (BENCHMARK_ENABLE)
             EnTT::EnTT
             flecs::flecs
     )
+
+    # TbbJobScheduler benchmarks need the oneTBB backend — build them only when
+    # it is available (-DRECS_BACKEND_ONETBB=ON).
+    if(TARGET R-ECS::back_oneTBB)
+        target_sources(recs_bench PRIVATE benchmarks/jobs/tbb.cpp)
+        target_link_libraries(recs_bench PRIVATE R-ECS::back_oneTBB)
+    else()
+        message("[R-ECS] TbbJobScheduler benchmarks need -DRECS_BACKEND_ONETBB=ON — skipped")
+    endif()
+
     if(TARGET benchmark)
         target_compile_options(benchmark PRIVATE -Wno-format-nonliteral)
     endif()

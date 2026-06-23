@@ -46,37 +46,137 @@ namespace ecs
          */
         explicit TbbJobScheduler(std::size_t threads = 0);
 
-        /// Stops every live service and tears down the arena (no threads to join).
+        /**
+         * @brief Stops every live service and tears down the arena.
+         *
+         * Requests every live service to stop, drops them, and destroys the
+         * internal tbb::task_arena. There are no threads to join — the PIMPL
+         * destructor handles all cleanup synchronously.
+         *
+         * @note Lifetime follows the port's invariant: the scheduler owns its
+         *       services, so destroying it (e.g. when the owning Registry dies,
+         *       or on SetScheduler(nullptr)) is safe and immediate.
+         */
         ~TbbJobScheduler() override;
 
         TbbJobScheduler(const TbbJobScheduler&) = delete;
         TbbJobScheduler& operator=(const TbbJobScheduler&) = delete;
 
+        /**
+         * @brief Data-parallel loop over [begin, end) via tbb::parallel_for.
+         *
+         * Delegates to tbb::parallel_for with a simple_range split by @p grain.
+         * The call blocks until every chunk has completed. @p body must be safe
+         * to run concurrently on disjoint sub-ranges.
+         *
+         * @param begin Inclusive start index.
+         * @param end   Exclusive end index. If end <= begin the call is a no-op.
+         * @param grain Minimum number of iterations per chunk (a hint; 0 means "scheduler decides").
+         * @param body  Callable applied to each sub-range. Borrowed, not stored.
+         *
+         * @see IJobScheduler::ParallelFor
+         */
         void ParallelFor(std::size_t begin, std::size_t end, std::size_t grain, RangeBody body) override;
 
-        /// @brief Schedules @p job on the arena's task group.
-        /// @note The returned handle owns the join state: dropping it without
-        ///       Wait still joins the task on destruction, so a fire-and-forget
-        ///       handle never tears down a running task_group (which is UB).
+        /**
+         * @brief Schedules a single task on the arena's tbb::task_group.
+         *
+         * @param job Work to execute. Ownership is transferred to the scheduler.
+         * @return A handle that becomes ready when the task finishes; call Wait
+         *         on it to join.
+         *
+         * @note The returned handle owns the join state: dropping it without
+         *       Wait still joins the task on destruction, so a fire-and-forget
+         *       handle never tears down a running task_group (which is UB).
+         *
+         * @see IJobScheduler::Run
+         */
         [[nodiscard]] JobHandle Run(std::function<void()> job) override;
 
+        /**
+         * @brief Blocks until the work behind @p handle has completed.
+         *
+         * Joins the internal tbb::task_group for the given handle. An empty or
+         * invalid handle returns immediately.
+         *
+         * @param handle A handle from Run.
+         *
+         * @see IJobScheduler::Wait
+         */
         void Wait(const JobHandle& handle) override;
 
+        /**
+         * @brief Number of workers the arena can run in parallel (>= 1).
+         *
+         * Returns tbb::this_task_arena::max_concurrency() for the private arena.
+         *
+         * @return Worker count, always at least 1.
+         *
+         * @note Useful for sizing grain and partitioning work.
+         *
+         * @see IJobScheduler::WorkerCount
+         */
         [[nodiscard]] std::size_t WorkerCount() const override;
 
+        /**
+         * @brief Spawns a long-lived, out-of-frame service on the arena.
+         *
+         * Unlike Run (which executes @p job once), a service ticks @p tick
+         * repeatedly until stopped via StopService or the scheduler is destroyed.
+         * @p tick must be one short, resumable step, not its own loop: the
+         * scheduler owns the loop and checks for cancellation between ticks,
+         * which is what lets a threadless backend tick the service cooperatively
+         * from PumpServices.
+         *
+         * @param tick One step of the service. Ownership is transferred to the scheduler.
+         * @param desc Optional scheduling/diagnostic hints; a backend may ignore them.
+         * @return A handle used to stop the service; an empty tick yields an empty handle.
+         *
+         * @see IJobScheduler::SpawnService
+         */
         [[nodiscard]] ServiceHandle SpawnService(std::function<void()> tick, ServiceDesc desc = {}) override;
 
+        /**
+         * @brief Requests a service stop and joins it.
+         *
+         * Sets the service's cancellation flag, then blocks until it has stopped.
+         * On this threadless (cooperative) backend, the service is dropped on its
+         * next pump rather than joined on a dedicated thread. An empty or invalid
+         * handle returns immediately.
+         *
+         * @param handle A handle from SpawnService.
+         *
+         * @see IJobScheduler::StopService
+         */
         void StopService(const ServiceHandle& handle) override;
 
-        /// @brief Ticks every live service once on the arena, in parallel, joining before return.
+        /**
+         * @brief Ticks every live service once on the arena, in parallel.
+         *
+         * Dispatches every live service's tick onto the tbb::task_group, runs
+         * them in parallel, and joins before returning. Called once per frame
+         * by Registry::Update.
+         *
+         * @see IJobScheduler::PumpServices
+         */
         void PumpServices() override;
 
-        /// @brief Services run cooperatively on the shared arena, never on a dedicated OS thread.
+        /**
+         * @brief Whether this backend can host services on dedicated OS threads.
+         *
+         * Always returns false. Services run cooperatively on the shared arena,
+         * never on a dedicated OS thread. Truly blocking subsystems (audio,
+         * socket I/O) are out of scope for this backend.
+         *
+         * @return false — all services are cooperative and frame-paced.
+         *
+         * @see IJobScheduler::CanHostDedicatedThreads
+         */
         [[nodiscard]] bool CanHostDedicatedThreads() const noexcept override { return false; }
 
     private:
         struct Impl;
-        std::unique_ptr<Impl> m_impl;
+        std::unique_ptr<Impl> m_impl; ///< PIMPL — hides all oneTBB types (task_arena, task_group, service list) from consumers.
     };
 
 } // namespace ecs

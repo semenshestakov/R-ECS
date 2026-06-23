@@ -35,6 +35,9 @@ namespace ecs
     class ServiceHandle
     {
     public:
+        /**
+         * @brief Default constructor. Creates an empty, invalid handle.
+         */
         ServiceHandle() = default;
 
         /**
@@ -48,28 +51,35 @@ namespace ecs
 
         /**
          * @brief Whether the handle refers to a live service.
+         * @return true if backend state is present; false for a default-constructed handle.
          */
         [[nodiscard]] bool valid() const noexcept { return static_cast<bool>(m_state); }
 
         /**
          * @brief Requests the service stop cooperatively.
-         * @note Does not block; pass the handle to IJobScheduler::StopService to also join.
+         *
+         * Idempotent and safe to call from any thread. Does not block; pass the
+         * handle to IJobScheduler::StopService to also join the service.
+         *
+         * @note On a threadless backend the service stops on the next PumpServices call.
          */
-        void request_stop() const noexcept { m_source.request_stop(); }
+        void requestStop() const noexcept { m_source.requestStop(); }
 
         /**
          * @brief Accesses the cancellation source (for the owning scheduler).
+         * @return Const reference to the embedded StopSource.
          */
         [[nodiscard]] const StopSource& source() const noexcept { return m_source; }
 
         /**
          * @brief Accesses the type-erased backend state (for the owning scheduler).
+         * @return Const reference to the shared backend state, or empty.
          */
         [[nodiscard]] const std::shared_ptr<void>& state() const noexcept { return m_state; }
 
     private:
-        StopSource m_source;            ///< Write side of the service's cancellation
-        std::shared_ptr<void> m_state;  ///< Backend-owned service state, or empty
+        StopSource m_source;                ///< Write side of the service's cooperative cancellation
+        std::shared_ptr<void> m_state;      ///< Backend-owned join/completion state, or empty
     };
 
 } // namespace ecs

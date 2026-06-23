@@ -34,18 +34,16 @@ namespace ecs
          * @brief Whether a stop has been requested through the owning source.
          * @return true once request_stop has been called; false for an empty token.
          */
-        [[nodiscard]] bool stop_requested() const noexcept
-        {
-            return m_flag && m_flag->load(std::memory_order_acquire);
-        }
+        [[nodiscard]] bool stopRequested() const noexcept { return m_flag && m_flag->load(std::memory_order_acquire); }
 
         /**
          * @brief Whether the token refers to a real stop state.
+         * @return true if the token owns a shared flag; false for a default-constructed token.
          */
         [[nodiscard]] bool valid() const noexcept { return static_cast<bool>(m_flag); }
 
     private:
-        std::shared_ptr<const std::atomic_bool> m_flag; ///< Shared stop flag, or empty
+        std::shared_ptr<const std::atomic_bool> m_flag; ///< Shared stop flag, or empty for a no-op token
     };
 
     /**
@@ -64,7 +62,9 @@ namespace ecs
     class StopSource
     {
     public:
-        /// Creates an empty source that owns no flag (request_stop is a no-op).
+        /**
+         * @brief Creates an empty source that owns no flag (request_stop is a no-op).
+         */
         StopSource() = default;
 
         /**
@@ -73,30 +73,40 @@ namespace ecs
          */
         explicit StopSource(std::shared_ptr<std::atomic_bool> flag) noexcept : m_flag(std::move(flag)) {}
 
-        /// Creates an active source backed by a fresh, unset stop flag.
+        /**
+         * @brief Creates an active source backed by a fresh, unset stop flag.
+         * @return StopSource owning a newly allocated flag set to false.
+         */
         [[nodiscard]] static StopSource Active() { return StopSource{std::make_shared<std::atomic_bool>(false)}; }
 
-        /// Hands out a read-only token sharing this source's flag.
+        /**
+         * @brief Hands out a read-only token sharing this source's flag.
+         * @return StopToken that observes the same flag as this source.
+         */
         [[nodiscard]] StopToken token() const noexcept { return StopToken{m_flag}; }
 
-        /// Requests cancellation. Idempotent and callable from any thread.
-        void request_stop() const noexcept
-        {
-            if (m_flag)
-                m_flag->store(true, std::memory_order_release);
-        }
+        /**
+         * @brief Requests cancellation. Idempotent and callable from any thread.
+         *
+         * Once called, every StopToken sharing this source's flag will report
+         * stopRequested() == true.
+         */
+        void requestStop() const noexcept { if (m_flag) m_flag->store(true, std::memory_order_release);}
 
-        /// Whether a stop has already been requested through this source.
-        [[nodiscard]] bool stop_requested() const noexcept
-        {
-            return m_flag && m_flag->load(std::memory_order_acquire);
-        }
+        /**
+         * @brief Whether a stop has already been requested through this source.
+         * @return true if request_stop has been called; false for an empty source.
+         */
+        [[nodiscard]] bool stopRequested() const noexcept { return m_flag && m_flag->load(std::memory_order_acquire); }
 
-        /// Whether the source owns a real flag.
+        /**
+         * @brief Whether the source owns a real flag.
+         * @return true if the source was created with Active() or a non-empty flag.
+         */
         [[nodiscard]] bool valid() const noexcept { return static_cast<bool>(m_flag); }
 
     private:
-        std::shared_ptr<std::atomic_bool> m_flag; ///< Owned stop flag, or empty
+        std::shared_ptr<std::atomic_bool> m_flag; ///< Shared stop flag this source sets on request_stop
     };
 
 } // namespace ecs

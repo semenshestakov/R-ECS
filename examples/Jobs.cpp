@@ -40,7 +40,7 @@ struct WorkSystem final : ecs::ISystem<WorkSystem>
     void Update(ecs::Registry& registry, const ecs::UpdateState& state) override
     {
         ecs::IJobScheduler& scheduler = registry.Scheduler();
-        JobsResult& out = registry.ctx().get<JobsResult>(); // read-only handle: safe on a worker
+        auto& out = registry.ctx().get<JobsResult>(); // read-only handle: safe on a worker
 
         // 1. Data-parallel reduction. Each chunk sums a disjoint sub-range, so
         //    the partials never race; ParallelFor blocks until every chunk runs.

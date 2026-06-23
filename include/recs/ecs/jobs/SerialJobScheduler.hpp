@@ -1,5 +1,5 @@
 #pragma once
-#include <algorithm>
+#include <functional>
 #include <memory>
 #include <vector>
 #include "IJobScheduler.hpp"
@@ -27,61 +27,75 @@ namespace ecs
      */
     struct SerialJobScheduler final : IJobScheduler
     {
-        void ParallelFor(const std::size_t begin, const std::size_t end, std::size_t /*grain*/, const RangeBody body) override
-        {
-            if (begin < end && body)
-                body(begin, end);
-        }
+        /**
+         * @brief Executes the body once over the full range on the calling thread.
+         *
+         * Ignores the grain hint since there is no parallelism.
+         *
+         * @param begin Inclusive start index.
+         * @param end   Exclusive end index.
+         * @param grain Ignored (serial backend).
+         * @param body  Callable applied to [begin, end). No-op if empty.
+         */
+        void ParallelFor(std::size_t begin, std::size_t end, std::size_t grain, RangeBody body) override;
 
-        [[nodiscard]] JobHandle Run(const std::function<void()> job) override
-        {
-            if (job)
-                job();
-            return JobHandle{};
-        }
+        /**
+         * @brief Runs the job immediately on the calling thread.
+         * @param job Work to execute. No-op if empty.
+         * @return An empty JobHandle (already completed).
+         */
+        [[nodiscard]] JobHandle Run(std::function<void()> job) override;
 
-        void Wait(const JobHandle & /*handle*/) override {}
+        /**
+         * @brief No-op; all work completes synchronously.
+         * @param handle Ignored.
+         */
+        void Wait(const JobHandle &handle) override;
 
-        [[nodiscard]] std::size_t WorkerCount() const override { return 1; }
+        /**
+         * @brief Serial backend always reports one worker.
+         * @return 1
+         */
+        [[nodiscard]] std::size_t WorkerCount() const override;
 
-        [[nodiscard]] ServiceHandle SpawnService(std::function<void()> tick, ServiceDesc /*desc*/ = {}) override
-        {
-            if (!tick)
-                return ServiceHandle{};
+        /**
+         * @brief Stores a service as a cooperative tickable unit.
+         *
+         * Since there are no worker threads, the service is not executed here.
+         * PumpServices ticks it once per call.
+         *
+         * @param tick One resumable step of the service. No-op if empty.
+         * @param desc Ignored (serial backend).
+         * @return ServiceHandle used to stop the service.
+         */
+        [[nodiscard]] ServiceHandle SpawnService(std::function<void()> tick, ServiceDesc desc = {}) override;
 
-            StopSource source = StopSource::Active();
-            auto state = std::make_shared<Service>(Service{source.token(), std::move(tick)});
-            m_services.push_back(state);
-            return ServiceHandle{std::move(source), std::move(state)};
-        }
+        /**
+         * @brief Requests a service stop (no thread to join).
+         *
+         * The service is dropped on the next PumpServices call.
+         *
+         * @param handle Handle from SpawnService.
+         */
+        void StopService(const ServiceHandle &handle) override;
 
-        void StopService(const ServiceHandle &handle) override
-        {
-            handle.request_stop(); // dropped on the next PumpServices; no thread to join
-        }
-
-        void PumpServices() override
-        {
-            if (m_services.empty())
-                return;
-
-            // Snapshot so a tick may spawn or stop services without invalidating iteration.
-            const std::vector<std::shared_ptr<Service>> live = m_services;
-            for (const auto &service : live)
-                if (!service->token.stop_requested() && service->tick)
-                    service->tick();
-
-            std::erase_if(m_services, [](const std::shared_ptr<Service>& s) { return s->token.stop_requested(); });
-        }
+        /**
+         * @brief Ticks each live service once and removes stopped services.
+         *
+         * Snapshots the service list so that tick callbacks may safely spawn or
+         * stop other services without invalidating iteration.
+         */
+        void PumpServices() override;
 
     private:
+        /// @brief A live service tracked by the serial scheduler.
         struct Service
         {
-            StopToken token;            ///< Observes the owning handle's cancellation
-            std::function<void()> tick; ///< One resumable step, run once per pump
+            StopToken token;               ///< Read-only cancellation view for the tick callback
+            std::function<void()> tick;    ///< One resumable step of the service
         };
 
-        std::vector<std::shared_ptr<Service>> m_services; ///< Live cooperative services
+        std::vector<std::shared_ptr<Service>> m_services; ///< All live services, snapshot for each PumpServices tick
     };
 
 } // namespace ecs

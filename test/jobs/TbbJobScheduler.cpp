@@ -158,7 +158,7 @@ TEST_F(TbbJobSchedulerTest, DeferredBatchWaitJoinsEveryHandle)
 
 TEST_F(TbbJobSchedulerTest, WorkerCountIsAtLeastOne) { EXPECT_GE(scheduler.WorkerCount(), 1u); }
 
-TEST_F(TbbJobSchedulerTest, HostsDedicatedThreads) { EXPECT_TRUE(scheduler.CanHostDedicatedThreads()); }
+TEST_F(TbbJobSchedulerTest, DoesNotHostDedicatedThreads) { EXPECT_FALSE(scheduler.CanHostDedicatedThreads()); }
 
 TEST(TbbJobSchedulerCtorTest, ExplicitThreadCountBoundsWorkerCount)
 {
@@ -167,33 +167,22 @@ TEST(TbbJobSchedulerCtorTest, ExplicitThreadCountBoundsWorkerCount)
 }
 
 
-template <typename T>
-bool WaitUntilAtLeast(const std::atomic<T>& value, const T target, const std::chrono::milliseconds timeout = 2s)
-{
-    const auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (value.load() < target)
-    {
-        if (std::chrono::steady_clock::now() > deadline)
-            return false;
-        std::this_thread::sleep_for(1ms);
-    }
-    return true;
-}
-
-
-TEST_F(TbbJobSchedulerTest, ServiceTicksUntilStopped)
+TEST_F(TbbJobSchedulerTest, ServiceTicksOncePerPumpUntilStopped)
 {
     std::atomic<int> ticks{0};
-    const ecs::ServiceHandle svc = scheduler.SpawnService([&] {
-        ++ticks;
-        std::this_thread::sleep_for(1ms);
-    });
+    const ecs::ServiceHandle svc = scheduler.SpawnService([&] { ++ticks; });
     ASSERT_TRUE(svc.valid());
-    ASSERT_TRUE(WaitUntilAtLeast(ticks, 3));
+
+    // Services are frame-paced: they advance only when PumpServices runs.
+    EXPECT_EQ(ticks.load(), 0);
+    scheduler.PumpServices();
+    scheduler.PumpServices();
+    scheduler.PumpServices();
+    EXPECT_EQ(ticks.load(), 3);
 
     scheduler.StopService(svc);
     const int after = ticks.load();
-    std::this_thread::sleep_for(20ms);
+    scheduler.PumpServices();
     EXPECT_EQ(ticks.load(), after);
 }
 
@@ -211,58 +200,47 @@ TEST_F(TbbJobSchedulerTest, StopServiceOnInvalidHandleIsNoOp)
 }
 
 
+TEST_F(TbbJobSchedulerTest, PumpWithNoServicesIsNoOp) { EXPECT_NO_THROW(scheduler.PumpServices()); }
+
+
+TEST_F(TbbJobSchedulerTest, MultipleServicesAllTickPerPump)
+{
+    std::array<std::atomic<int>, 4> ticks{};
+    std::vector<ecs::ServiceHandle> handles;
+    for (auto& t : ticks)
+        handles.push_back(scheduler.SpawnService([&t] { ++t; }));
+
+    scheduler.PumpServices();
+    scheduler.PumpServices();
+
+    for (const auto& t : ticks)
+        EXPECT_EQ(t.load(), 2);
+}
+
+
 TEST_F(TbbJobSchedulerTest, ServiceDescIsAccepted)
 {
     std::atomic<int> ticks{0};
     const ecs::ServiceHandle svc = scheduler.SpawnService(
-            [&] {
-                ++ticks;
-                std::this_thread::sleep_for(1ms);
-            },
-            ecs::ServiceDesc{.name = "test-service", .priority = 1});
+            [&] { ++ticks; }, ecs::ServiceDesc{.name = "test-service", .priority = 1});
     ASSERT_TRUE(svc.valid());
-    EXPECT_TRUE(WaitUntilAtLeast(ticks, 1));
+    scheduler.PumpServices();
+    EXPECT_EQ(ticks.load(), 1);
     scheduler.StopService(svc);
 }
 
 
-TEST(TbbJobSchedulerLifetimeTest, DestructionStopsRunningServices)
+TEST(TbbJobSchedulerLifetimeTest, DestructionDropsServices)
 {
     auto ticks = std::make_shared<std::atomic<int>>(0);
     {
         ecs::TbbJobScheduler scheduler;
-        static_cast<void>(scheduler.SpawnService([ticks] {
-            ++*ticks;
-            std::this_thread::sleep_for(1ms);
-        }));
-        EXPECT_TRUE(WaitUntilAtLeast(*ticks, 3));
+        static_cast<void>(scheduler.SpawnService([ticks] { ++*ticks; }));
+        scheduler.PumpServices();
+        scheduler.PumpServices();
+        EXPECT_EQ(ticks->load(), 2);
+    } // destructor drops the service: nothing pumps it anymore
 
-    }
     const int frozen = ticks->load();
-    std::this_thread::sleep_for(20ms);
     EXPECT_EQ(ticks->load(), frozen);
-}
-
-
-TEST(TbbJobSchedulerLifetimeTest, MultipleConcurrentServicesAllStop)
-{
-    std::array<std::atomic<int>, 4> ticks{};
-    {
-        ecs::TbbJobScheduler scheduler;
-        std::vector<ecs::ServiceHandle> handles;
-        for (auto& t : ticks)
-            handles.push_back(scheduler.SpawnService([&t] {
-                ++t;
-                std::this_thread::sleep_for(1ms);
-            }));
-        for (auto& t : ticks)
-            ASSERT_TRUE(WaitUntilAtLeast(t, 2));
-        // destructor stops all four
-    }
-    std::array<int, 4> frozen{};
-    for (std::size_t i = 0; i < ticks.size(); ++i)
-        frozen[i] = ticks[i].load();
-    std::this_thread::sleep_for(20ms);
-    for (std::size_t i = 0; i < ticks.size(); ++i)
-        EXPECT_EQ(ticks[i].load(), frozen[i]);
 }

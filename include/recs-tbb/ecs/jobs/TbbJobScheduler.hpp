@@ -17,17 +17,19 @@ namespace ecs
      * travels behind the opaque JobHandle. Install it with Registry::SetScheduler
      * to parallelise schedule stages without touching any system code.
      *
-     * Services are deliberately *not* run inside the arena. A long-lived tick loop
-     * pinned to an arena worker would permanently occupy a slot and starve frame
-     * work, so each service instead owns a dedicated std::thread that runs
-     * "while not stopped: tick()". This keeps the cooperative tick contract (the
-     * scheduler owns the loop and checks cancellation between ticks) while leaving
-     * the compute arena free, and lets the backend advertise
-     * CanHostDedicatedThreads() == true.
+     * Services are cooperative and frame-paced, mirroring Unity's job model:
+     * there is no dedicated OS thread per service. SpawnService merely records the
+     * tick; PumpServices (called once per frame by Registry::Update) dispatches
+     * every live service's tick onto the arena, runs them in parallel, and joins
+     * before returning. The scheduler owns the loop and checks cancellation
+     * between ticks, exactly as the port requires. Because no service blocks its
+     * own thread, the backend reports CanHostDedicatedThreads() == false: truly
+     * blocking subsystems (audio, socket I/O) are out of scope for this backend.
      *
      * Lifetime follows the port's invariant: the scheduler owns its services, so
      * destroying it (e.g. when the owning Registry dies, or on
-     * SetScheduler(nullptr)) requests every service to stop and joins its thread.
+     * SetScheduler(nullptr)) requests every service to stop and drops it; there
+     * are no threads to join.
      *
      * The header pulls in no TBB symbols — every oneTBB type lives behind a PIMPL
      * in the implementation translation unit, so consumers of this header need not
@@ -39,12 +41,12 @@ namespace ecs
         /**
          * @brief Creates the scheduler and its worker arena.
          * @param threads Number of workers the arena may use; 0 lets oneTBB choose
-         *                (typically the hardware concurrency). Dedicated service
-         *                threads are created on demand and are not counted here.
+         *                (typically the hardware concurrency). Services share these
+         *                workers; the backend spawns no threads of its own.
          */
         explicit TbbJobScheduler(std::size_t threads = 0);
 
-        /// Stops and joins every live service, then tears down the arena.
+        /// Stops every live service and tears down the arena (no threads to join).
         ~TbbJobScheduler() override;
 
         TbbJobScheduler(const TbbJobScheduler&) = delete;
@@ -52,6 +54,10 @@ namespace ecs
 
         void ParallelFor(std::size_t begin, std::size_t end, std::size_t grain, RangeBody body) override;
 
+        /// @brief Schedules @p job on the arena's task group.
+        /// @note The returned handle owns the join state: dropping it without
+        ///       Wait still joins the task on destruction, so a fire-and-forget
+        ///       handle never tears down a running task_group (which is UB).
         [[nodiscard]] JobHandle Run(std::function<void()> job) override;
 
         void Wait(const JobHandle& handle) override;
@@ -62,8 +68,11 @@ namespace ecs
 
         void StopService(const ServiceHandle& handle) override;
 
-        /// @brief This backend hosts services on dedicated OS threads.
-        [[nodiscard]] bool CanHostDedicatedThreads() const noexcept override { return true; }
+        /// @brief Ticks every live service once on the arena, in parallel, joining before return.
+        void PumpServices() override;
+
+        /// @brief Services run cooperatively on the shared arena, never on a dedicated OS thread.
+        [[nodiscard]] bool CanHostDedicatedThreads() const noexcept override { return false; }
 
     private:
         struct Impl;

@@ -72,16 +72,19 @@ null scheduler.
 ## Writing a backend
 
 Implement the frame methods, then the services. A `Run` schedules a task and
-returns a handle whose state is signalled on completion; `Wait` joins it.
-`ParallelFor` splits `[begin, end)` into chunks no smaller than `grain` and
+returns a handle whose state is signalled on completion; `Wait` joins it. A
+backend that signals completion with a join-on-destroy primitive (e.g. a TBB
+`task_group`) must keep that primitive alive until the task finishes — joining it
+from the handle's own destructor — so a dropped, never-waited handle still joins
+cleanly instead of tearing down running work. `ParallelFor` splits `[begin, end)`
+into chunks no smaller than `grain` and
 applies `body` to each, possibly concurrently, blocking until all chunks finish.
 `body` must be safe to run concurrently on disjoint sub-ranges.
 
 ```cpp
 class MyTbbScheduler final : public ecs::IJobScheduler
 {
-    void ParallelFor(std::size_t begin, std::size_t end,
-                     std::size_t grain, RangeBody body) override
+    void ParallelFor(std::size_t begin, std::size_t end, std::size_t grain, RangeBody body) override
     {
         tbb::parallel_for(
             tbb::blocked_range<std::size_t>(begin, end, grain),
@@ -89,21 +92,25 @@ class MyTbbScheduler final : public ecs::IJobScheduler
     }
     // Run / Wait / WorkerCount ...
 
-    // A pool runs the service's tick loop on a worker, so PumpServices stays the
-    // default no-op. CanHostDedicatedThreads may return true if the backend can
-    // also pin a service to its own OS thread.
+    // The shipped TBB backend keeps services cooperative and frame-paced
+    // (Unity-style): it only records the tick, then runs every live service once
+    // per PumpServices on the arena. No dedicated thread, so
+    // CanHostDedicatedThreads() stays false.
     ServiceHandle SpawnService(std::function<void()> tick, ServiceDesc) override
     {
         auto source = ecs::StopSource::Active();
-        auto token  = source.token();
-        auto state  = launch_worker([token, tick = std::move(tick)] {
-            while (!token.stop_requested()) tick();          // backend owns the loop
-        });
-        return ecs::ServiceHandle{std::move(source), std::move(state)};
+        auto rec    = store_service(source, std::move(tick));  // remembered, not started
+        return ecs::ServiceHandle{std::move(source), std::move(rec)};
+    }
+    void PumpServices() override                               // called once per frame
+    {
+        for (auto& s : live_services())
+            if (!s->source.stop_requested()) arena_run(s->tick);
+        join_arena();                                          // sync point: ticks joined here
     }
     void StopService(const ecs::ServiceHandle& h) override
     {
-        h.request_stop();          // then join the worker behind h.state()
+        h.request_stop();          // dropped on the next pump; no thread to join
     }
 };
 ```
@@ -126,6 +133,36 @@ until you install a real backend.
 
 This is the per-frame ("frame") work: a stage starts and finishes within the
 `Update` that launched it.
+
+## Frame jobs and the end-of-update sync point
+
+A system that wants extra parallelism inside its own `Update` can spawn frame
+work and have it joined for it, mirroring Unity's sync-point model. The
+`UpdateState` handed to every system carries the registry's scheduler plus a
+thread-safe **frame-job sink**:
+
+```cpp
+void MySystem::Update(ecs::Registry& registry, const ecs::UpdateState& state) override
+{
+    state.Run([] { bake_navmesh_tile(); });   // scheduled and recorded
+    state.Run([] { cull_offscreen(); });      // runs concurrently
+    // ...no manual Wait needed
+}
+```
+
+`UpdateState::Run` schedules the job through `Registry::Scheduler().Run` **and**
+records its handle in the sink. After every stage has finished,
+`SystemsManager::Update` drains the sink and `Wait`s on each handle, so no frame
+job leaks past the frame that launched it. The drain loops until the sink is
+empty, so a job that itself spawns more jobs is still joined before the frame
+ends. Because several systems in a stage may push concurrently, the sink
+serializes its inserts.
+
+When you would rather own the join — to consume a result mid-frame, or to keep a
+result alive across stages — call `Registry::Scheduler().Run` directly and
+`Wait` on the handle yourself; that path bypasses the sink. Joining a
+sink-tracked handle early is also fine: the redundant end-of-update `Wait` is a
+harmless no-op.
 
 ## Services — out-of-frame work
 
@@ -150,9 +187,13 @@ between ticks. This is what lets the threadless
 the same contract: it stores the service and ticks it once per
 `PumpServices()` — which `Registry::Update` calls every frame — so on the serial
 backend a service degrades to cooperative main-thread ticking, exactly as
-`ParallelFor` degrades to an inline loop. A real pool instead runs
-`while (!stop) tick();` on a worker and leaves `PumpServices` a no-op. Keep ticks
-short so cancellation stays responsive.
+`ParallelFor` degrades to an inline loop. The bundled
+[TBB backend](../../../include/recs-tbb/ecs/jobs/TbbJobScheduler.hpp) works the
+same way, only its `PumpServices` fans the ticks out across the arena and joins
+them — frame-paced, Unity-style, with no dedicated thread per service. (A
+backend is still free to instead run `while (!stop) tick();` on its own worker
+and leave `PumpServices` a no-op, but the schedulers R-ECS ships do not.) Keep
+ticks short so cancellation stays responsive.
 
 **Cooperative cancellation.** `SpawnService` returns a
 [`ServiceHandle`](../../../include/recs/ecs/jobs/ServiceHandle.hpp) carrying a
@@ -170,8 +211,12 @@ services before installing the serial one.
 Truly **dedicated OS threads** — for hard real-time audio or blocking socket I/O,
 where a cooperative tick is not enough — are an *optional capability*, not part
 of the universal contract. A backend advertises it via
-`CanHostDedicatedThreads()` (default `false`); the serial backend cannot provide
-them. Cooperative services, by contrast, every backend must honour.
+`CanHostDedicatedThreads()` (default `false`). Neither shipped backend provides
+them: the serial backend cannot, and the bundled TBB backend deliberately runs
+services cooperatively on the shared arena and reports `false` too, so a
+cooperative tick must never block. A custom backend that needs to host a
+blocking subsystem can opt in by spawning its own thread and returning `true`.
+Cooperative services, by contrast, every backend must honour.
 
 A service must not touch ECS state directly (the same rule as worker threads,
 below): funnel structural changes through the [command queue](./commands.md) and

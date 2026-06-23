@@ -1,8 +1,8 @@
 #include "ecs/jobs/TbbJobScheduler.hpp"
 
 #include <algorithm>
+#include <functional>
 #include <mutex>
-#include <thread>
 #include <vector>
 
 #include <tbb/blocked_range.h>
@@ -16,12 +16,14 @@ namespace
     struct JobState
     {
         tbb::task_group group;
+
+        ~JobState() { group.wait(); }
     };
 
     struct ServiceRec
     {
-        ecs::StopSource source;
-        std::thread thread;
+        ecs::StopSource source;        ///< Cooperative cancellation for this service
+        std::function<void()> tick;    ///< One resumable step, run once per PumpServices
     };
 
 } // namespace
@@ -35,20 +37,10 @@ struct ecs::TbbJobScheduler::Impl
 
     ~Impl()
     {
-        std::vector<std::shared_ptr<ServiceRec>> live;
-        {
-            std::lock_guard<std::mutex> lock(mutex);
-            live.swap(services);
-        }
-
-        for (const auto& s : live)
+        std::lock_guard<std::mutex> lock(mutex);
+        for (const auto& s : services)
             s->source.request_stop();
-
-        for (const auto& s : live)
-        {
-            if (s->thread.joinable())
-                s->thread.join();
-        }
+        services.clear();
     }
 
     tbb::task_arena arena;
@@ -108,15 +100,10 @@ ecs::ServiceHandle ecs::TbbJobScheduler::SpawnService(std::function<void()> tick
         return ServiceHandle{};
 
     StopSource source = StopSource::Active();
-    const StopToken token = source.token();
 
     const auto rec = std::make_shared<ServiceRec>();
     rec->source = source;
-    rec->thread = std::thread(
-        [token, tick = std::move(tick)] {
-        while (!token.stop_requested())
-            tick();
-        });
+    rec->tick = std::move(tick);
 
     {
         std::lock_guard<std::mutex> lock(m_impl->mutex);
@@ -133,9 +120,34 @@ void ecs::TbbJobScheduler::StopService(const ServiceHandle& handle)
 
     handle.request_stop();
     const auto rec = std::static_pointer_cast<ServiceRec>(handle.state());
-    if (rec->thread.joinable())
-        rec->thread.join();
 
     std::lock_guard<std::mutex> lock(m_impl->mutex);
     std::erase(m_impl->services, rec);
+}
+
+void ecs::TbbJobScheduler::PumpServices()
+{
+    std::vector<std::shared_ptr<ServiceRec>> live;
+    {
+        std::lock_guard<std::mutex> lock(m_impl->mutex);
+        live = m_impl->services; // snapshot: a tick may spawn or stop services
+    }
+
+    if (!live.empty())
+    {
+        m_impl->arena.execute([&] {
+            tbb::task_group group;
+            for (const auto& s : live)
+                if (!s->source.stop_requested() && s->tick)
+                    group.run([s] { s->tick(); });
+            group.wait();
+        });
+    }
+
+    std::lock_guard<std::mutex> lock(m_impl->mutex);
+    std::erase_if(
+        m_impl->services,
+        [](const std::shared_ptr<ServiceRec>& s) {
+            return s->source.stop_requested();
+        });
 }

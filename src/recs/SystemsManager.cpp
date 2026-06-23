@@ -129,8 +129,10 @@ void ecs::SystemsManager::Update(Registry& registry, RegistryToken)
 {
     m_schedule.Build();
     const std::unordered_set<systemHash_t> disabled = effectiveDisabled();
-    const UpdateState state{};
     IJobScheduler& scheduler = registry.Scheduler();
+
+    FrameJobs frameJobs;
+    const UpdateState state{.scheduler = &scheduler, .jobs = &frameJobs};
 
     for(const auto& stageSystems: m_schedule)
     {
@@ -147,6 +149,8 @@ void ecs::SystemsManager::Update(Registry& registry, RegistryToken)
                 }
             });
     }
+
+    frameJobs.JoinAll(scheduler);
 }
 
 bool ecs::SystemsManager::Register(const std::size_t systemRegIndex)

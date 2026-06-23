@@ -1,6 +1,11 @@
 #pragma once
 #include <cstdint>
+#include <functional>
+#include <mutex>
 #include <typeinfo>
+#include <vector>
+#include "ecs/jobs/IJobScheduler.hpp"
+#include "ecs/jobs/JobHandle.hpp"
 #include "event/EventUtils.hpp"
 #include "common_recs/utils/BaseError.hpp"
 
@@ -85,16 +90,85 @@ namespace ecs
     };
 
     /**
+     * @brief Thread-safe sink that collects the frame-scoped jobs spawned during an update.
+     *
+     * Mirrors Unity's sync-point model: work scheduled while systems run is
+     * recorded here and joined once at the end of SystemsManager::Update, so no
+     * frame job leaks past the frame that launched it. Several systems may run in
+     * parallel within a stage and push concurrently, so Add is mutex-guarded.
+     * JoinAll drains in a loop, so a job that itself spawns more jobs is still
+     * joined before the frame ends.
+     */
+    class FrameJobs
+    {
+    public:
+        /// Records a handle to be joined at the end of the update. Callable from any worker.
+        void Add(JobHandle handle)
+        {
+            if (!handle.valid())
+                return;
+            const std::lock_guard<std::mutex> lock(m_mutex);
+            m_handles.push_back(std::move(handle));
+        }
+
+        /// Waits on every recorded handle (including ones spawned while joining), then clears.
+        void JoinAll(IJobScheduler& scheduler)
+        {
+            for (;;)
+            {
+                std::vector<JobHandle> batch;
+                {
+                    const std::lock_guard<std::mutex> lock(m_mutex);
+                    batch.swap(m_handles);
+                }
+                if (batch.empty())
+                    break;
+                for (const auto& handle : batch)
+                    scheduler.Wait(handle);
+            }
+        }
+
+    private:
+        std::mutex m_mutex;                  ///< Serializes concurrent Add from parallel systems
+        std::vector<JobHandle> m_handles;    ///< Frame-scoped jobs awaiting their end-of-update join
+    };
+
+    /**
      * @brief Structure containing context information for system updates.
      *
-     * Passed to systems during each update cycle, providing contextual information
-     * about the current update phase. Currently contains the update tag, which
-     * allows systems to know which phase they're being executed in and potentially
-     * adjust their behavior accordingly.
+     * Passed to systems during each update cycle. It exposes the registry's job
+     * scheduler so a system can spawn parallel work, and a frame-job sink so that
+     * work is joined automatically at the end of the update (a Unity-style sync
+     * point). Use UpdateState::Run for fire-and-forget frame work that the manager
+     * joins for you; call Registry::Scheduler().Run / Wait directly when you want
+     * to own the join yourself.
      */
     struct UpdateState
     {
+        IJobScheduler* scheduler = nullptr; ///< Borrowed scheduler used to launch frame work (never owned).
+        FrameJobs* jobs = nullptr;          ///< Borrowed sink that joins spawned work at end of Update (never owned).
 
+        /**
+         * @brief Schedules frame-scoped work and registers it for the end-of-update join.
+         *
+         * Equivalent to Registry::Scheduler().Run, but the returned handle is also
+         * recorded in the frame-job sink, so SystemsManager::Update waits on it
+         * before the frame ends. You may still Wait on the handle earlier to join
+         * it yourself; the redundant end-of-frame Wait is a harmless no-op.
+         *
+         * @param job Work to execute asynchronously. Ownership is transferred to the scheduler.
+         * @return The job handle; empty when no scheduler is attached or @p job is null.
+         */
+        [[nodiscard]] JobHandle Run(std::function<void()> job) const
+        {
+            if (!scheduler)
+                return JobHandle{};
+
+            JobHandle handle = scheduler->Run(std::move(job));
+            if (jobs)
+                jobs->Add(handle);
+            return handle;
+        }
     };
 
     /**

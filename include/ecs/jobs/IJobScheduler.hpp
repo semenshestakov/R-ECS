@@ -26,9 +26,8 @@ namespace ecs
      * Implementations must be safe to call from the main thread. Whether they
      * are safe to call from worker threads is backend-defined.
      */
-    class IJobScheduler
+    struct IJobScheduler
     {
-    public:
         virtual ~IJobScheduler() = default;
 
         /// Body of a data-parallel loop, invoked over sub-ranges [first, last).

@@ -14,9 +14,8 @@ namespace ecs
      * real pool (e.g. a TBB-backed implementation) via Registry::SetScheduler to
      * get actual parallelism without touching any system code.
      */
-    class SerialJobScheduler final : public IJobScheduler
+    struct SerialJobScheduler final : IJobScheduler
     {
-    public:
         void ParallelFor(const std::size_t begin, const std::size_t end, std::size_t /*grain*/, const RangeBody body) override
         {
             if (begin < end && body)

@@ -37,6 +37,7 @@ void ecs::Registry::Update()
         m_systemManager.Subscribe({m_eventSystem}, {});
 
     m_systemManager.Update(*this, {});
+    m_scheduler->PumpServices();
     m_eventSystem.FlushEvents({});
     m_commandQueue.Flush({}, *this);
 }

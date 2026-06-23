@@ -3,6 +3,7 @@
 #include <functional>
 #include "FunctionRef.hpp"
 #include "JobHandle.hpp"
+#include "ServiceHandle.hpp"
 
 
 namespace ecs
@@ -22,6 +23,17 @@ namespace ecs
      * per-frame entry point, so the single virtual dispatch per call is
      * negligible against the work it launches. The hot, per-element work is
      * carried by the FunctionRef body and runs without further indirection.
+     *
+     * The port covers two execution models. Frame work (ParallelFor, Run/Wait)
+     * is started and joined within a frame. A service (SpawnService) is a
+     * long-lived, out-of-frame unit that ticks repeatedly until it is stopped or
+     * the registry that owns the scheduler dies. To stay portable down to the
+     * threadless SerialJobScheduler, a service is modelled as a repeatedly-ticked
+     * unit rather than a free-running loop: a real pool ticks it on a worker,
+     * while a threadless backend ticks it cooperatively from PumpServices. Truly
+     * dedicated OS threads (audio, blocking I/O) are an optional capability a
+     * backend may advertise via CanHostDedicatedThreads, not a universal
+     * contract.
      *
      * Implementations must be safe to call from the main thread. Whether they
      * are safe to call from worker threads is backend-defined.
@@ -67,6 +79,54 @@ namespace ecs
          * @note Useful for sizing grain and partitioning work.
          */
         [[nodiscard]] virtual std::size_t WorkerCount() const = 0;
+
+        /**
+         * @brief Spawns a long-lived, out-of-frame service.
+         *
+         * Unlike Run (which executes @p job once), a service ticks @p tick
+         * repeatedly until it is stopped via StopService or the scheduler is
+         * destroyed. @p tick must be one short, resumable step, not its own
+         * loop: the scheduler owns the loop and checks for cancellation between
+         * ticks, which is what lets a threadless backend tick the service
+         * cooperatively from PumpServices. The scheduler keeps the service alive,
+         * so it dies with the registry that owns the scheduler.
+         *
+         * @param tick One step of the service. Ownership is transferred to the scheduler.
+         * @param desc Optional scheduling/diagnostic hints; a backend may ignore them.
+         * @return A handle used to stop the service; an empty tick yields an empty handle.
+         */
+        [[nodiscard]] virtual ServiceHandle SpawnService(std::function<void()> tick, ServiceDesc desc = {}) = 0;
+
+        /**
+         * @brief Requests a service stop and joins it.
+         *
+         * Sets the service's cancellation, then blocks until it has stopped (a
+         * no-op join on a threadless backend, which simply drops the service on
+         * its next pump). An empty/invalid handle returns immediately.
+         *
+         * @param handle A handle from SpawnService.
+         */
+        virtual void StopService(const ServiceHandle &handle) = 0;
+
+        /**
+         * @brief Advances cooperatively-ticked services once.
+         *
+         * The host calls this once per frame (Registry::Update does so). A
+         * threadless backend ticks each live service here and drops the stopped
+         * ones; a backend that runs services on real workers leaves the default
+         * no-op, since its services already tick themselves.
+         */
+        virtual void PumpServices() {}
+
+        /**
+         * @brief Whether this backend can host services on dedicated OS threads.
+         *
+         * Cooperative services (SpawnService) are a universal contract every
+         * backend honours. Truly dedicated threads with their own cadence (for
+         * audio mixing or blocking I/O) are not: a threadless backend cannot
+         * provide them. Backends that can advertise it here; the default is false.
+         */
+        [[nodiscard]] virtual bool CanHostDedicatedThreads() const noexcept { return false; }
     };
 
 } // namespace ecs

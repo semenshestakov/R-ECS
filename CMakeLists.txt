@@ -28,24 +28,26 @@ target_include_directories(R-ECS
         ${CMAKE_CURRENT_SOURCE_DIR}/include/recs
 )
 
+# = = = = = = = = = = = = = = = = = = = = = = = = = all CMake options = = = = = = = = = = = = = = = = = = = = = = = = =
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = Optional backends = = = = = = = = = = = = = = = = = = = = = = = = =
-#set(RECS_BACKEND_ONETBB ON)
-
-# oneTBB-backed IJobScheduler. Lives in its own target so the core never depends
-# on TBB. Prefer a system oneTBB (find_package); if it is missing and fetching is
-# allowed, pull it with FetchContent so the backend builds out of the box.
+option(IS_DOCS_GEN "Configure for documentation generation only (skip tests/benchmarks)" OFF)
+option(EXAMPLES_ENABLE "Build R-ECS examples (skip tests/benchmarks)" OFF)
+option(TEST_ENABLE "Configure for tests" OFF)
+option(BENCHMARK_ENABLE "Configure for benchmarks" OFF)
 option(RECS_BACKEND_ONETBB "Build the R-ECS::back_oneTBB job/service backend (requires oneTBB)" OFF)
 option(RECS_ONETBB_FETCH "Fetch oneTBB with FetchContent when find_package(TBB) fails" ON)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = Optional backends = = = = = = = = = = = = = = = = = = = = = = = = =
+
 if(RECS_BACKEND_ONETBB)
     find_package(TBB CONFIG QUIET)
 
     if(NOT TBB_FOUND AND RECS_ONETBB_FETCH)
         message("= = = = = = = = = R-ECS fetching oneTBB = = = = = = = = =")
         include(FetchContent)
-        set(TBB_TEST OFF CACHE BOOL "" FORCE)       # don't build oneTBB's own tests
-        set(TBB_STRICT OFF CACHE BOOL "" FORCE)      # don't let oneTBB warnings fail our build
-        set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE) # only the scheduler is needed
+        set(TBB_TEST OFF CACHE BOOL "" FORCE)           # don't build oneTBB's own tests
+        set(TBB_STRICT OFF CACHE BOOL "" FORCE)         # don't let oneTBB warnings fail our build
+        set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE)    # only the scheduler is needed
         FetchContent_Declare(
                 onetbb
                 GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB.git
@@ -59,7 +61,7 @@ if(RECS_BACKEND_ONETBB)
         message("= = = = = = = = = R-ECS oneTBB backend enable = = = = = = = = =")
         add_library(R-ECS-back-onetbb
             STATIC
-                src/ecs/jobs/TbbJobScheduler.cpp
+                src/recs-tbb/TbbJobScheduler.cpp
         )
         add_library(R-ECS::back_oneTBB ALIAS R-ECS-back-onetbb)
         target_link_libraries(R-ECS-back-onetbb
@@ -68,6 +70,10 @@ if(RECS_BACKEND_ONETBB)
             PRIVATE
                 TBB::tbb
         )
+        target_include_directories(R-ECS-back-onetbb
+            PUBLIC
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/recs-tbb
+        )
     else()
         message(WARNING "[R-ECS] RECS_BACKEND_ONETBB=ON but oneTBB was not found and RECS_ONETBB_FETCH=OFF — backend skipped")
     endif()
@@ -75,11 +81,6 @@ endif()
 
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark && Examples = = = = = = = = = = = = = = = = = = = = = = = = =
-
-option(IS_DOCS_GEN "Configure for documentation generation only (skip tests/benchmarks)" OFF)
-option(EXAMPLES_ENABLE "Build R-ECS examples (skip tests/benchmarks)" OFF)
-option(TEST_ENABLE "Configure for tests" OFF)
-option(BENCHMARK_ENABLE "Configure for benchmarks" OFF)
 
 if (EXAMPLES_ENABLE)
 
@@ -132,6 +133,7 @@ if(TEST_ENABLE)
             test/ecs/SystemsResubscribe.cpp
             test/ecs/SystemsToggleEvents.cpp
     )
+
     target_include_directories(test_recs
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/test/include

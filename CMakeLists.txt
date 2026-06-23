@@ -15,18 +15,63 @@ endif()
 
 add_library(R-ECS
     STATIC
-        src/ecs/Registry.cpp
-        src/ecs/EntityWrapper.cpp
-        src/ecs/SystemsManager.cpp
-        src/ecs/SystemsSchedule.cpp
-        src/ecs/Commands.cpp
-        src/ecs/ThreadAffinity.cpp
+        src/recs/Registry.cpp
+        src/recs/EntityWrapper.cpp
+        src/recs/SystemsManager.cpp
+        src/recs/SystemsSchedule.cpp
+        src/recs/Commands.cpp
+        src/recs/ThreadAffinity.cpp
 )
 
 target_include_directories(R-ECS
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = Optional backends = = = = = = = = = = = = = = = = = = = = = = = = =
+#set(RECS_BACKEND_ONETBB ON)
+
+# oneTBB-backed IJobScheduler. Lives in its own target so the core never depends
+# on TBB. Prefer a system oneTBB (find_package); if it is missing and fetching is
+# allowed, pull it with FetchContent so the backend builds out of the box.
+option(RECS_BACKEND_ONETBB "Build the R-ECS::back_oneTBB job/service backend (requires oneTBB)" OFF)
+option(RECS_ONETBB_FETCH "Fetch oneTBB with FetchContent when find_package(TBB) fails" ON)
+if(RECS_BACKEND_ONETBB)
+    find_package(TBB CONFIG QUIET)
+
+    if(NOT TBB_FOUND AND RECS_ONETBB_FETCH)
+        message("= = = = = = = = = R-ECS fetching oneTBB = = = = = = = = =")
+        include(FetchContent)
+        set(TBB_TEST OFF CACHE BOOL "" FORCE)       # don't build oneTBB's own tests
+        set(TBB_STRICT OFF CACHE BOOL "" FORCE)      # don't let oneTBB warnings fail our build
+        set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE) # only the scheduler is needed
+        FetchContent_Declare(
+                onetbb
+                GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB.git
+                GIT_TAG v2022.3.0
+        )
+        FetchContent_MakeAvailable(onetbb)
+        set(TBB_FOUND TRUE)
+    endif()
+
+    if(TBB_FOUND)
+        message("= = = = = = = = = R-ECS oneTBB backend enable = = = = = = = = =")
+        add_library(R-ECS-back-onetbb
+            STATIC
+                src/ecs/jobs/TbbJobScheduler.cpp
+        )
+        add_library(R-ECS::back_oneTBB ALIAS R-ECS-back-onetbb)
+        target_link_libraries(R-ECS-back-onetbb
+            PUBLIC
+                R-ECS
+            PRIVATE
+                TBB::tbb
+        )
+    else()
+        message(WARNING "[R-ECS] RECS_BACKEND_ONETBB=ON but oneTBB was not found and RECS_ONETBB_FETCH=OFF — backend skipped")
+    endif()
+endif()
 
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark && Examples = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -97,6 +142,12 @@ if(TEST_ENABLE)
             gmock
             R-ECS
     )
+    # oneTBB backend tests are compiled only when that backend is built.
+    if(TARGET R-ECS-back-onetbb)
+        message("= = = = = = = = = R-ECS oneTBB backend tests enable = = = = = = = = =")
+        target_sources(test_recs PRIVATE test/jobs/TbbJobScheduler.cpp)
+        target_link_libraries(test_recs PRIVATE R-ECS::back_oneTBB)
+    endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
         target_compile_options(test_recs PRIVATE -fbracket-depth=1024)
     endif()

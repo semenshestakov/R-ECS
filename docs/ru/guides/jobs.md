@@ -264,8 +264,7 @@ for (auto chunk : manager.chunkView<Position, Velocity>())
 ```cpp
 registry.Scheduler().ParallelForEach(
     manager.chunkView<Position, Velocity>(),     // запрос
-    [](std::tuple<Position&, Velocity&> e) {
-        auto& [pos, vel] = e;
+    [](Position& pos, Velocity& vel) {           // по одной ссылке на каждый запрошенный компонент
         pos.x += vel.x;
     },
     /*chunksPerTask*/ 4);   // гранулярность в чанках: 1..n чанков на задачу

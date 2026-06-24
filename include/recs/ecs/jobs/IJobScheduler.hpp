@@ -152,9 +152,10 @@ namespace ecs
          * threading-library dependency.
          *
          * @tparam ChunkRange A range whose elements are ChunkView (e.g. `EntitiesManager::chunkView<...>()`).
-         * @tparam Body Callable invoked as body(*ChunkView::iterator) — a tuple of component
-         *              references (or the chunk-entity index when no components are requested).
-         *              Must be safe to call concurrently on disjoint entities.
+         * @tparam Body Callable invoked once per entity as body(ComponentCls&...) — one reference
+         *              per requested component (the component tuple is unpacked for you). When no
+         *              components are requested it is invoked as body(chunkEntityIndex). Must be
+         *              safe to call concurrently on disjoint entities.
          *
          * @param chunks The chunk view to iterate (the query result).
          * @param body Per-entity work.

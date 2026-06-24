@@ -1,10 +1,19 @@
 #pragma once
 #include <cstddef>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "../IJobScheduler.hpp"
+
+
+namespace ecs::detail
+{
+    /// @brief Trait detecting whether T is a std::tuple specialization.
+    template<typename T> struct IsTuple : std::false_type {};
+    template<typename... Ts> struct IsTuple<std::tuple<Ts...>> : std::true_type {};
+}
 
 
 template<typename ChunkRange, typename Body>
@@ -27,7 +36,15 @@ void ecs::IJobScheduler::ParallelForEach(ChunkRange&& chunks, const Body body, c
             for (std::size_t c = first; c < last; ++c)
             {
                 for (auto&& entity : matched[c])
-                    body(entity);
+                {
+                    // Components arrive as a tuple of references: hand them to the body as
+                    // separate arguments (body(ComponentCls&...)). With no components requested
+                    // the value is the chunk-entity index, passed through as-is.
+                    if constexpr (detail::IsTuple<std::decay_t<decltype(entity)>>::value)
+                        std::apply(body, entity);
+                    else
+                        body(entity);
+                }
             }
         });
 }

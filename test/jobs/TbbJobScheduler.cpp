@@ -274,8 +274,7 @@ TEST(TbbParallelForEachTest, EveryEntityVisitedExactlyOnceUnderParallelism)
     // Disjoint entities -> writing each entity's own components in parallel is data-race free.
     scheduler.ParallelForEach(
         manager.chunkView<TestId, Position2d>(),
-        [&](std::tuple<TestId&, Position2d&> e) {
-            auto& [id, pos] = e;
+        [&](TestId& id, Position2d& pos) {
             seen[id.id].fetch_add(1, std::memory_order_relaxed);
             pos.x += 1.f;
         },
@@ -302,7 +301,7 @@ TEST(TbbParallelForEachTest, BlocksUntilAllChunksFinish)
     std::atomic<long long> sum{0};
     scheduler.ParallelForEach(
         manager.chunkView<TestId>(),
-        [&](std::tuple<TestId&> e) { sum.fetch_add(std::get<0>(e).id, std::memory_order_relaxed); });
+        [&](TestId& id) { sum.fetch_add(id.id, std::memory_order_relaxed); });
 
     // The call is a barrier: on return every entity has been summed exactly once.
     constexpr long long expected = (static_cast<long long>(n) - 1) * n / 2;

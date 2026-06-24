@@ -263,8 +263,7 @@ per-entity work.
 ```cpp
 registry.Scheduler().ParallelForEach(
     manager.chunkView<Position, Velocity>(),     // the query
-    [](std::tuple<Position&, Velocity&> e) {
-        auto& [pos, vel] = e;
+    [](Position& pos, Velocity& vel) {           // one reference per requested component
         pos.x += vel.x;
     },
     /*chunksPerTask*/ 4);   // grain in chunks: 1..n chunks per task

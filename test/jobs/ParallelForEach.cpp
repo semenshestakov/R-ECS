@@ -43,7 +43,7 @@ protected:
         std::atomic<std::size_t> visited{0};
         scheduler.ParallelForEach(
             manager.chunkView<ComponentCls...>(),
-            [&](auto&&) { visited.fetch_add(1, std::memory_order_relaxed); },
+            [&](auto&&...) { visited.fetch_add(1, std::memory_order_relaxed); },
             chunksPerTask);
         return visited.load();
     }
@@ -61,8 +61,7 @@ TEST_F(ParallelForEachTest, VisitsEveryEntityExactlyOnceAcrossManyChunks)
 
     scheduler.ParallelForEach(
         manager.chunkView<TestId, Position2d>(),
-        [&](std::tuple<TestId&, Position2d&> e) {
-            auto& [id, pos] = e;
+        [&](TestId& id, Position2d&) {
             seen[id.id].fetch_add(1, std::memory_order_relaxed);
         });
 
@@ -83,7 +82,7 @@ TEST_F(ParallelForEachTest, MutatesComponentsInPlace)
 
     scheduler.ParallelForEach(
         manager.chunkView<TestId>(),
-        [](std::tuple<TestId&> e) { std::get<0>(e).id += 1; });
+        [](TestId& testId) { testId.id += 1; });
 
     std::size_t sum = 0.0;
     for (auto [ids] : manager.view<TestId>())
@@ -120,12 +119,12 @@ TEST_F(ParallelForEachTest, EmptyViewIsNoOp)
     // No entities at all.
     EntitiesManager empty;
     std::atomic<int> calls{0};
-    scheduler.ParallelForEach(empty.chunkView<Position2d>(), [&](auto&&) { ++calls; });
+    scheduler.ParallelForEach(empty.chunkView<Position2d>(), [&](auto&&...) { ++calls; });
     EXPECT_EQ(calls.load(), 0);
 
     calls.store(0);
 
-    scheduler.ParallelForEach(manager.chunkView<Position2d>(), [&](auto&&) { ++calls; });
+    scheduler.ParallelForEach(manager.chunkView<Position2d>(), [&](auto&&...) { ++calls; });
     EXPECT_EQ(calls.load(), 500);
 
 }
@@ -153,7 +152,7 @@ TEST_F(ParallelForEachTest, NoComponentsVisitsEveryEntity)
     std::atomic<std::size_t> visited{0};
     scheduler.ParallelForEach(
         manager.chunkView<>(),
-        [&](auto&&) { visited.fetch_add(1, std::memory_order_relaxed); });
+        [&](auto&&...) { visited.fetch_add(1, std::memory_order_relaxed); });
 
     EXPECT_EQ(visited.load(), a + b);
 }

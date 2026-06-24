@@ -20,7 +20,7 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::iterator(Archetyped
     {
         m_componentArrays = std::tuple{
             std::bit_cast<ComponentCls*>(
-                m_archetypedChunks->GetComponentData(0, ComponentRegistrator::GetComponentId<ComponentCls>())
+                m_archetypedChunks->GetComponentData(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS, ComponentRegistrator::GetComponentId<ComponentCls>())
             )...
         };
     }
@@ -92,7 +92,7 @@ void ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::advance()
 
         m_componentArrays = std::tuple{
             std::bit_cast<ComponentCls*>(
-                m_archetypedChunks->GetComponentData(m_chunkIndex, ComponentRegistrator::GetComponentId<ComponentCls>())
+                m_archetypedChunks->GetComponentData(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS, ComponentRegistrator::GetComponentId<ComponentCls>())
             )...
         };
         m_entityIndex = 0;

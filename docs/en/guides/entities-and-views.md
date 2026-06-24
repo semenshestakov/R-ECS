@@ -61,6 +61,22 @@ for (auto [hp] : world.view<Health>())
     if (hp.value <= 0.f) { /* mark for removal */ }
 ```
 
+### Getting the entity handle
+
+Lead the argument list with `Entity` to also receive the owning entity handle as
+the first element of each step. `Entity` is not a component — it is stripped from
+the archetype filter, so the view still matches on the remaining components only:
+
+```cpp
+for (auto [entity, pos, vel] : world.view<Entity, Position2d, Velocity2d>())
+{
+    pos.x += vel.x;
+    if (pos.x > bound) world.Destroy(entity);   // handle in hand, no extra lookup
+}
+```
+
+`view<Entity>()` on its own walks every alive entity and yields just its handle.
+
 ## Changing an entity's components
 
 `AddComponents` and `RemoveComponents` move the entity to a new archetype,

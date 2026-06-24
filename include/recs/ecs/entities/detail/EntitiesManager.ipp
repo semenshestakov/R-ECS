@@ -39,7 +39,7 @@ ReturnType ecs::EntitiesManager::Create(PrefabRef&& prefabEntity)
     }
 
     assert(entity.id < m_lastEntityId);
-    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(std::forward<PrefabRef>(prefabEntity), entity.id);
+    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(std::forward<PrefabRef>(prefabEntity), entity);
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 
@@ -81,11 +81,11 @@ void ecs::EntitiesManager::AddComponents(const Entity& entity, Args&&... args)
     (newArchetype.set(ComponentRegistrator::GetComponentId<std::remove_cvref_t<Args>>()), ...);
     newArchetype.updateHash();
 
-    const auto [newLocation, swapRemovedEntityId] =
-        m_storage.MigrateEntity(oldLocation, newArchetype, entity.id);
+    const auto [newLocation, swapRemovedEntity] =
+        m_storage.MigrateEntity(oldLocation, newArchetype, entity);
 
-    if (swapRemovedEntityId != INVALID_ENTITY_ID)
-        m_entitiesLocationByEntityIndex[swapRemovedEntityId].chunkEntityIndex = oldLocation.chunkEntityIndex;
+    if (swapRemovedEntity.id != INVALID_ENTITY_ID)
+        m_entitiesLocationByEntityIndex[swapRemovedEntity.id].chunkEntityIndex = oldLocation.chunkEntityIndex;
 
     ([&]
     {
@@ -129,11 +129,11 @@ void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
 
     newArchetype.updateHash();
 
-    const auto [newLocation, swapRemovedEntityId] =
-        m_storage.MigrateEntity(oldLocation, newArchetype, entity.id);
+    const auto [newLocation, swapRemovedEntity] =
+        m_storage.MigrateEntity(oldLocation, newArchetype, entity);
 
-    if (swapRemovedEntityId != INVALID_ENTITY_ID)
-        m_entitiesLocationByEntityIndex[swapRemovedEntityId].chunkEntityIndex = oldLocation.chunkEntityIndex;
+    if (swapRemovedEntity.id != INVALID_ENTITY_ID)
+        m_entitiesLocationByEntityIndex[swapRemovedEntity.id].chunkEntityIndex = oldLocation.chunkEntityIndex;
 
     m_entitiesLocationByEntityIndex[entity.id] = newLocation;
 }
@@ -150,12 +150,12 @@ void ecs::EntitiesManager::Destroy(const InputEntityType& entity)
     assert(m_versionByEntityIndex.size() == m_entitiesLocationByEntityIndex.size());
 
     if (
-        const entityId_t migratedEntityId = m_storage.Destroy(m_entitiesLocationByEntityIndex[entity.getId()]);
-        migratedEntityId != INVALID_ENTITY_ID
+        const Entity migratedEntity = m_storage.Destroy(m_entitiesLocationByEntityIndex[entity.getId()]);
+        migratedEntity.id != INVALID_ENTITY_ID
         )
     {
-        m_versionByEntityIndex[migratedEntityId] = entity.getVersion();
-        m_entitiesLocationByEntityIndex[migratedEntityId].chunkEntityIndex = m_entitiesLocationByEntityIndex[entity.getId()].chunkEntityIndex;
+        m_versionByEntityIndex[migratedEntity.id] = entity.getVersion();
+        m_entitiesLocationByEntityIndex[migratedEntity.id].chunkEntityIndex = m_entitiesLocationByEntityIndex[entity.getId()].chunkEntityIndex;
     }
 
     m_versionByEntityIndex[entity.getId()] = {};
@@ -221,7 +221,7 @@ const ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity) con
     return m_storage.template GetComponent<ComponentCls>(m_entitiesLocationByEntityIndex[entity.id]);
 }
 
-template<ecs::IsComponent... ComponentCls>
+template<typename... Args>
 auto ecs::EntitiesManager::view()
 {
     struct View
@@ -229,8 +229,8 @@ auto ecs::EntitiesManager::view()
         View() = delete;
         explicit View(EntitiesArchetypeStorage* storage) : m_storage(storage) {}
 
-        auto begin() const { return m_storage->begin<ComponentCls...>(); }
-        auto end() const { return m_storage->end<ComponentCls...>(); }
+        auto begin() const { return m_storage->begin<Args...>(); }
+        auto end() const { return m_storage->end<Args...>(); }
 
     private:
         EntitiesArchetypeStorage* m_storage;
@@ -239,7 +239,7 @@ auto ecs::EntitiesManager::view()
     return View(&m_storage);
 }
 
-template<ecs::IsComponent... ComponentCls>
+template<typename... Args>
 auto ecs::EntitiesManager::chunkView()
 {
     struct ChunkRange
@@ -247,8 +247,8 @@ auto ecs::EntitiesManager::chunkView()
         ChunkRange() = delete;
         explicit ChunkRange(EntitiesArchetypeStorage* storage) : m_storage(storage) {}
 
-        auto begin() const { return m_storage->chunksBegin<ComponentCls...>(); }
-        auto end() const { return m_storage->chunksEnd<ComponentCls...>(); }
+        auto begin() const { return m_storage->chunksBegin<Args...>(); }
+        auto end() const { return m_storage->chunksEnd<Args...>(); }
 
     private:
         EntitiesArchetypeStorage* m_storage;

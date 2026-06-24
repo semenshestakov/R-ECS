@@ -184,28 +184,28 @@ void ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::seekFromCur
 
 // ============================================= EntitiesArchetypeStorage ==============================================
 
-template<ecs::IsComponent... ComponentCls>
+template<typename... Args>
 auto ecs::EntitiesArchetypeStorage::begin()
 {
-    return iterator<iter_value_type<ComponentCls...>, ComponentCls...>(this);
+    return view_iterator_t<iterator, Args...>(this);
 }
 
-template<ecs::IsComponent... ComponentCls>
+template<typename... Args>
 auto ecs::EntitiesArchetypeStorage::end() const
 {
-    return iterator<iter_value_type<ComponentCls...>, ComponentCls...>();
+    return view_iterator_t<iterator, Args...>();
 }
 
-template<ecs::IsComponent... ComponentCls>
+template<typename... Args>
 auto ecs::EntitiesArchetypeStorage::chunksBegin()
 {
-    return chunk_iterator<ComponentCls...>(this);
+    return chunk_iterator<Args...>(this);
 }
 
-template<ecs::IsComponent... ComponentCls>
+template<typename... Args>
 auto ecs::EntitiesArchetypeStorage::chunksEnd() const
 {
-    return chunk_iterator<ComponentCls...>();
+    return chunk_iterator<Args...>();
 }
 
 template<ecs::IsComponent ComponentCls>
@@ -241,26 +241,26 @@ inline const ecs::Archetype& ecs::EntitiesArchetypeStorage::getArchetype(const a
 }
 
 template<ecs::PrefabEntityRef PrefabRef>
-ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(PrefabRef&& prefabEntity, const entityId_t entityId)
+ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(PrefabRef&& prefabEntity, const Entity entityHandle)
 {
     const Archetype& archetype = prefabEntity.getArchetype();
     const archetypeIndex_t archetypeIndex = findOrCreateArchetype(archetype);
 
     return {
         .archetypeIndex=archetypeIndex,
-        .chunkEntityIndex=m_storageByArchetypeIndex[archetypeIndex].Create(std::forward<PrefabRef>(prefabEntity), entityId)
+        .chunkEntityIndex=m_storageByArchetypeIndex[archetypeIndex].Create(std::forward<PrefabRef>(prefabEntity), entityHandle)
     };
 }
 
 inline ecs::EntitiesArchetypeStorage::EntityMigration ecs::EntitiesArchetypeStorage::MigrateEntity(
-    const ArchetypedChunkEntityLocation& oldLocation, const Archetype& newArchetype, const entityId_t entityId
+    const ArchetypedChunkEntityLocation& oldLocation, const Archetype& newArchetype, const Entity entityHandle
     )
 {
     const archetypeIndex_t newArchetypeIndex = findOrCreateArchetype(newArchetype);
 
     const ArchetypedChunkEntityLocation newLocation {
         .archetypeIndex=newArchetypeIndex,
-        .chunkEntityIndex=m_storageByArchetypeIndex[newArchetypeIndex].AllocateRawSlot(entityId)
+        .chunkEntityIndex=m_storageByArchetypeIndex[newArchetypeIndex].AllocateRawSlot(entityHandle)
     };
 
     // Move only the components shared by both archetypes. Components dropped by the
@@ -279,12 +279,12 @@ inline ecs::EntitiesArchetypeStorage::EntityMigration ecs::EntitiesArchetypeStor
         );
     }
 
-    const entityId_t swapRemovedEntityId = m_storageByArchetypeIndex[oldLocation.archetypeIndex].Destroy(oldLocation.chunkEntityIndex);
+    const Entity swapRemovedEntity = m_storageByArchetypeIndex[oldLocation.archetypeIndex].Destroy(oldLocation.chunkEntityIndex);
 
-    return {.newLocation=newLocation, .swapRemovedEntityId=swapRemovedEntityId};
+    return {.newLocation=newLocation, .swapRemovedEntity=swapRemovedEntity};
 }
 
-inline ecs::entityId_t ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedChunkEntityLocation& entityLocation)
+inline ecs::Entity ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedChunkEntityLocation& entityLocation)
 {
     return m_storageByArchetypeIndex.at(entityLocation.archetypeIndex).Destroy(entityLocation.chunkEntityIndex);
 }

@@ -181,11 +181,11 @@ namespace ecs
          * Returns a range that iterates only over entities containing all
          * requested component types. The view is lazily evaluated and
          * provides efficient iteration over archetype storage.
-         * @tparam ComponentCls Component types that entities must have
+         * @tparam Args Component types that entities must have
          * @return Range object supporting begin()/end() iteration
          * @note Example: for (auto [pos, vel] : manager.view<Position, Velocity>())
          */
-        template<IsComponent... ComponentCls>
+        template<typename... Args>
         auto view();
 
         /**
@@ -197,12 +197,12 @@ namespace ecs
          * iteration — a scheduler partitions the (forward, unknown-length) chunk range and
          * hands a chunk, or a run of chunks, to each worker.
          *
-         * @tparam ComponentCls Component types that entities must have.
+         * @tparam Args Component types that entities must have.
          * @return Range object supporting begin()/end() over ChunkView elements.
          * @note Example: for (auto chunk : manager.chunkView<Position, Velocity>())
          *                  for (auto [pos, vel] : chunk) { ... }
          */
-        template<IsComponent... ComponentCls>
+        template<typename... Args>
         auto chunkView();
 
     DEEP_TEST_PRIVATE_ACCESS:

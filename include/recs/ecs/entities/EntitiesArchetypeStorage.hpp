@@ -121,7 +121,7 @@ namespace ecs
              */
             void advance();
 
-            using archetypedChunksIt_t = ArchetypedChunks::iterator<iter_value_type<ComponentCls...>, ComponentCls...>;     ///< Iterator type used for traversal inside a single archetype storage.
+            using archetypedChunksIt_t = ArchetypedChunks::iterator<ValueType, ComponentCls...>;     ///< Iterator type used for traversal inside a single archetype storage.
 
             archetypedChunksIt_t m_archetypedChunksIt;                          ///< Current iterator within the active ArchetypedChunks instance.
             archetypeIndex_t m_archetypeIndex = INVALID_ARCHETYPE_INDEX;        ///< Index of currently traversed archetype.
@@ -205,35 +205,35 @@ namespace ecs
          * Iteration spans all archetypes whose component set is a superset of
          * ComponentCls....
          *
-         * @tparam ComponentCls Required component types.
+         * @tparam Args Required component types.
          * @return Iterator positioned at the first matching entity.
          */
-        template<IsComponent... ComponentCls>
+        template<typename... Args>
         [[nodiscard]] auto begin();
 
         /**
          * @brief Returns iterator representing end of traversal.
          *
-         * @tparam ComponentCls Component filter type list.
+         * @tparam Args Component filter type list.
          * @return End iterator.
          */
-        template<IsComponent... ComponentCls>
+        template<typename... Args>
         [[nodiscard]] auto end() const;
 
         /**
          * @brief Returns a chunk iterator positioned at the first matching, non-empty chunk.
-         * @tparam ComponentCls Required component types.
+         * @tparam Args Required component types.
          * @return Begin chunk iterator.
          */
-        template<IsComponent... ComponentCls>
+        template<typename... Args>
         [[nodiscard]] auto chunksBegin();
 
         /**
          * @brief Returns the end chunk iterator.
-         * @tparam ComponentCls Required component types.
+         * @tparam Args Required component types.
          * @return End chunk iterator.
          */
-        template<IsComponent... ComponentCls>
+        template<typename... Args>
         [[nodiscard]] auto chunksEnd() const;
 
         // ========================================= EntitiesArchetypeStorage =========================================
@@ -242,11 +242,11 @@ namespace ecs
          * @brief Creates a new entity from prefab data.
          * Automatically determines or finds appropriate archetype based on prefab's components.
          * @param prefabEntity Prefab containing component data
-         * @param entityId global entity id
+         * @param entityHandle Entity handle (id + version)
          * @return Location descriptor for created entity
          */
         template<PrefabEntityRef PrefabRef>
-        ArchetypedChunkEntityLocation Create(PrefabRef&& prefabEntity, entityId_t entityId);
+        ArchetypedChunkEntityLocation Create(PrefabRef&& prefabEntity, Entity entityHandle);
 
         /**
          * @brief Result of migrating an entity between archetypes.
@@ -254,7 +254,7 @@ namespace ecs
         struct EntityMigration final
         {
             ArchetypedChunkEntityLocation newLocation {};       ///< Location of the entity in the new archetype storage.
-            entityId_t swapRemovedEntityId {INVALID_ENTITY_ID}; ///< Entity relocated inside the old storage by swap-remove, or INVALID_ENTITY_ID.
+            Entity swapRemovedEntity {}; ///< Entity relocated inside the old storage by swap-remove, or invalid Entity.
         };
 
         /**
@@ -277,21 +277,22 @@ namespace ecs
          *
          * @param oldLocation Current location of the entity
          * @param newArchetype Fully resolved target archetype (with an up-to-date hash)
-         * @param entityId Global id of the migrated entity
-         * @return Location in the new archetype plus any swap-removed entity id
+         * @param entityHandle Entity handle (id + version) of the migrated entity
+         * @return Location in the new archetype plus the swap-removed Entity
          *
          * @pre newArchetype must be non-empty and differ from the entity's current archetype.
          */
         EntityMigration MigrateEntity(
-            const ArchetypedChunkEntityLocation& oldLocation, const Archetype& newArchetype, entityId_t entityId
+            const ArchetypedChunkEntityLocation& oldLocation, const Archetype& newArchetype, Entity entityHandle
             );
 
         /**
          * @brief Destroys entity at given location.
          * Calls destructors and marks slot for reuse.
          * @param entityLocation Location of entity to destroy
+         * @return Entity of the swap-removed entity, or invalid Entity if none
          */
-        entityId_t Destroy(const ArchetypedChunkEntityLocation& entityLocation);
+        Entity Destroy(const ArchetypedChunkEntityLocation& entityLocation);
 
         /**
          * @brief Gets mutable pointer to component data by component ID.

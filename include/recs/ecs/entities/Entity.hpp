@@ -43,6 +43,7 @@ namespace ecs
          * @return auto The result of comparing the entity IDs (strong ordering)
          */
         auto operator<=>(const Entity& other) const  { return std::tie(id, version) <=> std::tie(other.id, other.version); }
+        bool operator==(const Entity& other) const = default;
 
         [[nodiscard]] entityId_t getId() const { return id; }
         [[nodiscard]] entityVersion_t getVersion() const { return version; }

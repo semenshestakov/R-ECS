@@ -2,6 +2,7 @@
 #define ARCHETYPED_CHUNKS_HPP
 #include "../components/Utils.hpp"
 #include "Archetype.hpp"
+#include "Entity.hpp"
 #include "Utils.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
@@ -10,18 +11,57 @@
 namespace ecs
 {
 
-    struct Entity;
-
     /**
      * @brief Value type returned by iterator when components are requested.
      * Tuple of references to requested components.
      */
-    template<IsComponent... ComponentCls>
+    template<typename... Args>
     using iter_value_type = std::conditional_t<
-        (sizeof...(ComponentCls) > 0),
-        std::tuple<ComponentCls&...>,
+        (sizeof...(Args) > 0),
+        std::tuple<Args&...>,
         chunkEntityIndex_t
     >;
+
+
+    /**
+     * @brief Detects whether an iterator value type carries the owning Entity.
+     *
+     * True only for tuples whose first element is exactly Entity (by value),
+     * which is how the Entity-aware views (`view<Entity, Components...>`) request
+     * the entity handle alongside its component references. Component-only value
+     * types store references (`Component&`), so they never match.
+     */
+    template<typename T> struct is_entity_value_type : std::false_type {};
+    template<typename... Args> struct is_entity_value_type<std::tuple<Entity, Args...>> : std::true_type {};
+    template<typename T> inline constexpr bool is_entity_value_type_v = is_entity_value_type<T>::value;
+
+
+    /**
+     * @brief Maps a view argument pack to its iterator instantiation.
+     *
+     * The pack passed to `view<Args...>()` may optionally start with `Entity`. When
+     * it does, the entity is stripped from the component list (entities are not
+     * components and must not enter the archetype) and the iterator value type
+     * becomes a tuple of the Entity plus the requested component references.
+     * Otherwise the value type is the usual @ref iter_value_type.
+     *
+     * @tparam IterT  Iterator class template parameterized as `IterT<ValueType, Components...>`.
+     * @tparam Args   View argument pack, optionally led by `Entity`.
+     */
+    template<template<typename, typename...> class IterT, typename... Args>
+    struct view_iterator
+    {
+        using type = IterT<iter_value_type<Args...>, Args...>;
+    };
+
+    template<template<typename, typename...> class IterT, typename... ComponentCls>
+    struct view_iterator<IterT, Entity, ComponentCls...>
+    {
+        using type = IterT<std::tuple<Entity, ComponentCls&...>, ComponentCls...>;
+    };
+
+    template<template<typename, typename...> class IterT, typename... Args>
+    using view_iterator_t = typename view_iterator<IterT, Args...>::type;
 
 
     /**
@@ -174,14 +214,14 @@ namespace ecs
          * Copies component data from the prefab entity into the appropriate chunk locations.
          *
          * @param entity PrefabEntity containing all component data to initialize the new entity
-         * @param entityId global entity id
+         * @param entityHandle Entity handle (id + version)
          * @return chunkEntityIndex_t Unique index identifying this entity within the archetype
          *
          * @pre Entity must have all components required by this archetype
          * @post Entity is marked as alive and its component data is stored in the chunk arrays
          */
         template<PrefabEntityRef PrefabRef>
-        chunkEntityIndex_t Create(PrefabRef&& entity, entityId_t entityId);
+        chunkEntityIndex_t Create(PrefabRef&& entity, Entity entityHandle);
 
         /**
          * @brief Reserves a new entity slot without constructing component data.
@@ -191,10 +231,10 @@ namespace ecs
          * but leaves the component memory raw/uninitialized so the caller can construct or
          * migrate component data into it.
          *
-         * @param entityId global entity id stored in the reserved slot
+         * @param entityHandle Entity (id + version) stored in the reserved slot
          * @return chunkEntityIndex_t Unique index identifying the reserved slot
          */
-        [[nodiscard]] chunkEntityIndex_t AllocateRawSlot(entityId_t entityId);
+        [[nodiscard]] chunkEntityIndex_t AllocateRawSlot(Entity entityHandle);
 
         /**
          * @brief Destroys an entity and frees its storage slot.
@@ -203,12 +243,12 @@ namespace ecs
          * for future reuse. The memory is not immediately freed but will be reused by subsequent Create calls.
          *
          * @param chunkEntityIndex Index of the entity to destroy
-         * @return global entity in chunk migration
+         * @return Entity of the swap-removed entity, or invalid Entity if none
          *
          * @pre Entity must be alive at the given index
          * @post Entity's slot is added to free list and marked as not alive
          */
-        [[nodiscard]] entityId_t Destroy(chunkEntityIndex_t chunkEntityIndex);
+        [[nodiscard]] Entity Destroy(chunkEntityIndex_t chunkEntityIndex);
 
     private:
         /**
@@ -315,11 +355,11 @@ namespace ecs
         Archetype m_archetype;                                                                      ///< Archetype shared by all entities stored in this container.
         std::vector<componentChunks_t> m_chunksByComponentId {};                                    ///< Indexed by component ID. Each entry stores memory chunks for that component.
         std::vector<chunkEntityIndex_t> m_chunksEntityCount {};                                     ///< Number of alive entities stored in each chunk.
-        collections::BitSet m_hasFreeEntityInChunk;                                                  ///< Tracks chunks that still have free capacity for new entities.
+        collections::BitSet m_hasFreeEntityInChunk;                                                 ///< Tracks chunks that still have free capacity for new entities.
 
-        /// @brief Maps [chunkIndex][localEntityIndex] to global entity ID
-        /// Used during entity destruction to retrieve the global ID of the entity being removed.
-        std::vector<std::array<entityId_t, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;
+        /// @brief Maps [chunkIndex][localEntityIndex] to Entity (id + version)
+        /// Used during entity destruction to retrieve the Entity being swapped.
+        std::vector<std::array<Entity, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;
     };
 
     // ============================================== ChunkView ===============================================

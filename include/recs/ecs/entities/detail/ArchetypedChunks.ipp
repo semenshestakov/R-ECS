@@ -30,7 +30,12 @@ template<typename ValueType, ecs::IsComponent... ComponentCls> ValueType ecs::Ar
 {
     assert(m_archetypedChunks != nullptr);
 
-    if constexpr (sizeof...(ComponentCls) == 0)
+    if constexpr (is_entity_value_type_v<ValueType>)
+        return value_type{
+            m_archetypedChunks->m_localIndexToEntityId[m_chunkIndex][m_entityIndex],
+            std::get<ComponentCls*>(m_componentArrays)[m_entityIndex]...
+        };
+    else if constexpr (sizeof...(ComponentCls) == 0)
         return m_entityIndex | m_chunkIndex;
     else
         return value_type{
@@ -134,7 +139,7 @@ inline ecs::ArchetypedChunks::~ArchetypedChunks()
 }
 
 
-inline ecs::entityId_t ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityIndex)
+inline ecs::Entity ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunkEntityIndex)
 {
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
@@ -147,13 +152,13 @@ inline ecs::entityId_t ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t c
                 &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * localEntityIndex]);
     }
 
-    entityId_t migrationEntityId;
+    Entity migrationEntity;
     const chunkEntityIndex_t lastChunkEntityIndex = --m_chunksEntityCount[chunkIndex];
 
     if (lastChunkEntityIndex != localEntityIndex)
     {
-        migrationEntityId = m_localIndexToEntityId[chunkIndex][lastChunkEntityIndex];
-        m_localIndexToEntityId[chunkIndex][localEntityIndex] = migrationEntityId;
+        migrationEntity = m_localIndexToEntityId[chunkIndex][lastChunkEntityIndex];
+        m_localIndexToEntityId[chunkIndex][localEntityIndex] = migrationEntity;
         for (const componentId_t componentId : m_archetype)
         {
             const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
@@ -164,15 +169,11 @@ inline ecs::entityId_t ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t c
                     );
         }
     }
-    else
-    {
-        migrationEntityId = INVALID_ENTITY_ID;
-    }
 
-    m_localIndexToEntityId[chunkIndex][lastChunkEntityIndex] = INVALID_ENTITY_ID;
+    m_localIndexToEntityId[chunkIndex][lastChunkEntityIndex] = Entity{};
     m_hasFreeEntityInChunk.set(chunkIndex);
 
-    return migrationEntityId;
+    return migrationEntity;
 }
 
 inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId)
@@ -294,7 +295,7 @@ auto ecs::ArchetypedChunks::end()
     return iterator<ValueType, ComponentCls...>();
 }
 
-inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::AllocateRawSlot(const entityId_t entityId)
+inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::AllocateRawSlot(const Entity entityHandle)
 {
     // - - - Find Chunk Index, Entity Index - - -
     chunkEntityIndex_t chunkIndex;
@@ -317,7 +318,7 @@ inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::AllocateRawSlot(const enti
         if (m_chunksEntityCount[minChunkIndexHasFreeEntities] == MAX_ENTITIES_IN_CHUNK)
             m_hasFreeEntityInChunk.reset(minChunkIndexHasFreeEntities);
     }
-    assert(m_localIndexToEntityId[chunkIndex][localEntityIndex] == INVALID_ENTITY_ID);
+    assert(m_localIndexToEntityId[chunkIndex][localEntityIndex] == Entity{});
 
     // - - - Ensure Backing Chunk Memory - - -
 
@@ -334,14 +335,14 @@ inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::AllocateRawSlot(const enti
         }
     }
 
-    m_localIndexToEntityId[chunkIndex][localEntityIndex] = entityId;
+    m_localIndexToEntityId[chunkIndex][localEntityIndex] = entityHandle;
     return localEntityIndex + (chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS);
 }
 
 template<ecs::PrefabEntityRef PrefabRef>
-ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const entityId_t entityId)
+ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const Entity entityHandle)
 {
-    const chunkEntityIndex_t chunkEntityIndex = AllocateRawSlot(entityId);
+    const chunkEntityIndex_t chunkEntityIndex = AllocateRawSlot(entityHandle);
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 

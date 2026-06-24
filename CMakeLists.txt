@@ -133,6 +133,7 @@ if(TEST_ENABLE)
             test/ecs/SystemsAccessAndDisable.cpp
             test/ecs/SystemsResubscribe.cpp
             test/ecs/SystemsToggleEvents.cpp
+            test/jobs/ParallelForEach.cpp
     )
 
     target_include_directories(test_recs

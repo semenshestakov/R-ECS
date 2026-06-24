@@ -246,25 +246,22 @@ for (auto chunk : manager.chunkView<Position, Velocity>())
         pos.x += vel.x;
 ```
 
-The core builds on this with a free helper,
-[`ecs::ParallelForEach`](../../../include/recs/ecs/jobs/ParallelForEach.hpp), which is the
-parallel counterpart of a plain `for (auto e : view<...>())` loop. It mirrors Unity DOTS'
+The port builds on this with a method,
+[`IJobScheduler::ParallelForEach`](../../../include/recs/ecs/jobs/IJobScheduler.hpp), which is
+the parallel counterpart of a plain `for (auto e : view<...>())` loop. It mirrors Unity DOTS'
 `EntityQuery.ScheduleParallel`: the chunk view *is* the query, the chunk is the unit of
 parallelism, and the work is split as an index range over the matched chunks.
 
-Because the chunk iterator is forward-only, the helper first does one cheap pass to gather
+Because the chunk iterator is forward-only, the method first does one cheap pass to gather
 the matched chunks into a contiguous array — at which point the chunk **count is known** and
-random-accessible. That is exactly what lets it drive the index-based
-[`IJobScheduler::ParallelFor`](#the-port) — which recursively bisects `[0, N)` by a grain and
-work-steals — instead of a forward-only `parallel_for_each`: better load balancing, no serial
-feeder. The gather is `O(number of chunks)` (entities / chunk capacity), negligible against
-the per-entity work.
+random-accessible. That is exactly what lets it drive this port's own index-based
+[`ParallelFor`](#the-port) — which recursively bisects `[0, N)` by a grain and work-steals —
+instead of a forward-only `parallel_for_each`: better load balancing, no serial feeder. The
+gather is `O(number of chunks)` (entities / chunk capacity), negligible against the
+per-entity work.
 
 ```cpp
-#include "ecs/jobs/ParallelForEach.hpp"
-
-ecs::ParallelForEach(
-    registry.Scheduler(),
+registry.Scheduler().ParallelForEach(
     manager.chunkView<Position, Velocity>(),     // the query
     [](std::tuple<Position&, Velocity&> e) {
         auto& [pos, vel] = e;
@@ -276,11 +273,10 @@ ecs::ParallelForEach(
 Each task processes a run of `chunksPerTask` chunks and forward-walks the entities inside,
 invoking the body once per entity — Unity's `IJobEntity` ergonomics over an
 `IJobChunk`-style batch. Distinct chunks are distinct allocations, so tasks on different
-chunks never write the same cache line. The helper uses only the `IJobScheduler` port and
-the core chunk iteration, so it is backend-agnostic: it runs truly in parallel on
-`TbbJobScheduler` and degrades to an inline loop on `SerialJobScheduler`, with no
-threading-library dependency. `ParallelFor` blocks until every chunk has finished, so the
-call is a sync point.
+chunks never write the same cache line. Living on the port itself, it is backend-agnostic:
+it runs truly in parallel on `TbbJobScheduler` and degrades to an inline loop on
+`SerialJobScheduler`, with no threading-library dependency. `ParallelFor` blocks until every
+chunk has finished, so the call is a sync point.
 
 The body runs on worker threads, so the [threading rules](#threading-rules) below apply:
 read and write disjoint entity components freely, but route structural changes through the

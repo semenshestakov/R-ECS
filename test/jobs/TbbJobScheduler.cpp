@@ -12,6 +12,10 @@
 
 #include "ecs/jobs/TbbJobScheduler.hpp"
 
+#include "ComponentsClass.hpp"
+#include "ecs/entities/EntitiesManager.hpp"
+#include "ecs/entities/PrefabEntity.hpp"
+
 
 using namespace std::chrono_literals;
 
@@ -243,4 +247,64 @@ TEST(TbbJobSchedulerLifetimeTest, DestructionDropsServices)
 
     const int frozen = ticks->load();
     EXPECT_EQ(ticks->load(), frozen);
+}
+
+
+// ===================================== ParallelForEach over TBB ======================================
+// Same coverage contract as the serial tests, but under genuine multi-worker parallelism.
+
+TEST(TbbParallelForEachTest, EveryEntityVisitedExactlyOnceUnderParallelism)
+{
+    ecs::EntitiesManager manager;
+    ecs::TbbJobScheduler scheduler;
+
+    constexpr std::size_t n = 50'000; // many chunks across the arena's workers
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        ecs::PrefabEntity prefab;
+        prefab.AddComponent<TestId>(static_cast<unsigned int>(i));
+        prefab.AddComponent<Position2d>(static_cast<float>(i), 0.f);
+        manager.Create(prefab);
+    }
+
+    std::vector<std::atomic<int>> seen(n);
+    for (auto& s : seen)
+        s.store(0);
+
+    // Disjoint entities -> writing each entity's own components in parallel is data-race free.
+    scheduler.ParallelForEach(
+        manager.chunkView<TestId, Position2d>(),
+        [&](std::tuple<TestId&, Position2d&> e) {
+            auto& [id, pos] = e;
+            seen[id.id].fetch_add(1, std::memory_order_relaxed);
+            pos.x += 1.f;
+        },
+        /*chunksPerTask*/ 4);
+
+    EXPECT_TRUE(std::ranges::all_of(seen.begin(), seen.end(),
+                                    [](const std::atomic<int>& s) { return s.load() == 1; }));
+}
+
+
+TEST(TbbParallelForEachTest, BlocksUntilAllChunksFinish)
+{
+    ecs::EntitiesManager manager;
+    ecs::TbbJobScheduler scheduler;
+
+    constexpr std::size_t n = 40'000;
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        ecs::PrefabEntity prefab;
+        prefab.AddComponent<TestId>(static_cast<unsigned int>(i));
+        manager.Create(prefab);
+    }
+
+    std::atomic<long long> sum{0};
+    scheduler.ParallelForEach(
+        manager.chunkView<TestId>(),
+        [&](std::tuple<TestId&> e) { sum.fetch_add(std::get<0>(e).id, std::memory_order_relaxed); });
+
+    // The call is a barrier: on return every entity has been summed exactly once.
+    constexpr long long expected = (static_cast<long long>(n) - 1) * n / 2;
+    EXPECT_EQ(sum.load(), expected);
 }

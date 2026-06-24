@@ -93,6 +93,95 @@ void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advanc
     }
 }
 
+// ==================================== EntitiesArchetypeStorage::chunk_iterator =======================================
+
+template<ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::chunk_iterator(EntitiesArchetypeStorage* storage) :
+    m_storage(storage),
+    m_archetypeIndex(0),
+    m_chunkIndex(0)
+{
+    assert(storage != nullptr);
+
+    if (storage->m_storageByArchetypeIndex.empty())
+    {
+        m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+        m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;
+        return;
+    }
+
+    seekFromCurrent();
+}
+
+template<ecs::IsComponent... ComponentCls>
+typename ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::value_type
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator*() const
+{
+    assert(m_storage != nullptr);
+    assert(m_archetypeIndex != INVALID_ARCHETYPE_INDEX);
+    return ChunkView<ComponentCls...>(&m_storage->m_storageByArchetypeIndex[m_archetypeIndex], m_chunkIndex);
+}
+
+template<ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>&
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator++()
+{
+    ++m_chunkIndex;
+    seekFromCurrent();
+    return *this;
+}
+
+template<ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator++(int)
+{
+    chunk_iterator copy = *this;
+    ++(*this);
+    return copy;
+}
+
+template<ecs::IsComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator==(const chunk_iterator& other) const
+{
+    return m_archetypeIndex == other.m_archetypeIndex && m_chunkIndex == other.m_chunkIndex;
+}
+
+template<ecs::IsComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator!=(const chunk_iterator& other) const
+{
+    return !(*this == other);
+}
+
+template<ecs::IsComponent... ComponentCls>
+void ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::seekFromCurrent()
+{
+    assert(m_storage != nullptr);
+
+    while (m_archetypeIndex < m_storage->m_storageByArchetypeIndex.size())
+    {
+        if (
+            ArchetypedChunks& chunks = m_storage->m_storageByArchetypeIndex[m_archetypeIndex];
+            s_archetype.isSubsetOf(chunks.archetype())
+            )
+        {
+            const chunkEntityIndex_t chunkCount = chunks.chunkCount();
+            while (m_chunkIndex < chunkCount)
+            {
+                if (chunks.aliveInChunk(m_chunkIndex) > 0)
+                    return;
+                ++m_chunkIndex;
+            }
+        }
+
+        ++m_archetypeIndex;
+        m_chunkIndex = 0;
+    }
+
+    // end state
+    m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+    m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;
+}
+
 // ============================================= EntitiesArchetypeStorage ==============================================
 
 template<ecs::IsComponent... ComponentCls>
@@ -105,6 +194,18 @@ template<ecs::IsComponent... ComponentCls>
 auto ecs::EntitiesArchetypeStorage::end() const
 {
     return iterator<iter_value_type<ComponentCls...>, ComponentCls...>();
+}
+
+template<ecs::IsComponent... ComponentCls>
+auto ecs::EntitiesArchetypeStorage::chunksBegin()
+{
+    return chunk_iterator<ComponentCls...>(this);
+}
+
+template<ecs::IsComponent... ComponentCls>
+auto ecs::EntitiesArchetypeStorage::chunksEnd() const
+{
+    return chunk_iterator<ComponentCls...>();
 }
 
 template<ecs::IsComponent ComponentCls>

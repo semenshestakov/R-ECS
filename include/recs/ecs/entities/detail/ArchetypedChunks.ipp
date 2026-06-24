@@ -237,6 +237,32 @@ const ComponentCls& ecs::ArchetypedChunks::GetComponent(const chunkEntityIndex_t
 
 inline const ecs::Archetype& ecs::ArchetypedChunks::archetype() const { return m_archetype; }
 
+inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::chunkCount() const
+{
+    return static_cast<chunkEntityIndex_t>(m_chunksEntityCount.size());
+}
+
+inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::aliveInChunk(const chunkEntityIndex_t chunkIndex) const
+{
+    assert(chunkIndex < m_chunksEntityCount.size());
+    return m_chunksEntityCount[chunkIndex];
+}
+
+// =================================================== ChunkView ====================================================
+
+template<ecs::IsComponent... ComponentCls>
+ecs::ChunkView<ComponentCls...>::ChunkView(ArchetypedChunks* chunks, const chunkEntityIndex_t chunkIndex) :
+    m_count(chunks->aliveInChunk(chunkIndex)),
+    m_chunkIndex(chunkIndex)
+{
+    const chunkEntityIndex_t chunkBase = chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS;
+    m_componentArrays = std::tuple{
+        std::bit_cast<ComponentCls*>(
+            chunks->GetComponentData(chunkBase, ComponentRegistrator::GetComponentId<ComponentCls>())
+        )...
+    };
+}
+
 template <typename ValueType, ecs::IsComponent... ComponentCls>
 auto ecs::ArchetypedChunks::begin()
 {

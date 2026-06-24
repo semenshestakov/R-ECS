@@ -10,7 +10,6 @@
 namespace ecs
 {
 
-#include "PrefabEntity.hpp"
     struct Entity;
 
     /**
@@ -249,6 +248,28 @@ namespace ecs
         [[nodiscard]] const Archetype& archetype() const;
 
         /**
+         * @brief Number of chunks currently backing this archetype.
+         *
+         * Chunks are addressable by index in the half-open range [0, chunkCount());
+         * combined with aliveInChunk() this exposes the chunk layout so external
+         * code (e.g. a parallel scheduler) can partition iteration per chunk.
+         *
+         * @return Chunk count.
+         */
+        [[nodiscard]] chunkEntityIndex_t chunkCount() const;
+
+        /**
+         * @brief Number of alive entities packed in a given chunk.
+         *
+         * Alive entities are stored densely in [0, aliveInChunk(chunkIndex)) inside
+         * the chunk, so the count doubles as the chunk's local iteration bound.
+         *
+         * @param chunkIndex Chunk to query (must be < chunkCount()).
+         * @return Alive entity count in the chunk.
+         */
+        [[nodiscard]] chunkEntityIndex_t aliveInChunk(chunkEntityIndex_t chunkIndex) const;
+
+        /**
          * @brief Returns iterator positioned at the first entity.
          *
          * @tparam ValueType Iterator value type.
@@ -281,6 +302,81 @@ namespace ecs
         /// @brief Maps [chunkIndex][localEntityIndex] to global entity ID
         /// Used during entity destruction to retrieve the global ID of the entity being removed.
         std::vector<std::array<entityId_t, MAX_ENTITIES_IN_CHUNK>> m_localIndexToEntityId;
+    };
+
+    // ============================================== ChunkView ===============================================
+
+    /**
+     * @brief Lightweight, self-contained view over the alive entities of a single chunk.
+     *
+     * A ChunkView captures the component array base pointers of one chunk plus its alive
+     * count, so it can be copied freely and iterated per entity without touching the owning
+     * storage again. It is the unit of work a parallel scheduler hands to a worker: chunks
+     * are independent, fixed-capacity and densely packed, which makes them the natural grain
+     * for data-parallel iteration even though the cross-chunk iterators are only forward.
+     *
+     * Iterating a ChunkView yields the same value_type as the entity iterators
+     * (a tuple of component references, or the chunk-entity index when no components were
+     * requested).
+     *
+     * @tparam ComponentCls Components exposed through iteration.
+     */
+    template<IsComponent... ComponentCls>
+    class ChunkView
+    {
+    public:
+        using value_type = iter_value_type<ComponentCls...>;        ///< Value produced per entity.
+
+        /**
+         * @brief Forward iterator over the alive entities of the chunk.
+         */
+        class iterator
+        {
+        public:
+            using iterator_category = std::forward_iterator_tag;
+            using value_type = iter_value_type<ComponentCls...>;
+            using difference_type = std::ptrdiff_t;
+
+            constexpr iterator() = default;
+            iterator(const ChunkView* view, chunkEntityIndex_t index) : m_view(view), m_index(index) {}
+
+            value_type operator*() const
+            {
+                if constexpr (sizeof...(ComponentCls) == 0)
+                    return m_index | m_view->m_chunkIndex;
+                else
+                    return value_type{std::get<ComponentCls*>(m_view->m_componentArrays)[m_index]...};
+            }
+
+            iterator& operator++() { ++m_index; return *this; }
+            iterator operator++(int) { iterator copy = *this; ++m_index; return copy; }
+
+            bool operator==(const iterator& other) const { return m_index == other.m_index; }
+            bool operator!=(const iterator& other) const { return m_index != other.m_index; }
+
+        private:
+            const ChunkView* m_view = nullptr;
+            chunkEntityIndex_t m_index = 0;
+        };
+
+        /**
+         * @brief Constructs a view over a single chunk of an ArchetypedChunks storage.
+         *
+         * @param chunks Owning chunk storage.
+         * @param chunkIndex Chunk to view (must be < chunks->chunkCount()).
+         */
+        ChunkView(ArchetypedChunks* chunks, chunkEntityIndex_t chunkIndex);
+
+        [[nodiscard]] chunkEntityIndex_t size() const { return m_count; }
+        [[nodiscard]] bool empty() const { return m_count == 0; }
+
+        [[nodiscard]] iterator begin() const { return iterator(this, 0); }
+        [[nodiscard]] iterator end() const { return iterator(this, m_count); }
+
+    private:
+        std::tuple<ComponentCls*...> m_componentArrays {};                 ///< Base pointers of each component array in the chunk.
+        chunkEntityIndex_t m_count = 0;                                    ///< Alive entity count in the chunk.
+        chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;      ///< Index of the viewed chunk.
     };
 
 } // namespace ecs

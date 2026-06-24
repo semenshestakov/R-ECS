@@ -128,6 +128,77 @@ namespace ecs
             EntitiesArchetypeStorage* m_storage = nullptr;                      ///< Storage being iterated.
         };
 
+        // ================================== EntitiesArchetypeStorage::chunk_iterator ==================================
+
+        /**
+         * @brief Forward iterator over the chunks of every matching archetype.
+         *
+         * Where iterator visits one entity at a time, chunk_iterator visits one chunk at a
+         * time, dereferencing to a ChunkView over that chunk's alive entities. Empty chunks
+         * and archetypes that do not contain all requested components are skipped. The total
+         * chunk count is not known up front (it is discovered by walking), so the range is
+         * forward-only — but each yielded chunk is an independent, self-contained unit of
+         * work, which is what a parallel scheduler partitions over.
+         *
+         * @tparam ComponentCls Components exposed through each ChunkView.
+         */
+        template<IsComponent... ComponentCls>
+        class chunk_iterator
+        {
+        public:
+            using iterator_category = std::forward_iterator_tag;    ///< Forward iterator: chunk count is discovered while walking.
+            using value_type = ChunkView<ComponentCls...>;          ///< Value produced per chunk.
+            using difference_type = std::ptrdiff_t;                 ///< Signed distance type.
+            using reference = value_type;                           ///< Dereference returns a ChunkView by value.
+            using pointer = void;                                   ///< No pointer indirection.
+
+            /**
+             * @brief Archetype composed from all requested ComponentCls types.
+             */
+            static inline const Archetype s_archetype = Archetype::GetArchetype<ComponentCls...>();
+
+            /**
+             * @brief Constructs end iterator.
+             */
+            constexpr chunk_iterator() = default;
+
+            /**
+             * @brief Constructs iterator positioned at the first non-empty matching chunk.
+             * @param storage Owning storage to iterate over.
+             * @pre storage != nullptr
+             */
+            explicit chunk_iterator(EntitiesArchetypeStorage* storage);
+
+            /**
+             * @brief Returns a ChunkView over the current chunk.
+             */
+            value_type operator*() const;
+
+            /**
+             * @brief Advances to the next non-empty matching chunk.
+             */
+            chunk_iterator& operator++();
+
+            /**
+             * @brief Post-increment operator.
+             */
+            chunk_iterator operator++(int);
+
+            bool operator==(const chunk_iterator& other) const;
+            bool operator!=(const chunk_iterator& other) const;
+
+        private:
+            /**
+             * @brief Scans forward from the current position to the next non-empty
+             *        chunk in a matching archetype, entering end state when exhausted.
+             */
+            void seekFromCurrent();
+
+            EntitiesArchetypeStorage* m_storage = nullptr;                  ///< Storage being iterated.
+            archetypeIndex_t m_archetypeIndex = INVALID_ARCHETYPE_INDEX;    ///< Index of currently traversed archetype.
+            chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;   ///< Index of the current chunk within the archetype.
+        };
+
         /**
          * @brief Creates iterator over entities containing all specified components.
          *
@@ -148,6 +219,22 @@ namespace ecs
          */
         template<IsComponent... ComponentCls>
         [[nodiscard]] auto end() const;
+
+        /**
+         * @brief Returns a chunk iterator positioned at the first matching, non-empty chunk.
+         * @tparam ComponentCls Required component types.
+         * @return Begin chunk iterator.
+         */
+        template<IsComponent... ComponentCls>
+        [[nodiscard]] auto chunksBegin();
+
+        /**
+         * @brief Returns the end chunk iterator.
+         * @tparam ComponentCls Required component types.
+         * @return End chunk iterator.
+         */
+        template<IsComponent... ComponentCls>
+        [[nodiscard]] auto chunksEnd() const;
 
         // ========================================= EntitiesArchetypeStorage =========================================
 

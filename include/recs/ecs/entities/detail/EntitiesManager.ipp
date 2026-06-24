@@ -241,6 +241,24 @@ auto ecs::EntitiesManager::view()
     return View(&m_storage);
 }
 
+template<ecs::IsComponent... ComponentCls>
+auto ecs::EntitiesManager::chunkView()
+{
+    struct ChunkRange
+    {
+        ChunkRange() = delete;
+        explicit ChunkRange(EntitiesArchetypeStorage* storage) : m_storage(storage) {}
+
+        auto begin() const { return m_storage->chunksBegin<ComponentCls...>(); }
+        auto end() const { return m_storage->chunksEnd<ComponentCls...>(); }
+
+    private:
+        EntitiesArchetypeStorage* m_storage;
+    };
+
+    return ChunkRange(&m_storage);
+}
+
 inline void ecs::EntitiesManager::resize(const std::size_t size)
 {
     m_versionByEntityIndex.resize(size);

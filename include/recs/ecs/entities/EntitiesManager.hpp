@@ -188,6 +188,23 @@ namespace ecs
         template<IsComponent... ComponentCls>
         auto view();
 
+        /**
+         * @brief Creates a chunk view over entities with specified components.
+         *
+         * Like view(), but iterates one chunk at a time instead of one entity at a time:
+         * each element is a ChunkView over the alive entities of a single chunk. Chunks are
+         * independent units of work, which makes this the entry point for data-parallel
+         * iteration — a scheduler partitions the (forward, unknown-length) chunk range and
+         * hands a chunk, or a run of chunks, to each worker.
+         *
+         * @tparam ComponentCls Component types that entities must have.
+         * @return Range object supporting begin()/end() over ChunkView elements.
+         * @note Example: for (auto chunk : manager.chunkView<Position, Velocity>())
+         *                  for (auto [pos, vel] : chunk) { ... }
+         */
+        template<IsComponent... ComponentCls>
+        auto chunkView();
+
     DEEP_TEST_PRIVATE_ACCESS:
         std::size_t m_isAliveEntitiesCount = 0;                                         ///< Number of currently alive entities
         entityId_t m_lastEntityId = INVALID_ENTITY_ID + 1;                              ///< Next ID to allocate (when free list empty)

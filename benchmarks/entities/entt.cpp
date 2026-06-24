@@ -92,8 +92,8 @@ BENCHMARK_F(EnTTBenchmark, View_100k)(benchmark::State& state)
         auto view = registry.view<Position2d, Position3d>();
         for (auto e : view)
         {
-            auto& pos2d = registry.get<Position2d>(e);
-            auto& pos3d = registry.get<Position3d>(e);
+            auto& pos2d = view.get<Position2d>(e);
+            auto& pos3d = view.get<Position3d>(e);
             benchmark::DoNotOptimize(pos2d);
             benchmark::DoNotOptimize(pos3d);
             ++count;

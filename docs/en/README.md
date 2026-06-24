@@ -37,7 +37,7 @@ Generated from the source docstrings (run
 |--------|------|-------|
 | `ecs/Registry.hpp` | Central hub: owns entities, events, systems, context, command queue | [Getting started](./guides/getting-started.md) |
 | `ecs/ISystem.hpp` | CRTP base for systems + the `ECS_*` macros | [Systems & scheduling](./guides/systems-and-scheduling.md) |
-| `ecs/Context.hpp` | Main-thread-guarded adapter over `collections::Context` | [Jobs & threading](./guides/jobs.md) |
+| `ecs/Context.hpp` | Main-thread-guarded adapter over `collections::SingletonStore` | [Jobs & threading](./guides/jobs.md) |
 
 ### `include/ecs/entities` — entities & storage
 

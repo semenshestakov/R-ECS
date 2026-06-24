@@ -9,7 +9,7 @@ namespace collections
     /**
      * @brief A type-safe dependency injection container for managing singleton instances.
      *
-     * The Context class provides a simple yet powerful mechanism for storing and retrieving
+     * The SingletonStore class provides a simple yet powerful mechanism for storing and retrieving
      * singleton instances of any type. It uses type-based indexing to ensure type safety
      * and automatic memory management through RAII principles. Each stored instance is
      * uniquely identified by its type, and the container ensures that only one instance
@@ -18,7 +18,7 @@ namespace collections
      * The class employs a type-erasure technique with a polymorphic base class to store
      * instances of arbitrary types while maintaining type safety. This allows the container
      * to hold heterogeneous types in a single homogeneous container. All stored objects
-     * are managed via std::unique_ptr, ensuring automatic cleanup when the Context is
+     * are managed via std::unique_ptr, ensuring automatic cleanup when the SingletonStore is
      * destroyed.
      *
      * Key features:
@@ -27,7 +27,7 @@ namespace collections
      * - Move-only semantics: prevents accidental copying of unique resources
      * - Thread-unsafe: designed for single-threaded use (no internal synchronization)
      *
-     * The Context is particularly useful in ECS architectures for storing system-wide
+     * The SingletonStore is particularly useful in ECS architectures for storing system-wide
      * resources, configuration objects, and shared services that need to be accessed
      * across different parts of the application without passing references explicitly.
      *
@@ -36,16 +36,16 @@ namespace collections
      *          required for concurrent access from multiple threads.
      *
      */
-    class Context
+    class SingletonStore
     {
     public:
         /**
          * @brief Default constructor.
          *
-         * Creates an empty Context with no stored instances. The container starts in a
+         * Creates an empty SingletonStore with no stored instances. The container starts in a
          * valid empty state and can be populated later through emplace operations.
          */
-        Context() = default;
+        SingletonStore() = default;
 
         /**
          * @brief Destructor.
@@ -53,7 +53,7 @@ namespace collections
          * Automatically destroys all stored instances through their respective unique_ptr
          * deleters. Each instance is properly destructed in the order of storage.
          */
-        ~Context() = default;
+        ~SingletonStore() = default;
 
         /**
          * @brief Deleted copy constructor.
@@ -61,7 +61,7 @@ namespace collections
          * Copying is disabled because std::unique_ptr members are non-copyable.
          * This prevents accidental duplication of unique resources.
          */
-        Context(const Context&) = delete;
+        SingletonStore(const SingletonStore&) = delete;
 
         /**
          * @brief Deleted copy assignment operator.
@@ -69,28 +69,28 @@ namespace collections
          * Copy assignment is disabled to maintain unique ownership semantics of
          * the stored instances and prevent resource duplication.
          */
-        Context& operator=(const Context&) = delete;
+        SingletonStore& operator=(const SingletonStore&) = delete;
 
         /**
          * @brief Move constructor.
          *
-         * Transfers ownership of all stored instances from another Context.
-         * The source Context is left in a valid but unspecified state.
+         * Transfers ownership of all stored instances from another SingletonStore.
+         * The source SingletonStore is left in a valid but unspecified state.
          *
-         * @param other The Context to move from.
+         * @param other The SingletonStore to move from.
          */
-        Context(Context&& other) noexcept = default;
+        SingletonStore(SingletonStore&& other) noexcept = default;
 
         /**
          * @brief Move assignment operator.
          *
-         * Transfers ownership of all stored instances from another Context,
-         * destroying any previously stored instances in this Context.
+         * Transfers ownership of all stored instances from another SingletonStore,
+         * destroying any previously stored instances in this SingletonStore.
          *
-         * @param other The Context to move from.
-         * @return Reference to this Context after the move.
+         * @param other The SingletonStore to move from.
+         * @return Reference to this SingletonStore after the move.
          */
-        Context& operator=(Context&& other) noexcept = default;
+        SingletonStore& operator=(SingletonStore&& other) noexcept = default;
 
         /**
          * @brief Constructs and stores a new instance of type T.
@@ -112,8 +112,8 @@ namespace collections
          *     std::string y;
          * };
          *
-         * ecs::Context ctx;
-         * auto& obj = ctx.emplace<MyClass>(42, "hello");
+         * ecs::SingletonStore store;
+         * auto& obj = store.emplace<MyClass>(42, "hello");
          * assert(obj.x == 42 && obj.y == "hello");
          * @endcode
          */
@@ -124,7 +124,7 @@ namespace collections
          * @brief Retrieves a reference to the stored instance of type T.
          *
          * Accesses the previously stored instance of type T. The behavior is undefined
-         * if no instance of type T exists in the Context (assertion will trigger in debug builds).
+         * if no instance of type T exists in the SingletonStore (assertion will trigger in debug builds).
          * This method is more efficient than getOrEmplace() as it doesn't check for existence.
          *
          * @tparam T The type of instance to retrieve.
@@ -135,9 +135,9 @@ namespace collections
          *
          * @example
          * @code
-         * ctx.emplace<std::string>("initialized");
-         * if (ctx.has<std::string>()) {
-         *     auto& str = ctx.get<std::string>();
+         * store.emplace<std::string>("initialized");
+         * if (store.has<std::string>()) {
+         *     auto& str = store.get<std::string>();
          *     str += " - modified";
          * }
          * @endcode
@@ -162,10 +162,10 @@ namespace collections
          * @example
          * @code
          * // First call constructs the instance
-         * auto& logger = ctx.getOrEmplace<Logger>("app.log");
+         * auto& logger = store.getOrEmplace<Logger>("app.log");
          *
          * // Second call returns the existing instance
-         * auto& sameLogger = ctx.getOrEmplace<Logger>();
+         * auto& sameLogger = store.getOrEmplace<Logger>();
          * assert(&logger == &sameLogger);
          * @endcode
          */
@@ -174,18 +174,18 @@ namespace collections
         T& getOrEmplace(Args&&... args);
 
         /**
-         * @brief Checks whether an instance of type T exists in the Context.
+         * @brief Checks whether an instance of type T exists in the SingletonStore.
          *
          * Performs a lookup to determine if an instance of the specified type has been
-         * stored in the Context. This operation is constant time on average.
+         * stored in the SingletonStore. This operation is constant time on average.
          *
          * @tparam T The type to check for existence.
          * @return true if an instance of type T exists, false otherwise.
          *
          * @example
          * @code
-         * if (!ctx.has<DatabaseConnection>()) {
-         *     auto& db = ctx.emplace<DatabaseConnection>("localhost", 5432);
+         * if (!store.has<DatabaseConnection>()) {
+         *     auto& db = store.emplace<DatabaseConnection>("localhost", 5432);
          * }
          * @endcode
          */
@@ -193,7 +193,7 @@ namespace collections
         [[nodiscard]] bool has() const;
 
         /**
-         * @brief Removes the stored instance of type T from the Context.
+         * @brief Removes the stored instance of type T from the SingletonStore.
          *
          * Destroys the stored instance of type T and removes it from the container.
          * If no instance exists, the operation does nothing (no error).
@@ -202,11 +202,11 @@ namespace collections
          *
          * @example
          * @code
-         * ctx.emplace<TemporaryResource>();
-         * assert(ctx.has<TemporaryResource>());
+         * store.emplace<TemporaryResource>();
+         * assert(store.has<TemporaryResource>());
          *
-         * ctx.remove<TemporaryResource>();
-         * assert(!ctx.has<TemporaryResource>());  // Instance is gone
+         * store.remove<TemporaryResource>();
+         * assert(!store.has<TemporaryResource>());  // Instance is gone
          * @endcode
          */
         template<typename T>
@@ -255,7 +255,7 @@ namespace collections
          * @return A hash code that uniquely identifies type T.
          */
         template<typename T>
-        static constexpr ctxId_t getCtxT();
+        static constexpr ctxId_t getStoreKey();
 
         /// Storage container mapping type IDs to their instances
         std::unordered_map<ctxId_t, std::unique_ptr<BaseHolder>> m_data;
@@ -263,4 +263,4 @@ namespace collections
 
 } // namespace collections
 
-#include "detail/Context.ipp"
+#include "detail/SingletonStore.ipp"

@@ -1,12 +1,12 @@
 #pragma once
 #include <cassert>
-#include "../Context.hpp"
+#include "../SingletonStore.hpp"
 
 
-template<typename T, typename... Args>
-T& collections::Context::emplace(Args&&... args)
+template <typename T, typename... Args>
+T& collections::SingletonStore::emplace(Args&&... args)
 {
-    auto id = getCtxT<T>();
+    auto id = getStoreKey<T>();
 
     auto ptr = std::make_unique<Holder<T>>(std::forward<Args>(args)...);
     T& ref = static_cast<Holder<T>*>(ptr.get())->value;
@@ -16,9 +16,9 @@ T& collections::Context::emplace(Args&&... args)
 }
 
 template<typename T>
-T& collections::Context::get()
+T& collections::SingletonStore::get()
 {
-    auto id = getCtxT<T>();
+    auto id = getStoreKey<T>();
     assert(m_data.contains(id) && "Context: type not found");
 
     auto* holder = static_cast<Holder<T>*>(m_data[id].get());
@@ -26,9 +26,9 @@ T& collections::Context::get()
 }
 
 template<typename T>
-const T& collections::Context::get() const
+const T& collections::SingletonStore::get() const
 {
-    auto id = getCtxT<T>();
+    auto id = getStoreKey<T>();
     assert(m_data.contains(id) && "Context: type not found");
 
     auto* holder = static_cast<Holder<T>*>(m_data[id].get());
@@ -36,7 +36,7 @@ const T& collections::Context::get() const
 }
 
 template<typename T, typename... Args>
-T& collections::Context::getOrEmplace(Args&&... args)
+T& collections::SingletonStore::getOrEmplace(Args&&... args)
 {
     if(!has<T>())
         return emplace<T>(std::forward<Args>(args)...);
@@ -45,19 +45,19 @@ T& collections::Context::getOrEmplace(Args&&... args)
 }
 
 template<typename T>
-bool collections::Context::has() const
+bool collections::SingletonStore::has() const
 {
-    return m_data.contains(getCtxT<T>());
+    return m_data.contains(getStoreKey<T>());
 }
 
 template<typename T>
-void collections::Context::remove()
+void collections::SingletonStore::remove()
 {
-    m_data.erase(getCtxT<T>());
+    m_data.erase(getStoreKey<T>());
 }
 
 template<typename T>
-constexpr collections::Context::ctxId_t collections::Context::getCtxT()
+constexpr collections::SingletonStore::ctxId_t collections::SingletonStore::getStoreKey()
 {
     return typeid(T).hash_code();
 }

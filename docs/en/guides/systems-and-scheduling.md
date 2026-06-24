@@ -202,7 +202,7 @@ auto& clock = registry.ctx().getOrEmplace<GameClock>();
 ```
 
 `registry.ctx()` returns an [`ecs::Context`](./jobs.md) — a main-thread-guarded
-adapter over [`collections::Context`](../api/index_classes.md) — storing one
+adapter over [`collections::SingletonStore`](../api/index_classes.md) — storing one
 instance per type, ideal for resources and services shared across systems.
 Mutating it (`getOrEmplace` / `emplace` / `remove`) is main-thread only; read it
 with `get<T>()` from parallel systems.

@@ -201,7 +201,7 @@ auto& clock = registry.ctx().getOrEmplace<GameClock>();
 ```
 
 `registry.ctx()` возвращает [`ecs::Context`](./jobs.md) — адаптер с гардом
-главного потока над [`collections::Context`](../api/index_classes.md) — и хранит
+главного потока над [`collections::SingletonStore`](../api/index_classes.md) — и хранит
 по одному экземпляру на тип, идеально для ресурсов и сервисов, общих для систем.
 Мутация (`getOrEmplace` / `emplace` / `remove`) — только из главного потока;
 читай через `get<T>()` из параллельных систем.

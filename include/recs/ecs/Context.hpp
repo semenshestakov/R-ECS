@@ -1,6 +1,6 @@
 #pragma once
 #include <utility>
-#include "collections/Context.hpp"
+#include "collections/SingletonStore.hpp"
 #include "jobs/ThreadAffinity.hpp"
 
 
@@ -8,9 +8,9 @@ namespace ecs
 {
 
     /**
-     * @brief ECS-layer adapter over collections::Context that enforces main-thread mutation.
+     * @brief ECS-layer adapter over collections::SingletonStore that enforces main-thread mutation.
      *
-     * collections::Context is a generic, reusable container and must not depend on
+     * collections::SingletonStore is a generic, reusable container and must not depend on
      * the ECS threading model. This adapter sits in the ECS layer (mirroring how
      * ecs::EventSystem wraps event::EventSystem) and adds a single concern: the
      * structural, mutating operations (emplace / getOrEmplace / remove) assert in
@@ -22,11 +22,11 @@ namespace ecs
      * during Init), then have parallel systems read them with get<T>(). Use
      * getOrEmplace only on the main thread, since it may construct.
      */
-    class Context final : protected collections::Context
+    class Context final : protected collections::SingletonStore
     {
-        using Super = collections::Context;
+        using Super = collections::SingletonStore;
     public:
-        using Super::Context;
+        using Super::SingletonStore;
 
         // Read-only access is re-exposed unchanged and stays safe to call
         // concurrently from workers on already-present entries.
@@ -35,7 +35,7 @@ namespace ecs
 
         /**
          * @brief Constructs and stores a new instance of type T (main thread only).
-         * @see collections::Context::emplace
+         * @see collections::SingletonStore::emplace
          */
         template<typename T, typename... Args>
         T& emplace(Args&&... args)
@@ -48,7 +48,7 @@ namespace ecs
          * @brief Retrieves an existing instance or constructs one (main thread only).
          * @note Guarded unconditionally because it may construct; for concurrent
          *       read-only access from workers use get<T>() on a pre-created entry.
-         * @see collections::Context::getOrEmplace
+         * @see collections::SingletonStore::getOrEmplace
          */
         template<typename T, typename... Args>
         T& getOrEmplace(Args&&... args)
@@ -59,7 +59,7 @@ namespace ecs
 
         /**
          * @brief Removes the stored instance of type T (main thread only).
-         * @see collections::Context::remove
+         * @see collections::SingletonStore::remove
          */
         template<typename T>
         void remove()

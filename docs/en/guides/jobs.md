@@ -274,7 +274,7 @@ R-ECS's own test and benchmark runners call `ecs::MarkMainThread()` at the very
 start of `main`, so the affinity checks are live throughout the suite.
 
 `ecs::Context` is a thin ECS-layer adapter over the generic
-`collections::Context` (the same way `ecs::EventSystem` wraps the generic event
+`collections::SingletonStore` (the same way `ecs::EventSystem` wraps the generic event
 dispatcher): it guards only the mutating operations, while read-only `get` /
 `has` are inherited unchanged and remain safe to call concurrently from workers
 on entries that already exist. Create shared resources on the main thread, then

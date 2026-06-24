@@ -38,7 +38,7 @@ C++ (C++20). Сущности хранятся в плотных чанках, �
 |-----------|------------|-------------|
 | `ecs/Registry.hpp` | Центральный узел: владеет сущностями, событиями, системами, контекстом, очередью команд | [Быстрый старт](./guides/getting-started.md) |
 | `ecs/ISystem.hpp` | CRTP-база для систем и макросы `ECS_*` | [Системы и планирование](./guides/systems-and-scheduling.md) |
-| `ecs/Context.hpp` | Адаптер над `collections::Context` с гардом главного потока | [Джобы и многопоточность](./guides/jobs.md) |
+| `ecs/Context.hpp` | Адаптер над `collections::SingletonStore` с гардом главного потока | [Джобы и многопоточность](./guides/jobs.md) |
 
 ### `include/ecs/entities` — сущности и хранилище
 

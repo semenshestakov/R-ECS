@@ -120,7 +120,7 @@ if(TEST_ENABLE)
             test/event/Listener.cpp
             test/event/EventSystem.cpp
             test/collections/BitSet.cpp
-            test/collections/Context.cpp
+            test/collections/SingletonStore.cpp
             test/collections/CommandQueue.cpp
             test/collections/DirectedAcyclicGraph.cpp
             test/ecs/AutoRegistration.cpp

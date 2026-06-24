@@ -43,8 +43,10 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
 
 /* static */ inline const ecs::RegisterComponentInfo& ecs::ComponentRegistrator::GetInfo(const componentId_t componentId)
 {
+#ifndef NDEBUG
     if(componentId == INVALID_COMPONENT_ID)
         throw error::InvalidComponentId("ComponentRegistrator::GetInfo; componentId == INVALID_COMPONENT_ID");
+#endif
     return Super::collection().at(static_cast<std::size_t>(componentId - 1)).second.value();
 }
 

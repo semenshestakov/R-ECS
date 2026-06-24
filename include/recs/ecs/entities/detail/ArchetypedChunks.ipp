@@ -20,7 +20,7 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::iterator(Archetyped
     {
         m_componentArrays = std::tuple{
             std::bit_cast<ComponentCls*>(
-                m_archetypedChunks->GetComponentData(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS, ComponentRegistrator::GetComponentId<ComponentCls>())
+                m_archetypedChunks->GetComponentDataUnchecked(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS, ComponentRegistrator::GetComponentId<ComponentCls>())
             )...
         };
     }
@@ -206,6 +206,28 @@ inline const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntit
     return &chunk[componentSize * localEntityIndex];
 }
 
+inline ecs::byte* ecs::ArchetypedChunks::GetComponentDataUnchecked(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId)
+{
+    assert(m_archetype.test(componentId));
+
+    const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
+    const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
+    const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
+
+    return &m_chunksByComponentId[componentId][chunkIndex][componentSize * localEntityIndex];
+}
+
+inline const ecs::byte* ecs::ArchetypedChunks::GetComponentDataUnchecked(const chunkEntityIndex_t chunkEntityIndex, const componentId_t componentId) const
+{
+    assert(m_archetype.test(componentId));
+
+    const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
+    const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
+    const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
+
+    return &m_chunksByComponentId[componentId][chunkIndex][componentSize * localEntityIndex];
+}
+
 template <ecs::IsComponent ComponentCls>
 ComponentCls* ecs::ArchetypedChunks::TryGetComponent(const chunkEntityIndex_t chunkEntityIndex)
 {
@@ -222,17 +244,14 @@ const ComponentCls* ecs::ArchetypedChunks::TryGetComponent(const chunkEntityInde
 template <ecs::IsComponent ComponentCls>
 ComponentCls& ecs::ArchetypedChunks::GetComponent(const chunkEntityIndex_t chunkEntityIndex)
 {
-    ComponentCls* componentData = TryGetComponent<ComponentCls>(chunkEntityIndex);
-    assert(componentData != nullptr);
-    return *componentData;
+    return *std::bit_cast<ComponentCls*>(GetComponentDataUnchecked(chunkEntityIndex, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 template <ecs::IsComponent ComponentCls>
 const ComponentCls& ecs::ArchetypedChunks::GetComponent(const chunkEntityIndex_t chunkEntityIndex) const
 {
-    const ComponentCls* componentData = TryGetComponent<ComponentCls>(chunkEntityIndex);
-    assert(componentData != nullptr);
-    return *componentData;
+    return *std::bit_cast<const ComponentCls*>(
+        GetComponentDataUnchecked(chunkEntityIndex, ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
 
 inline const ecs::Archetype& ecs::ArchetypedChunks::archetype() const { return m_archetype; }

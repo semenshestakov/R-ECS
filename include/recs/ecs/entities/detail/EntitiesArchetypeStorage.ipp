@@ -304,15 +304,13 @@ inline const ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const Ar
 template<ecs::IsComponent ComponentCls>
 ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location)
 {
-    ComponentCls* componentData = TryGetComponent<ComponentCls>(location);
-    assert(componentData != nullptr);
-    return *componentData;
+    assert(location.archetypeIndex < m_storageByArchetypeIndex.size());
+    return m_storageByArchetypeIndex[location.archetypeIndex].template GetComponent<ComponentCls>(location.chunkEntityIndex);
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location) const
 {
-    const ComponentCls* componentData = TryGetComponent<ComponentCls>(location);
-    assert(componentData != nullptr);
-    return *componentData;
+    assert(location.archetypeIndex < m_storageByArchetypeIndex.size());
+    return m_storageByArchetypeIndex[location.archetypeIndex].template GetComponent<ComponentCls>(location.chunkEntityIndex);
 }

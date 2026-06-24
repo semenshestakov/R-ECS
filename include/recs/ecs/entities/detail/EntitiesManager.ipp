@@ -210,17 +210,15 @@ const ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity) 
 template<ecs::IsComponent ComponentCls>
 ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity)
 {
-    ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
+    assert(IsAlive(entity));
+    return m_storage.template GetComponent<ComponentCls>(m_entitiesLocationByEntityIndex[entity.id]);
 }
 
 template<ecs::IsComponent ComponentCls>
 const ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity) const
 {
-    const ComponentCls* component = TryGetComponent<ComponentCls>(entity);
-    assert(component != nullptr);
-    return *component;
+    assert(IsAlive(entity));
+    return m_storage.template GetComponent<ComponentCls>(m_entitiesLocationByEntityIndex[entity.id]);
 }
 
 template<ecs::IsComponent... ComponentCls>

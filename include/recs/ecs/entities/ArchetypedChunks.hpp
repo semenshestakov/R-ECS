@@ -210,6 +210,24 @@ namespace ecs
          */
         [[nodiscard]] entityId_t Destroy(chunkEntityIndex_t chunkEntityIndex);
 
+    private:
+        /**
+         * @brief Retrieves component data without checking archetype membership.
+         *
+         * Same address computation as GetComponentData but omits the m_archetype.test()
+         * membership check. Intended for hot paths where the archetype is already known to
+         * contain the component (asserting accessors, view iteration over a matched archetype).
+         *
+         * @param chunkEntityIndex Index of the entity
+         * @param componentId ID of the component to retrieve
+         * @return byte* Pointer to component data
+         *
+         * @pre m_archetype.test(componentId) == true
+         */
+        [[nodiscard]] byte* GetComponentDataUnchecked(chunkEntityIndex_t chunkEntityIndex, componentId_t componentId);
+        [[nodiscard]] const byte* GetComponentDataUnchecked(chunkEntityIndex_t chunkEntityIndex, componentId_t componentId) const;
+
+    public:
         /**
          * @brief Retrieves mutable component data for a specific component type.
          *

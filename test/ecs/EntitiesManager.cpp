@@ -2,6 +2,7 @@
 #include "ecs/entities/EntitiesManager.hpp"
 
 #include <set>
+#include <type_traits>
 #include <unordered_set>
 #include <vector>
 
@@ -339,6 +340,129 @@ TEST_F(EntitiesManagerTest, View_Entity_SpansMultipleChunks)
 
     EXPECT_EQ(seen.size(), total);
     EXPECT_EQ(seen, created);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_PresentAndAbsent)
+{
+    manager.Create(Create2DPrefab(1.f, 2.f));    // Position2d only -> optional absent
+    manager.Create(CreateMixedPrefab());         // Position2d + Position3d -> optional present
+
+    size_t with2dOnly = 0;
+    size_t withBoth = 0;
+
+    for (auto [pos2d, pos3d] : manager.view<Position2d, Position3d*>())
+    {
+        static_assert(std::is_pointer_v<decltype(pos3d)>);
+
+        if (pos2d.x == 1.f)
+        {
+            EXPECT_EQ(pos3d, nullptr);
+            ++with2dOnly;
+        }
+        else
+        {
+            EXPECT_FLOAT_EQ(pos2d.x, 10.f);
+            ASSERT_NE(pos3d, nullptr);
+            EXPECT_FLOAT_EQ(pos3d->z, 3.f);
+            ++withBoth;
+        }
+    }
+
+    EXPECT_EQ(with2dOnly, 1u);
+    EXPECT_EQ(withBoth, 1u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_DoesNotAffectArchetypeFilter)
+{
+    manager.Create(Create2DPrefab());      // matches (has Position2d)
+    manager.Create(CreateMixedPrefab());   // matches (has Position2d)
+    manager.Create(Create3DPrefab());      // excluded (no Position2d)
+
+    size_t count = 0;
+    for (auto [pos2d, pos3d] : manager.view<Position2d, Position3d*>())
+    {
+        (void)pos2d; (void)pos3d;
+        ++count;
+    }
+
+    EXPECT_EQ(count, 2u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_PointerIsWritable)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    for (auto [pos2d, pos3d] : manager.view<Position2d, Position3d*>())
+    {
+        (void)pos2d;
+        ASSERT_NE(pos3d, nullptr);
+        pos3d->z = 42.f;   // write through the optional pointer
+    }
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(e).z, 42.f);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_WithEntity_MatchesTryGetComponent)
+{
+    manager.Create(Create2DPrefab());
+    manager.Create(CreateMixedPrefab());
+
+    size_t count = 0;
+    for (auto [entity, pos2d, pos3d] : manager.view<Entity, Position2d, Position3d*>())
+    {
+        (void)pos2d;
+        // The optional pointer is exactly what TryGetComponent would return for this entity.
+        EXPECT_EQ(pos3d, manager.TryGetComponent<Position3d>(entity));
+        ++count;
+    }
+
+    EXPECT_EQ(count, 2u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_OnlyOptional_VisitsEveryEntity)
+{
+    manager.Create(Create2DPrefab());      // no Position3d -> nullptr
+    manager.Create(CreateMixedPrefab());   // has Position3d
+    manager.Create(Create3DPrefab());      // has Position3d
+
+    size_t total = 0;
+    size_t present = 0;
+
+    for (auto [pos3d] : manager.view<Position3d*>())
+    {
+        ++total;
+        if (pos3d != nullptr)
+            ++present;
+    }
+
+    EXPECT_EQ(total, 3u);     // empty required filter -> every alive entity
+    EXPECT_EQ(present, 2u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_RequiredStillFilters)
+{
+    manager.Create(CreateMixedPrefab());   // has both
+    manager.Create(Create3DPrefab());      // has Position3d but NOT Position2d
+
+    // Position3d required, Position2d optional: only entities owning Position3d match.
+    size_t count = 0;
+    size_t with2d = 0;
+    for (auto [pos3d, pos2d] : manager.view<Position3d, Position2d*>())
+    {
+        (void)pos3d;
+        ++count;
+        if (pos2d != nullptr)
+            ++with2d;
+    }
+
+    EXPECT_EQ(count, 2u);
+    EXPECT_EQ(with2d, 1u);
 }
 
 

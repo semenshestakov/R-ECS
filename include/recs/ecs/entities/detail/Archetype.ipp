@@ -51,6 +51,24 @@ template<ecs::IsComponent... ComponentCls>
     return s_archetype;
 }
 
+template<ecs::IsComponent... Args>
+/* static */ const ecs::Archetype& ecs::Archetype::GetViewArchetype()
+{
+    static const Archetype s_archetype = []() {
+        Archetype archetype;
+        ( (std::is_pointer_v<Args>
+              ? void()
+              : void(archetype.set(ComponentRegistrator::GetComponentId<std::remove_pointer_t<Args>>()))), ... );
+
+        if constexpr ((false || ... || !std::is_pointer_v<Args>))
+            archetype.m_hash = Archetype::GetArchetypeHash(archetype);
+
+        return archetype;
+    }();
+
+    return s_archetype;
+}
+
 // =========================================== ArchetypedChunkEntityLocation ===========================================
 
 inline bool ecs::ArchetypedChunkEntityLocation::operator==(const ArchetypedChunkEntityLocation& other) const

@@ -77,6 +77,32 @@ for (auto [entity, pos, vel] : world.view<Entity, Position2d, Velocity2d>())
 
 `view<Entity>()` on its own walks every alive entity and yields just its handle.
 
+### Optional components
+
+Write a component as a pointer — `Component*` — to make it optional. Optional
+components do **not** take part in the archetype filter: the view still selects
+entities by its required (non-pointer) components, and for each match the optional
+argument yields a pointer to the component when the entity owns it, or `nullptr`
+otherwise. It is the iteration-time equivalent of `TryGetComponent`:
+
+```cpp
+for (auto [pos, vel] : world.view<Position2d, Velocity2d*>())
+{
+    pos.x += 1.f;                    // Position2d is required — a reference
+    if (vel) pos.x += vel->x;        // Velocity2d is optional — pointer or nullptr
+}
+```
+
+The markers compose with `Entity` and with each other:
+
+```cpp
+for (auto [entity, hp, shield] : world.view<Entity, Health, Shield*>())
+    ...
+```
+
+If every listed component is optional, the required filter is empty and the view
+walks every alive entity, reporting each optional component as present or null.
+
 ## Changing an entity's components
 
 `AddComponents` and `RemoveComponents` move the entity to a new archetype,

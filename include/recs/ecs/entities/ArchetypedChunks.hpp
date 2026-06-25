@@ -1,5 +1,8 @@
 #ifndef ARCHETYPED_CHUNKS_HPP
 #define ARCHETYPED_CHUNKS_HPP
+#include <bit>
+#include <tuple>
+#include <type_traits>
 #include "../components/Utils.hpp"
 #include "Archetype.hpp"
 #include "Entity.hpp"
@@ -24,6 +27,41 @@ namespace ecs
 
 
     /**
+     * @brief Optional-component marker for views.
+     *
+     * A view argument written as `Component*` is optional: it does not take part in
+     * the archetype filter, and per entity it yields a pointer to the component when
+     * the entity's archetype owns it, or `nullptr` otherwise (the @ref
+     * ArchetypedChunks::TryGetComponent semantics). A plain `Component` stays required
+     * and is yielded by reference.
+     */
+    template<typename Arg> inline constexpr bool is_optional_component_v = std::is_pointer_v<Arg>;
+
+    /// @brief The underlying component type of a view argument (`Component*` → `Component`).
+    template<typename Arg> using component_bare_t = std::remove_pointer_t<Arg>;
+
+    /**
+     * @brief Element produced for a single view argument: `Component*` for optional,
+     * `Component&` for required.
+     */
+    template<typename Arg>
+    using view_element_t = std::conditional_t<is_optional_component_v<Arg>, Arg, Arg&>;
+
+    /**
+     * @brief Value type yielded per entity for a (non-Entity) view argument pack.
+     *
+     * Generalizes @ref iter_value_type to optional components: each argument maps to
+     * @ref view_element_t. An empty pack still yields the packed chunk-entity index.
+     */
+    template<typename... Args>
+    using view_value_type = std::conditional_t<
+        (sizeof...(Args) > 0),
+        std::tuple<view_element_t<Args>...>,
+        chunkEntityIndex_t
+    >;
+
+
+    /**
      * @brief Detects whether an iterator value type carries the owning Entity.
      *
      * True only for tuples whose first element is exactly Entity (by value),
@@ -41,9 +79,9 @@ namespace ecs
      *
      * The pack passed to `view<Args...>()` may optionally start with `Entity`. When
      * it does, the entity is stripped from the component list (entities are not
-     * components and must not enter the archetype) and the iterator value type
-     * becomes a tuple of the Entity plus the requested component references.
-     * Otherwise the value type is the usual @ref iter_value_type.
+     * components and must not enter the archetype) and prepended to the value type.
+     * The remaining arguments keep their @ref view_element_t mapping, so optional
+     * `Component*` arguments are preserved as pointer elements.
      *
      * @tparam IterT  Iterator class template parameterized as `IterT<ValueType, Components...>`.
      * @tparam Args   View argument pack, optionally led by `Entity`.
@@ -51,13 +89,13 @@ namespace ecs
     template<template<typename, typename...> class IterT, typename... Args>
     struct view_iterator
     {
-        using type = IterT<iter_value_type<Args...>, Args...>;
+        using type = IterT<view_value_type<Args...>, Args...>;
     };
 
     template<template<typename, typename...> class IterT, typename... ComponentCls>
     struct view_iterator<IterT, Entity, ComponentCls...>
     {
-        using type = IterT<std::tuple<Entity, ComponentCls&...>, ComponentCls...>;
+        using type = IterT<std::tuple<Entity, view_element_t<ComponentCls>...>, ComponentCls...>;
     };
 
     template<template<typename, typename...> class IterT, typename... Args>
@@ -167,9 +205,52 @@ namespace ecs
              */
             void advance();
 
+            /**
+             * @brief Resolves the base pointer of one component array in the current chunk.
+             *
+             * Required components use the unchecked accessor (the archetype is known to
+             * contain them). Optional `Component*` arguments use the checked accessor, so a
+             * chunk whose archetype lacks the component yields a null base — every entity in
+             * that chunk then reports the component as absent.
+             *
+             * @tparam Comp View argument (`Component` or `Component*`).
+             * @param chunkBaseIndex Global index of the chunk's first slot.
+             * @return Base pointer to the component array, or nullptr for an absent optional.
+             */
+            template<typename Comp>
+            [[nodiscard]] component_bare_t<Comp>* componentBase(const chunkEntityIndex_t chunkBaseIndex) const
+            {
+                using Bare = component_bare_t<Comp>;
+                const componentId_t componentId = ComponentRegistrator::GetComponentId<Bare>();
+
+                if constexpr (is_optional_component_v<Comp>)
+                    return std::bit_cast<Bare*>(m_archetypedChunks->GetComponentData(chunkBaseIndex, componentId));
+                else
+                    return std::bit_cast<Bare*>(m_archetypedChunks->GetComponentDataUnchecked(chunkBaseIndex, componentId));
+            }
+
+            /**
+             * @brief Produces the value yielded for one component at the current entity.
+             *
+             * @tparam Comp View argument (`Component` or `Component*`).
+             * @return `Component&` for a required argument; a `Component*` (possibly nullptr)
+             *         for an optional one.
+             */
+            template<typename Comp>
+            [[nodiscard]] view_element_t<Comp> elementOf() const
+            {
+                using Bare = component_bare_t<Comp>;
+                Bare* base = std::get<Bare*>(m_componentArrays);
+
+                if constexpr (is_optional_component_v<Comp>)
+                    return base ? base + m_entityIndex : nullptr;
+                else
+                    return base[m_entityIndex];
+            }
+
             chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;       ///< Current chunk index.
             chunkEntityIndex_t m_entityIndex = INVALID_CHUNK_ENTITY_INDEX;      ///< Current entity index within the chunk.
-            std::tuple<ComponentCls*...> m_componentArrays;                     ///< Component array pointers for the current chunk.
+            std::tuple<component_bare_t<ComponentCls>*...> m_componentArrays;   ///< Component array base pointers for the current chunk.
             ArchetypedChunks* m_archetypedChunks = nullptr;                     ///< Chunk storage being iterated.
         };
 

@@ -40,12 +40,13 @@ namespace ecs
             using difference_type = std::ptrdiff_t;                 ///< Signed type used for iterator distance calculations.
 
             /**
-             * @brief Archetype composed from all requested ComponentCls types.
+             * @brief Archetype composed from the required ComponentCls types.
              *
-             * Used to quickly determine whether a storage archetype contains
-             * all components required by this iterator.
+             * Used to quickly determine whether a storage archetype contains all
+             * components required by this iterator. Optional `Component*` arguments are
+             * excluded from the filter (see Archetype::GetViewArchetype).
              */
-            static inline const Archetype s_archetype = Archetype::GetArchetype<ComponentCls...>();
+            static inline const Archetype s_archetype = Archetype::GetViewArchetype<ComponentCls...>();
 
             /**
              * @brief Constructs end iterator.

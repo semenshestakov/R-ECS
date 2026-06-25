@@ -68,6 +68,19 @@ namespace ecs
         template<IsComponent... ComponentCls>
         static const Archetype& GetArchetype();
 
+        /**
+         * @brief Builds the filter archetype for a view argument pack.
+         *
+         * Like GetArchetype, but optional arguments written as `Component*` are skipped:
+         * only required (non-pointer) components form the archetype an entity must match.
+         * Optional components are resolved per entity instead of constraining the query.
+         *
+         * @tparam Args View argument types (`Component` required, `Component*` optional).
+         * @return Const reference to the cached filter archetype.
+         */
+        template<IsComponent... Args>
+        static const Archetype& GetViewArchetype();
+
     private:
         archetypeHash_t m_hash {};                            ///< Hash value uniquely identifying this component combination
 

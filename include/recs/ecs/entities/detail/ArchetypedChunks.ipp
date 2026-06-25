@@ -19,9 +19,7 @@ ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::iterator(Archetyped
     if (*this)
     {
         m_componentArrays = std::tuple{
-            std::bit_cast<ComponentCls*>(
-                m_archetypedChunks->GetComponentDataUnchecked(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS, ComponentRegistrator::GetComponentId<ComponentCls>())
-            )...
+            componentBase<ComponentCls>(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS)...
         };
     }
 }
@@ -33,13 +31,13 @@ template<typename ValueType, ecs::IsComponent... ComponentCls> ValueType ecs::Ar
     if constexpr (is_entity_value_type_v<ValueType>)
         return value_type{
             m_archetypedChunks->m_localIndexToEntityId[m_chunkIndex][m_entityIndex],
-            std::get<ComponentCls*>(m_componentArrays)[m_entityIndex]...
+            elementOf<ComponentCls>()...
         };
     else if constexpr (sizeof...(ComponentCls) == 0)
         return m_entityIndex | m_chunkIndex;
     else
         return value_type{
-            std::get<ComponentCls*>(m_componentArrays)[m_entityIndex]...
+            elementOf<ComponentCls>()...
         };
 }
 
@@ -96,9 +94,7 @@ void ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::advance()
         }
 
         m_componentArrays = std::tuple{
-            std::bit_cast<ComponentCls*>(
-                m_archetypedChunks->GetComponentData(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS, ComponentRegistrator::GetComponentId<ComponentCls>())
-            )...
+            componentBase<ComponentCls>(m_chunkIndex << MAX_ENTITIES_IN_CHUNK_BITS)...
         };
         m_entityIndex = 0;
 

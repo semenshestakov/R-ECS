@@ -466,6 +466,73 @@ TEST_F(EntitiesManagerTest, View_Optional_RequiredStillFilters)
 }
 
 
+TEST_F(EntitiesManagerTest, GetComponents_RequiredAndOptional_Present)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d*>(e);
+
+    static_assert(std::is_pointer_v<decltype(pos3d)>);
+
+    EXPECT_EQ(&pos2d, &manager.GetComponent<Position2d>(e));
+    ASSERT_NE(pos3d, nullptr);
+    EXPECT_EQ(pos3d, manager.TryGetComponent<Position3d>(e));
+    EXPECT_FLOAT_EQ(pos2d.x, 10.f);
+    EXPECT_FLOAT_EQ(pos3d->z, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_OptionalAbsent_IsNull)
+{
+    const Entity e = manager.Create<Entity>(Create2DPrefab(1.f, 2.f));
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d*>(e);
+
+    EXPECT_FLOAT_EQ(pos2d.x, 1.f);
+    EXPECT_EQ(pos3d, nullptr);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_ReferencesAreWritable)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d*>(e);
+    ASSERT_NE(pos3d, nullptr);
+
+    pos2d.x = 7.f;     // required reference
+    pos3d->z = 9.f;    // optional pointer
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(e).x, 7.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(e).z, 9.f);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_AllRequired)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d>(e);
+
+    EXPECT_EQ(&pos2d, &manager.GetComponent<Position2d>(e));
+    EXPECT_EQ(&pos3d, &manager.GetComponent<Position3d>(e));
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_ConstOverload)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    const EntitiesManager& constManager = manager;
+    std::tuple<const Position2d&, const Position3d*> components =
+        constManager.GetComponents<Position2d, Position3d*>(e);
+
+    EXPECT_FLOAT_EQ(std::get<0>(components).x, 10.f);
+    ASSERT_NE(std::get<1>(components), nullptr);
+    EXPECT_FLOAT_EQ(std::get<1>(components)->z, 3.f);
+}
+
+
 TEST_F(EntitiesManagerTest, ReuseEntityIds)
 {
     const auto entity1 = manager.Create(Create2DPrefab());

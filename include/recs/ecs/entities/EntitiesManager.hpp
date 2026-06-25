@@ -153,6 +153,34 @@ namespace ecs
         template<IsComponent ComponentCls> [[nodiscard]] const ComponentCls* TryGetComponent(const Entity& entity) const;
 
         /**
+         * @brief Bulk component access mirroring the view<...> element semantics.
+         *
+         * Each argument maps exactly like a view argument: a required `Component`
+         * yields a reference (GetComponent), an optional `Component*` yields a pointer
+         * that is nullptr when the entity lacks it (TryGetComponent). The result is a
+         * tuple of those elements, ready for structured bindings.
+         *
+         * @tparam Args Component types: `Component` required, `Component*` optional.
+         * @param entity Entity to read.
+         * @return Tuple with one reference/pointer per argument.
+         * @note Asserts the entity is alive; required components must be present.
+         * @note Example: auto [pos, vel] = manager.GetComponents<Position2d, Velocity2d*>(e);
+         */
+        template<typename... Args> [[nodiscard]] auto GetComponents(const Entity& entity);
+
+        /**
+         * @brief Const overload of GetComponents.
+         *
+         * Required arguments yield `const Component&`, optional arguments yield
+         * `const Component*`.
+         *
+         * @tparam Args Component types: `Component` required, `Component*` optional.
+         * @param entity Entity to read.
+         * @return Tuple with one const reference/pointer per argument.
+         */
+        template<typename... Args> [[nodiscard]] auto GetComponents(const Entity& entity) const;
+
+        /**
          * @brief Gets mutable component data by component ID.
          * Low-level access for generic component operations.
          * @param entity Entity owning the component

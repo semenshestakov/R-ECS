@@ -222,6 +222,36 @@ const ComponentCls& ecs::EntitiesManager::GetComponent(const Entity& entity) con
 }
 
 template<typename... Args>
+auto ecs::EntitiesManager::GetComponents(const Entity& entity)
+{
+    assert(IsAlive(entity));
+    return std::tuple<view_element_t<Args>...>(
+        [&]() -> view_element_t<Args>
+        {
+            if constexpr (is_optional_component_v<Args>)
+                return TryGetComponent<component_bare_t<Args>>(entity);
+            else
+                return GetComponent<component_bare_t<Args>>(entity);
+        }()...
+    );
+}
+
+template<typename... Args>
+auto ecs::EntitiesManager::GetComponents(const Entity& entity) const
+{
+    assert(IsAlive(entity));
+    return std::tuple<view_const_element_t<Args>...>(
+        [&]() -> view_const_element_t<Args>
+        {
+            if constexpr (is_optional_component_v<Args>)
+                return TryGetComponent<component_bare_t<Args>>(entity);
+            else
+                return GetComponent<component_bare_t<Args>>(entity);
+        }()...
+    );
+}
+
+template<typename... Args>
 auto ecs::EntitiesManager::view()
 {
     struct View

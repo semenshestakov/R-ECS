@@ -103,6 +103,19 @@ for (auto [entity, hp, shield] : world.view<Entity, Health, Shield*>())
 If every listed component is optional, the required filter is empty and the view
 walks every alive entity, reporting each optional component as present or null.
 
+### Reading several components at once
+
+`GetComponents<...>()` applies the very same `Component` / `Component*` rules to a
+single entity by handle, returning a tuple instead of iterating. A required
+`Component` comes back as a reference, an optional `Component*` as a pointer (null
+when absent) — the bulk equivalent of `GetComponent` / `TryGetComponent`:
+
+```cpp
+auto [pos, vel] = world.GetComponents<Position2d, Velocity2d*>(entity);
+pos.x += 1.f;
+if (vel) pos.x += vel->x;
+```
+
 ## Changing an entity's components
 
 `AddComponents` and `RemoveComponents` move the entity to a new archetype,

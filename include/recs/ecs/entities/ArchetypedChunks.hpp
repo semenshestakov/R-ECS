@@ -48,6 +48,17 @@ namespace ecs
     using view_element_t = std::conditional_t<is_optional_component_v<Arg>, Arg, Arg&>;
 
     /**
+     * @brief Const counterpart of @ref view_element_t: `const Component*` for optional,
+     * `const Component&` for required.
+     */
+    template<typename Arg>
+    using view_const_element_t = std::conditional_t<
+        is_optional_component_v<Arg>,
+        const component_bare_t<Arg>*,
+        const component_bare_t<Arg>&
+    >;
+
+    /**
      * @brief Value type yielded per entity for a (non-Entity) view argument pack.
      *
      * Generalizes @ref iter_value_type to optional components: each argument maps to

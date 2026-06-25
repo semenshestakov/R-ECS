@@ -106,6 +106,19 @@ for (auto [entity, hp, shield] : world.view<Entity, Health, Shield*>())
 представление обходит все живые сущности, сообщая для каждого опционального
 компонента его наличие или `nullptr`.
 
+### Чтение нескольких компонентов сразу
+
+`GetComponents<...>()` применяет те же правила `Component` / `Component*` к одной
+сущности по хэндлу, возвращая кортеж вместо итерации. Обязательный `Component`
+возвращается ссылкой, опциональный `Component*` — указателем (`nullptr`, если
+компонента нет). Это пакетный аналог `GetComponent` / `TryGetComponent`:
+
+```cpp
+auto [pos, vel] = world.GetComponents<Position2d, Velocity2d*>(entity);
+pos.x += 1.f;
+if (vel) pos.x += vel->x;
+```
+
 ## Изменение набора компонентов сущности
 
 `AddComponents` и `RemoveComponents` переносят сущность в новый архетип,

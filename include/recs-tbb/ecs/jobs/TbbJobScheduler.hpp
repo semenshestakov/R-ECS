@@ -161,19 +161,6 @@ namespace ecs
          */
         void PumpServices() override;
 
-        /**
-         * @brief Whether this backend can host services on dedicated OS threads.
-         *
-         * Always returns false. Services run cooperatively on the shared arena,
-         * never on a dedicated OS thread. Truly blocking subsystems (audio,
-         * socket I/O) are out of scope for this backend.
-         *
-         * @return false — all services are cooperative and frame-paced.
-         *
-         * @see IJobScheduler::CanHostDedicatedThreads
-         */
-        [[nodiscard]] bool CanHostDedicatedThreads() const noexcept override { return false; }
-
     private:
         struct Impl;
         std::unique_ptr<Impl> m_impl; ///< PIMPL — hides all oneTBB types (task_arena, task_group, service list) from consumers.

@@ -119,16 +119,6 @@ namespace ecs
         virtual void PumpServices() {}
 
         /**
-         * @brief Whether this backend can host services on dedicated OS threads.
-         *
-         * Cooperative services (SpawnService) are a universal contract every
-         * backend honours. Truly dedicated threads with their own cadence (for
-         * audio mixing or blocking I/O) are not: a threadless backend cannot
-         * provide them. Backends that can advertise it here; the default is false.
-         */
-        [[nodiscard]] virtual bool CanHostDedicatedThreads() const noexcept { return false; }
-
-        /**
          * @brief Data-parallel per-entity iteration over a chunk view, Unity ScheduleParallel-style.
          *
          * This is the parallel counterpart of a plain `for (auto e : view<...>())` loop. It mirrors

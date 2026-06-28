@@ -99,7 +99,7 @@ namespace event
     }
 
     template<typename... Args>
-    void Event<Args...>::operator()(Args... args)
+    void Event<Args...>::operator()(Args... args) const
     {
         m_dispatching = true;
         bool hasRemoved = false;

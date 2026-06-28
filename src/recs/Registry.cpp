@@ -23,7 +23,7 @@ void ecs::Registry::SetScheduler(std::unique_ptr<IJobScheduler> scheduler)
 
 bool ecs::Registry::Init(void* args /* = nullptr */)
 {
-    const bool result = m_systemManager.Init({"", args}, {});
+    const bool result = m_systemManager.Init({"", args, *this}, {});
     if (result)
         return result&m_systemManager.Subscribe({m_eventSystem}, {});
     return result;

@@ -21,7 +21,7 @@ T& collections::SingletonStore::get()
     auto id = getStoreKey<T>();
     assert(m_data.contains(id) && "Context: type not found");
 
-    auto* holder = static_cast<Holder<T>*>(m_data[id].get());
+    auto* holder = static_cast<Holder<T>*>(m_data.at(id).get());
     return holder->value;
 }
 
@@ -31,7 +31,7 @@ const T& collections::SingletonStore::get() const
     auto id = getStoreKey<T>();
     assert(m_data.contains(id) && "Context: type not found");
 
-    auto* holder = static_cast<Holder<T>*>(m_data[id].get());
+    auto* holder = static_cast<Holder<T>*>(m_data.at(id).get());
     return holder->value;
 }
 

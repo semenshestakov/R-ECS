@@ -22,7 +22,13 @@ namespace collections
             func(args...);
     }
 
-    template<typename... Args>
+    template <typename... Args>
+    void CommandQueue<Args...>::operator()(Args... args)
+    {
+        Flush<Args...>(std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
     bool CommandQueue<Args...>::empty() const
     {
         return m_queue.empty();
@@ -35,3 +41,11 @@ namespace collections
     }
 
 } // namespace collections
+
+template <typename... Args>
+collections::CommandQueue<Args...>& operator+(collections::CommandQueue<Args...>& cmdQueue, std::function<void(Args...)>&& func)
+{
+    cmdQueue.Push(std::forward<decltype(func)>(func));
+    return cmdQueue;
+}
+

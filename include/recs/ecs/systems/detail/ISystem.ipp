@@ -61,9 +61,7 @@ void ecs::ISystem<SystemCls>::SetEventsPriority(const event::priority_t priority
 
 template<typename SystemCls>
 template<class Event>
-auto ecs::ISystem<SystemCls>::RegisterEvent(
-    void (SystemCls::*method)(Registry&, const Event&)
-    )-> std::unique_ptr<EventListener<Event>>
+auto ecs::ISystem<SystemCls>::RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<EventListener<Event>>
 {
     std::unique_ptr<EventListener<Event>> listenerPtr = std::make_unique<EventListener<Event>>();
     std::function<void(EventSystem&, event::priority_t)> registerFunction = [this, listener = listenerPtr.get(), method](

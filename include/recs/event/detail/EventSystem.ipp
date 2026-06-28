@@ -40,9 +40,9 @@ namespace event
 
     template<typename K>
     template<typename... Args>
-    void EventSystem<K>::OnEvent(const K& key, Args&&... args)
+    void EventSystem<K>::OnEvent(const K& key, Args&&... args) const
     {
-        if(auto* event = TryGet<Args...>(key))
+        if(const auto* event = TryGet<Args...>(key))
             (*event)(std::forward<Args>(args)...);
     }
 
@@ -88,7 +88,7 @@ namespace event
         if(it == m_eventsMap.end())
             return nullptr;
 
-        return dynamic_cast<Event<Args...>*>(it->second.get());
+        return dynamic_cast<const Event<Args...>*>(it->second.get());
     }
 
     template<typename K>

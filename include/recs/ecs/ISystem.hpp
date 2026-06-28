@@ -10,8 +10,8 @@
  */
 
 #include <array>
+#include "event/Listener.hpp"
 #include "common_recs/utils/ClassUtils.hpp"
-#include "event/EventSystem.hpp"
 #include "systems/IBaseSystem.hpp"
 #include "systems/SystemRegistrator.hpp"
 
@@ -148,7 +148,7 @@ namespace ecs
          * @see ECS_EVENT macro for convenient member declaration
          */
         template <class Event>
-        auto RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<EventListener<Event>>;
+        auto RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<ISystem::EventListener<Event>>;
 
         /**
          * @brief Collection of event registration functions

@@ -74,6 +74,7 @@ namespace ecs
     {
         const char* nameFactory;            ///< Identifier for the systemsManager or creator of this system
         void* args;                         ///< Pointer to system-specific initialization arguments
+        Registry& registry;
     };
 
     /**

@@ -23,7 +23,7 @@ namespace collections
     class CommandQueue
     {
     public:
-        typedef std::function<void(Args...)> func_t; ///< Type-erased callable.
+        using func_t = std::function<void(Args...)>;    ///< Type-erased callable.
 
         /**
          * @brief Constructs an empty command queue.
@@ -41,13 +41,13 @@ namespace collections
         /**
          * @brief Move constructor.
          */
-        CommandQueue(CommandQueue&&) = default;
+        CommandQueue(CommandQueue&&) noexcept = default;
 
         /**
          * @brief Move assignment.
          * @return Reference to this queue.
          */
-        CommandQueue& operator=(CommandQueue&&) = default;
+        CommandQueue& operator=(CommandQueue&&) noexcept = default;
 
         /**
          * @brief Enqueue a callable for deferred execution.
@@ -69,6 +69,17 @@ namespace collections
         void Flush(Args... args);
 
         /**
+         * @brief Execute all queued commands in FIFO order.
+         *
+         * The internal queue is swapped into a local vector so that
+         * commands added during execution are not processed in the
+         * same pass.
+         *
+         * @param args Arguments forwarded to each queued callable
+         */
+        void operator()(Args... args);
+
+        /**
          * @brief Check whether the queue holds any commands.
          */
         [[nodiscard]] bool empty() const;
@@ -83,7 +94,10 @@ namespace collections
     };
 
 }
-#include "detail/CommandQueue.ipp"
 
+template<typename... Args>
+collections::CommandQueue<Args...>& operator+(collections::CommandQueue<Args...>&, std::function<void(Args...)>&&);
+
+#include "detail/CommandQueue.ipp"
 #endif
 

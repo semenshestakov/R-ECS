@@ -60,7 +60,19 @@ namespace ecs
          * prefab.AddComponent<Health>(100);
          */
         template<IsComponent ComponentCls, typename... Args>
-        void AddComponent(Args&&... args);
+        ComponentCls& AddComponent(Args&&... args);
+        
+        template<IsComponent ComponentCls>
+        [[nodiscard]] ComponentCls* TryGetComponent();
+
+        template<IsComponent ComponentCls>
+        [[nodiscard]] const ComponentCls* TryGetComponent() const;
+
+        template<IsComponent ComponentCls>
+        [[nodiscard]] ComponentCls& GetComponent();
+
+        template<IsComponent ComponentCls>
+        [[nodiscard]] const ComponentCls& GetComponent() const;
 
         /**
          * @brief Custom deleter for component slots acquired from ComponentFreeList.

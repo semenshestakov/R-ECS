@@ -61,7 +61,7 @@ namespace ecs
          * @param event Event instance containing payload data.
          */
         template<class Event>
-        void OnEvent(const Event& event);
+        void OnEvent(const Event& event) const;
 
         /**
          * @brief Enqueue an ECS event for deferred processing within the frame
@@ -122,7 +122,7 @@ namespace ecs
 
 
     template<class Event>
-    void EventSystem::OnEvent(const Event& event)
+    void EventSystem::OnEvent(const Event& event) const
     {
         ECS_ASSERT_MAIN_THREAD("EventSystem::OnEvent");
         Super::OnEvent<Registry&, const Event&>(GetEventKey<Event>(), m_registryRef.get(), event);

@@ -49,6 +49,7 @@ namespace ecs
         ComponentRegistrator() = delete;
 
         using Super::size;
+        using Super::iter;
 
         /**
          * @brief Registers a component type and assigns it a unique ID.

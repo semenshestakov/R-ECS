@@ -61,7 +61,7 @@ namespace event
          * @note If the event doesn't exist or has wrong signature, this function does nothing
          */
         template<class... Args>
-        void OnEvent(const K& key, Args&&... args);
+        void OnEvent(const K& key, Args&&... args) const;
 
         /**
          * @brief Enqueue an event for deferred processing within the current frame

@@ -177,13 +177,13 @@ inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex
     if (!m_archetype.test(componentId))
         return nullptr;
 
-    const auto& componentChunks = m_chunksByComponentId[componentId];
+    const auto& componentChunks = m_chunksByComponentId.at(componentId);
 
     const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
-    auto& chunk = componentChunks[chunkIndex];
+    auto& chunk = componentChunks.at(chunkIndex);
     return &chunk[componentSize * localEntityIndex];
 }
 

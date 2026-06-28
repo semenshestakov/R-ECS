@@ -5,7 +5,7 @@
 inline ecs::PrefabEntity::~PrefabEntity() { clear(); }
 
 template <ecs::IsComponent ComponentCls, typename... Args>
-void ecs::PrefabEntity::AddComponent(Args&&... args)
+ComponentCls& ecs::PrefabEntity::AddComponent(Args&&... args)
 {
     static const componentId_t componentId = ComponentRegistrator::GetComponentId<ComponentCls>();
     if (m_dataByComponentsIndex.size() <= componentId)
@@ -21,6 +21,43 @@ void ecs::PrefabEntity::AddComponent(Args&&... args)
 
     m_archetype.set(componentId);
     m_dataByComponentsIndex[componentId] = {raw, PoolDeleter{componentId}};
+    return GetComponent<ComponentCls>();
+}
+
+template <ecs::IsComponent ComponentCls>
+ComponentCls* ecs::PrefabEntity::TryGetComponent()
+{
+    static const componentId_t componentId = ComponentRegistrator::GetComponentId<ComponentCls>();
+    if (componentId < m_dataByComponentsIndex.size() && m_dataByComponentsIndex[componentId] != nullptr)
+        return std::bit_cast<ComponentCls*>(m_dataByComponentsIndex[componentId].get());
+
+    return nullptr;
+}
+
+template <ecs::IsComponent ComponentCls>
+const ComponentCls* ecs::PrefabEntity::TryGetComponent() const
+{
+    static const componentId_t componentId = ComponentRegistrator::GetComponentId<ComponentCls>();
+    if (componentId < m_dataByComponentsIndex.size() && m_dataByComponentsIndex[componentId] != nullptr)
+        return std::bit_cast<ComponentCls*>(m_dataByComponentsIndex[componentId].get());
+
+    return nullptr;
+}
+
+template <ecs::IsComponent ComponentCls>
+ComponentCls& ecs::PrefabEntity::GetComponent()
+{
+    auto* component = TryGetComponent<ComponentCls>();
+    assert(component != nullptr);
+    return *component;
+}
+
+template <ecs::IsComponent ComponentCls>
+const ComponentCls& ecs::PrefabEntity::GetComponent() const
+{
+    const auto* component = TryGetComponent<ComponentCls>();
+    assert(component != nullptr);
+    return *component;
 }
 
 inline void ecs::PrefabEntity::PoolDeleter::operator()(byte* ptr) const

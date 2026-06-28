@@ -68,12 +68,12 @@ namespace event
          * Trigger the event, calling all registered callbacks.
          * @param args Arguments to pass to callbacks
          */
-        void operator()(Args... args);
+        void operator()(Args... args) const;
     
     private:
-        std::vector<Entry> m_callbacks;                                                 ///< Callback storage (sorted by ID)
+        mutable std::vector<Entry> m_callbacks;                                         ///< Callback storage (sorted by ID)
         callbackId_t m_lastCallbackId = INVALID_CALLBACK_ID + 1;                        ///< Next callback ID
-        bool m_dispatching = false;
+        mutable bool m_dispatching = false;
 
     };
 

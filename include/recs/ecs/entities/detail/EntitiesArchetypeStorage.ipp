@@ -292,7 +292,7 @@ inline ecs::Entity ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedChunkE
 inline ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId)
 {
     assert(entityLocation.archetypeIndex < m_storageByArchetypeIndex.size());
-    return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
+    return m_storageByArchetypeIndex.at(entityLocation.archetypeIndex).GetComponentData(entityLocation.chunkEntityIndex, componentId);
 }
 
 inline const ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId) const

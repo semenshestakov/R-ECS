@@ -224,7 +224,7 @@ language.
 | Event System: PushEvent / FlushEvents / priority | v0.9.0 ✅ | ✅ |
 | Benchmarks vs EnTT & flecs (create / view / delete) | v0.10.0 ✅ | ✅ |
 | Cooking: Cooker, Recipe (PrefabEntity hierarchy) | v0.11.0 ✅ | ✅ |
-| Multithreading: ThreadPool, job queues, priority jobs, JobManager, safe parallel updates | v0.12.0 🚧 | 🚧 |
+| Multithreading: ThreadPool, job queues, priority jobs, JobManager, safe parallel updates | v0.12.0 ✅ | ✅ |
 | Replication core: delta compression, RPC, pluggable network transport in `Registry` (virtual hooks — bring your own transport) | v0.13.0 📝 | 📝 |
 
 <sub>✅ done · 🚧 in progress · 📝 planned · ⚠️ deprecated · ❌ not started</sub>

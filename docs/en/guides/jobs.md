@@ -31,7 +31,6 @@ public:
                                        ServiceDesc desc = {})        = 0;
     virtual void          StopService(const ServiceHandle& handle)   = 0;
     virtual void          PumpServices()                       { /*default no-op*/ }
-    virtual bool          CanHostDedicatedThreads() const noexcept { return false; }
 };
 ```
 
@@ -94,8 +93,7 @@ class MyTbbScheduler final : public ecs::IJobScheduler
 
     // The shipped TBB backend keeps services cooperative and frame-paced
     // (Unity-style): it only records the tick, then runs every live service once
-    // per PumpServices on the arena. No dedicated thread, so
-    // CanHostDedicatedThreads() stays false.
+    // per PumpServices on the arena.
     ServiceHandle SpawnService(std::function<void()> tick, ServiceDesc) override
     {
         auto source = ecs::StopSource::Active();
@@ -211,12 +209,11 @@ services before installing the serial one.
 
 Truly **dedicated OS threads** — for hard real-time audio or blocking socket I/O,
 where a cooperative tick is not enough — are an *optional capability*, not part
-of the universal contract. A backend advertises it via
-`CanHostDedicatedThreads()` (default `false`). Neither shipped backend provides
-them: the serial backend cannot, and the bundled TBB backend deliberately runs
-services cooperatively on the shared arena and reports `false` too, so a
-cooperative tick must never block. A custom backend that needs to host a
-blocking subsystem can opt in by spawning its own thread and returning `true`.
+of the universal contract. Neither shipped backend provides them: the serial
+backend cannot, and the bundled TBB backend deliberately runs services
+cooperatively on the shared arena, so a cooperative tick must never block. A
+custom backend that needs to host a blocking subsystem can opt in by spawning
+its own thread.
 Cooperative services, by contrast, every backend must honour.
 
 A service must not touch ECS state directly (the same rule as worker threads,

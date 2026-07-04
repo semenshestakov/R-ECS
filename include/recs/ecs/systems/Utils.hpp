@@ -45,7 +45,7 @@ namespace ecs
      * @par Example:
      * @code
      * struct PlayerDiedEvent {};
-     * auto key = TryGetKey<PlayerDiedEvent>(); // Unique identifier
+     * auto key = GetEventKey<PlayerDiedEvent>(); // Unique identifier
      * @endcode
      */
     template<class Event>

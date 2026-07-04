@@ -159,10 +159,8 @@ TEST_F(TbbJobSchedulerTest, DeferredBatchWaitJoinsEveryHandle)
 }
 
 
-
 TEST_F(TbbJobSchedulerTest, WorkerCountIsAtLeastOne) { EXPECT_GE(scheduler.WorkerCount(), 1u); }
 
-TEST_F(TbbJobSchedulerTest, DoesNotHostDedicatedThreads) { EXPECT_FALSE(scheduler.CanHostDedicatedThreads()); }
 
 TEST(TbbJobSchedulerCtorTest, ExplicitThreadCountBoundsWorkerCount)
 {

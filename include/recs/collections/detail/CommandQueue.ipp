@@ -25,7 +25,7 @@ namespace collections
     template <typename... Args>
     void CommandQueue<Args...>::operator()(Args... args)
     {
-        Flush<Args...>(std::forward<Args>(args)...);
+        Flush(std::forward<Args>(args)...);
     }
 
     template <typename... Args>

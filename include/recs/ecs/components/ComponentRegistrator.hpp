@@ -14,7 +14,8 @@ namespace ecs
      */
     struct RegisterComponentInfo final
     {
-        std::string name;
+        std::string name;                                           ///< Raw (mangled) type name from typeid
+        std::string dname;                                          ///< Demangled, human-readable type name
         bufferSize_t componentSize {0};                             ///< Size of the component in bytes
         componentId_t componentId {INVALID_COMPONENT_ID};           ///< Unique identifier for the component
         void(*constructor)(byte*) = nullptr;                        ///< Placement new constructor function

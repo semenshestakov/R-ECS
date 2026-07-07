@@ -116,6 +116,40 @@ namespace ecs
          */
         void FlushEvents(FlushEventsToken _);
 
+        /**
+         * @brief Subscribe to an ECS event by its type, receiving just the event payload.
+         *
+         * Mirror of OnEvent()/PushEvent(): the event type is turned into a compile-time
+         * key via GetEventKey<Event>(), and the underlying (Registry&, const Event&)
+         * channel is created on demand. The handler is invoked with only the event, which
+         * is the convenient single-argument form.
+         *
+         * @tparam Event ECS event type to listen for.
+         * @param callback Handler invoked as void(const Event&).
+         * @param priority Listener priority (higher runs first).
+         * @return Callback id, usable with Unsubscribe().
+         */
+        template<class Event>
+        event::callbackId_t Subscribe(std::function<void(const Event&)> callback, event::priority_t priority = event::DEFAULT_PRIORITY);
+
+        /**
+         * @brief Subscribe to an ECS event, also receiving the owning Registry.
+         *
+         * @tparam Event ECS event type to listen for.
+         * @param callback Handler invoked as void(Registry&, const Event&).
+         * @param priority Listener priority (higher runs first).
+         * @return Callback id, usable with Unsubscribe().
+         */
+        template<class Event>
+        event::callbackId_t Subscribe(std::function<void(Registry&, const Event&)> callback,
+                                      event::priority_t priority = event::DEFAULT_PRIORITY);
+
+        /**
+         * @brief Remove a previously registered listener for @p Event.
+         */
+        template<class Event>
+        void Unsubscribe(event::callbackId_t callbackId);
+
     private:
         std::reference_wrapper<Registry> m_registryRef;     ///< Reference to the ECS registry used for event callbacks
     };
@@ -144,6 +178,32 @@ namespace ecs
     {
         ECS_ASSERT_MAIN_THREAD("EventSystem::FlushEvents");
         Super::FlushEvents();
+    }
+
+    template<class Event>
+    event::callbackId_t EventSystem::Subscribe(std::function<void(Registry&, const Event&)> callback, const event::priority_t priority)
+    {
+        ECS_ASSERT_MAIN_THREAD("EventSystem::Subscribe");
+        const eventKey_t key = GetEventKey<Event>();
+        Super::Create<Registry&, const Event&>(key); // no-op if the channel already exists
+        return Super::Get<Registry&, const Event&>(key).add(std::move(callback), priority);
+    }
+
+    template<class Event>
+    event::callbackId_t EventSystem::Subscribe(std::function<void(const Event&)> callback, const event::priority_t priority)
+    {
+        return Subscribe<Event>(
+            std::function<void(Registry&, const Event&)>(
+                [cb = std::move(callback)](Registry&, const Event& event) { cb(event); }),
+            priority);
+    }
+
+    template<class Event>
+    void EventSystem::Unsubscribe(const event::callbackId_t callbackId)
+    {
+        ECS_ASSERT_MAIN_THREAD("EventSystem::Unsubscribe");
+        if (auto* channel = Super::TryGet<Registry&, const Event&>(GetEventKey<Event>()))
+            channel->remove(callbackId);
     }
 
 } // namespace ecs

@@ -273,6 +273,9 @@ inline ecs::EntitiesArchetypeStorage::EntityMigration ecs::EntitiesArchetypeStor
             continue;
 
         const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+        if (componentInfo.isTag)
+            continue;
+
         componentInfo.move(
             /* to */    GetComponentData(newLocation, componentId),
             /* from */  GetComponentData(oldLocation, componentId)

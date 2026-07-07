@@ -101,6 +101,33 @@ namespace ecs
         void RemoveComponents(const Entity& entity);
 
         /**
+         * @brief Adds zero-sized tags to an existing entity.
+         *
+         * Sets the tag bits and migrates the entity to the resulting archetype without
+         * constructing any component data. Tags already present are ignored; if the set
+         * of tags is fully present the call is a no-op.
+         *
+         * @tparam Tags Tag types (must derive from ecs::Tag).
+         * @param entity Entity to modify.
+         * @note No-op if the entity is not alive.
+         */
+        template<IsTag... Tags>
+        void AddTag(const Entity& entity);
+
+        /**
+         * @brief Removes zero-sized tags from an existing entity.
+         *
+         * Equivalent to RemoveComponents for tag types: drops the tag bits and migrates
+         * the entity. Tags the entity does not have are ignored.
+         *
+         * @tparam Tags Tag types (must derive from ecs::Tag).
+         * @param entity Entity to modify.
+         * @note No-op if the entity is not alive.
+         */
+        template<IsTag... Tags>
+        void RemoveTag(const Entity& entity);
+
+        /**
          * @brief Destroys entity if it exists.
          * Marks entity as dead, calls component destructors, and returns
          * entity ID to free list for reuse with incremented version.
@@ -212,9 +239,26 @@ namespace ecs
          * @tparam Args Component types that entities must have
          * @return Range object supporting begin()/end() iteration
          * @note Example: for (auto [pos, vel] : manager.view<Position, Velocity>())
+         *
+         * The first argument selects the entity handle yielded alongside the components:
+         *  - `Entity`             yields the raw Entity (not part of the filter).
+         *  - an `EntityWrapperLike` type yields that wrapper (a wrapper-tag also filters
+         *    on its bit; a pure wrapper does not).
+         *  - a tag type (`ecs::Tag`-derived) yields the Entity and filters on the tag.
+         * Tags anywhere in the argument list are filter-only: they contribute an
+         * archetype bit but are never yielded and never allocate a column.
+         * @note Example: for (auto [e] : manager.view<Door>())  // Door : EntityWrapper, ecs::Tag
          */
         template<typename... Args>
         auto view();
+
+        /**
+         * @brief Internal: resolves the head argument of view<> to the concrete range type.
+         * @tparam Head First view argument (handle selector or component).
+         * @tparam Tail Remaining view arguments.
+         */
+        template<typename Head, typename... Tail>
+        auto viewDispatch();
 
         /**
          * @brief Creates a chunk view over entities with specified components.

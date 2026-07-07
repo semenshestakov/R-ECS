@@ -29,16 +29,16 @@ template<typename ValueType, ecs::IsComponent... ComponentCls> ValueType ecs::Ar
     assert(m_archetypedChunks != nullptr);
 
     if constexpr (is_entity_value_type_v<ValueType>)
-        return value_type{
-            m_archetypedChunks->m_localIndexToEntityId[m_chunkIndex][m_entityIndex],
-            elementOf<ComponentCls>()...
-        };
+        return std::tuple_cat(
+            std::tuple<Entity>(m_archetypedChunks->m_localIndexToEntityId[m_chunkIndex][m_entityIndex]),
+            elementTuple<ComponentCls>()...
+        );
     else if constexpr (sizeof...(ComponentCls) == 0)
         return m_entityIndex | m_chunkIndex;
     else
-        return value_type{
-            elementOf<ComponentCls>()...
-        };
+        return std::tuple_cat(
+            elementTuple<ComponentCls>()...
+        );
 }
 
 template<typename ValueType, ecs::IsComponent... ComponentCls>
@@ -127,6 +127,8 @@ inline ecs::ArchetypedChunks::~ArchetypedChunks()
             for (const componentId_t componentId : m_archetype)
             {
                 const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+                if (componentInfo.isTag)
+                    continue;
                 componentInfo.destructor(
                     &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * localEntityIndex]);
             }
@@ -143,6 +145,8 @@ inline ecs::Entity ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunk
     for (const componentId_t componentId : m_archetype)
     {
         const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+        if (componentInfo.isTag)
+            continue;
 
         componentInfo.destructor(
                 &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * localEntityIndex]);
@@ -158,6 +162,8 @@ inline ecs::Entity ecs::ArchetypedChunks::Destroy(const chunkEntityIndex_t chunk
         for (const componentId_t componentId : m_archetype)
         {
             const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+            if (componentInfo.isTag)
+                continue;
 
             componentInfo.move(
                     /* to */ &m_chunksByComponentId[componentId][chunkIndex][componentInfo.componentSize * localEntityIndex],
@@ -177,9 +183,13 @@ inline ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntityIndex
     if (!m_archetype.test(componentId))
         return nullptr;
 
+    const RegisterComponentInfo& info = ComponentRegistrator::GetInfo(componentId);
+    if (info.isTag)
+        return nullptr;
+
     const auto& componentChunks = m_chunksByComponentId.at(componentId);
 
-    const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
+    const bufferSize_t componentSize = info.componentSize;
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
@@ -193,9 +203,13 @@ inline const ecs::byte* ecs::ArchetypedChunks::GetComponentData(const chunkEntit
     if (!m_archetype.test(componentId))
         return nullptr;
 
+    const RegisterComponentInfo& info = ComponentRegistrator::GetInfo(componentId);
+    if (info.isTag)
+        return nullptr;
+
     const auto& componentChunks = m_chunksByComponentId[componentId];
 
-    const bufferSize_t componentSize = ComponentRegistrator::GetInfo(componentId).componentSize;
+    const bufferSize_t componentSize = info.componentSize;
     const std::size_t chunkIndex = getChunkByEntityIndex(chunkEntityIndex);
     const std::size_t localEntityIndex = getLocalEntityIndex(chunkEntityIndex);
 
@@ -320,11 +334,14 @@ inline ecs::chunkEntityIndex_t ecs::ArchetypedChunks::AllocateRawSlot(const Enti
 
     for (const componentId_t componentId : m_archetype)
     {
+        const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+        if (componentInfo.isTag)
+            continue;
+
         componentChunks_t& componentChunks = m_chunksByComponentId[componentId];
 
         if (componentChunks.size() <= chunkIndex)
         {
-            const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
             componentChunks.reserve(chunkIndex * 2);
             componentChunks.resize(chunkIndex + 1);
             componentChunks[chunkIndex] = std::make_unique<byte[]>(componentInfo.componentSize * MAX_ENTITIES_IN_CHUNK);
@@ -346,6 +363,8 @@ ecs::chunkEntityIndex_t ecs::ArchetypedChunks::Create(PrefabRef&& entity, const 
     for (const componentId_t componentId : m_archetype)
     {
         const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+        if (componentInfo.isTag)
+            continue;
 
         assert(componentsData[componentId] != nullptr);
 

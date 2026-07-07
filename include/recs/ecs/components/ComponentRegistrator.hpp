@@ -16,8 +16,9 @@ namespace ecs
     {
         std::string name;                                           ///< Raw (mangled) type name from typeid
         std::string dname;                                          ///< Demangled, human-readable type name
-        bufferSize_t componentSize {0};                             ///< Size of the component in bytes
+        bufferSize_t componentSize {0};                             ///< Size of the component in bytes (0 for tags)
         componentId_t componentId {INVALID_COMPONENT_ID};           ///< Unique identifier for the component
+        bool isTag {false};                                         ///< True for zero-sized archetype tags (no chunk column)
         void(*constructor)(byte*) = nullptr;                        ///< Placement new constructor function
         void(*destructor)(byte*) = nullptr;                         ///< Destructor function
         void(*copy)(byte* to, byte* from) = nullptr;                ///< Copy function

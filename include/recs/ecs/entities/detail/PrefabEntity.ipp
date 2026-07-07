@@ -24,6 +24,17 @@ ComponentCls& ecs::PrefabEntity::AddComponent(Args&&... args)
     return GetComponent<ComponentCls>();
 }
 
+template <ecs::IsTag TagCls>
+void ecs::PrefabEntity::AddTag()
+{
+    const componentId_t componentId = ComponentRegistrator::GetComponentId<TagCls>();
+    if (m_archetype.test(componentId))
+        return;
+
+    m_archetype.set(componentId);
+    m_isDirtyArchetype = true;
+}
+
 template <ecs::IsComponent ComponentCls>
 ComponentCls* ecs::PrefabEntity::TryGetComponent()
 {

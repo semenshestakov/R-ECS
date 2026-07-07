@@ -61,7 +61,18 @@ namespace ecs
          */
         template<IsComponent ComponentCls, typename... Args>
         ComponentCls& AddComponent(Args&&... args);
-        
+
+        /**
+         * @brief Adds a zero-sized tag to the prefab.
+         *
+         * Sets the tag bit in the prefab archetype without storing any data. The tag
+         * carries no chunk column, so no free-list slot is acquired.
+         *
+         * @tparam TagCls Tag type (must derive from ecs::Tag).
+         */
+        template<IsTag TagCls>
+        void AddTag();
+
         template<IsComponent ComponentCls>
         [[nodiscard]] ComponentCls* TryGetComponent();
 

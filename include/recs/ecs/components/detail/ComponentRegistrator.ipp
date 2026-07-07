@@ -11,17 +11,29 @@
 template <ecs::IsComponent ComponentCls>
 ecs::RegisterComponentInfo ecs::RegisterComponentInfo::Create(const std::string& name)
 {
-    return {.name = std::string(name),
-            .dname = demangle(name.c_str()),
-            .componentSize = sizeof(ComponentCls),
-            .componentId = INVALID_COMPONENT_ID,
-            .constructor = [](byte* ptr) { new(ptr) ComponentCls(); },
-            .destructor = [](byte* ptr) { std::bit_cast<ComponentCls*>(ptr)->~ComponentCls(); },
-            .copy = [](byte* to, byte* from) { new(to) ComponentCls(*std::bit_cast<const ComponentCls*>(from)); },
-            .move = [](byte* to, byte* from) { new(to) ComponentCls(std::move(*std::bit_cast<ComponentCls*>(from)));},
-            .poolAcquire  = []() -> byte* { return ComponentFreeList<ComponentCls>::acquire(); },
-            .poolRelease  = [](byte* ptr)  { ComponentFreeList<ComponentCls>::release(ptr); }
-    };
+    if constexpr (IsTag<ComponentCls>)
+    {
+        return {.name = std::string(name),
+                .dname = demangle(name.c_str()),
+                .componentSize = 0,
+                .componentId = INVALID_COMPONENT_ID,
+                .isTag = true};
+    }
+    else
+    {
+        return {.name = std::string(name),
+                .dname = demangle(name.c_str()),
+                .componentSize = sizeof(ComponentCls),
+                .componentId = INVALID_COMPONENT_ID,
+                .isTag = false,
+                .constructor = [](byte* ptr) { new(ptr) ComponentCls(); },
+                .destructor = [](byte* ptr) { std::bit_cast<ComponentCls*>(ptr)->~ComponentCls(); },
+                .copy = [](byte* to, byte* from) { new(to) ComponentCls(*std::bit_cast<const ComponentCls*>(from)); },
+                .move = [](byte* to, byte* from) { new(to) ComponentCls(std::move(*std::bit_cast<ComponentCls*>(from)));},
+                .poolAcquire  = []() -> byte* { return ComponentFreeList<ComponentCls>::acquire(); },
+                .poolRelease  = [](byte* ptr)  { ComponentFreeList<ComponentCls>::release(ptr); }
+        };
+    }
 }
 
 template<ecs::IsComponent ComponentCls>

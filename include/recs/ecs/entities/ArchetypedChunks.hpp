@@ -18,10 +18,15 @@ namespace ecs
      * @brief Value type returned by iterator when components are requested.
      * Tuple of references to requested components.
      */
+    /// @brief Per-argument contribution to a chunk value tuple: nothing for a tag,
+    ///        a single `Arg&` otherwise. Tags are filter-only and never yielded.
+    template<typename Arg>
+    using chunk_arg_elements_t = std::conditional_t<IsTag<Arg>, std::tuple<>, std::tuple<Arg&>>;
+
     template<typename... Args>
     using iter_value_type = std::conditional_t<
         (sizeof...(Args) > 0),
-        std::tuple<Args&...>,
+        decltype(std::tuple_cat(std::declval<chunk_arg_elements_t<Args>>()...)),
         chunkEntityIndex_t
     >;
 
@@ -39,6 +44,14 @@ namespace ecs
 
     /// @brief The underlying component type of a view argument (`Component*` → `Component`).
     template<typename Arg> using component_bare_t = std::remove_pointer_t<Arg>;
+
+    /**
+     * @brief Detects a tag view argument (filter-only, zero-sized).
+     *
+     * A tag contributes its bit to the query archetype but is never materialized: it
+     * gets no chunk column and no element in the yielded tuple.
+     */
+    template<typename Arg> inline constexpr bool is_tag_arg_v = IsTag<component_bare_t<Arg>>;
 
     /**
      * @brief Element produced for a single view argument: `Component*` for optional,
@@ -64,10 +77,24 @@ namespace ecs
      * Generalizes @ref iter_value_type to optional components: each argument maps to
      * @ref view_element_t. An empty pack still yields the packed chunk-entity index.
      */
+    /**
+     * @brief Per-argument contribution to a view value tuple.
+     *
+     * Empty for a tag (filter-only), a single @ref view_element_t otherwise. Folding
+     * these with std::tuple_cat drops tags from the yielded tuple while keeping their
+     * archetype bit in the query.
+     */
+    template<typename Arg>
+    using view_arg_elements_t = std::conditional_t<
+        is_tag_arg_v<Arg>,
+        std::tuple<>,
+        std::tuple<view_element_t<Arg>>
+    >;
+
     template<typename... Args>
     using view_value_type = std::conditional_t<
         (sizeof...(Args) > 0),
-        std::tuple<view_element_t<Args>...>,
+        decltype(std::tuple_cat(std::declval<view_arg_elements_t<Args>>()...)),
         chunkEntityIndex_t
     >;
 
@@ -106,7 +133,10 @@ namespace ecs
     template<template<typename, typename...> class IterT, typename... ComponentCls>
     struct view_iterator<IterT, Entity, ComponentCls...>
     {
-        using type = IterT<std::tuple<Entity, view_element_t<ComponentCls>...>, ComponentCls...>;
+        using type = IterT<
+            decltype(std::tuple_cat(std::declval<std::tuple<Entity>>(),
+                                    std::declval<view_arg_elements_t<ComponentCls>>()...)),
+            ComponentCls...>;
     };
 
     template<template<typename, typename...> class IterT, typename... Args>
@@ -232,12 +262,20 @@ namespace ecs
             [[nodiscard]] component_bare_t<Comp>* componentBase(const chunkEntityIndex_t chunkBaseIndex) const
             {
                 using Bare = component_bare_t<Comp>;
-                const componentId_t componentId = ComponentRegistrator::GetComponentId<Bare>();
 
-                if constexpr (is_optional_component_v<Comp>)
-                    return std::bit_cast<Bare*>(m_archetypedChunks->GetComponentData(chunkBaseIndex, componentId));
+                if constexpr (is_tag_arg_v<Comp>)
+                {
+                    return nullptr;
+                }
                 else
-                    return std::bit_cast<Bare*>(m_archetypedChunks->GetComponentDataUnchecked(chunkBaseIndex, componentId));
+                {
+                    const componentId_t componentId = ComponentRegistrator::GetComponentId<Bare>();
+
+                    if constexpr (is_optional_component_v<Comp>)
+                        return std::bit_cast<Bare*>(m_archetypedChunks->GetComponentData(chunkBaseIndex, componentId));
+                    else
+                        return std::bit_cast<Bare*>(m_archetypedChunks->GetComponentDataUnchecked(chunkBaseIndex, componentId));
+                }
             }
 
             /**
@@ -257,6 +295,19 @@ namespace ecs
                     return base ? base + m_entityIndex : nullptr;
                 else
                     return base[m_entityIndex];
+            }
+
+            /**
+             * @brief Value-tuple fragment for one view argument: empty for a tag,
+             *        a single element (@ref elementOf) otherwise.
+             */
+            template<typename Comp>
+            [[nodiscard]] auto elementTuple() const
+            {
+                if constexpr (is_tag_arg_v<Comp>)
+                    return std::tuple<>{};
+                else
+                    return std::tuple<view_element_t<Comp>>(elementOf<Comp>());
             }
 
             chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;       ///< Current chunk index.
@@ -495,7 +546,7 @@ namespace ecs
                 if constexpr (sizeof...(ComponentCls) == 0)
                     return m_index | m_view->m_chunkIndex;
                 else
-                    return value_type{std::get<ComponentCls*>(m_view->m_componentArrays)[m_index]...};
+                    return std::tuple_cat(m_view->template elementTuple<ComponentCls>(m_index)...);
             }
 
             iterator& operator++() { ++m_index; return *this; }
@@ -524,6 +575,19 @@ namespace ecs
         [[nodiscard]] iterator end() const { return iterator(this, m_count); }
 
     private:
+        /**
+         * @brief Value-tuple fragment for one component at a chunk-local index:
+         *        empty for a tag, a single `C&` otherwise.
+         */
+        template<typename C>
+        [[nodiscard]] auto elementTuple(const chunkEntityIndex_t index) const
+        {
+            if constexpr (IsTag<C>)
+                return std::tuple<>{};
+            else
+                return std::tuple<C&>(std::get<C*>(m_componentArrays)[index]);
+        }
+
         std::tuple<ComponentCls*...> m_componentArrays {};                 ///< Base pointers of each component array in the chunk.
         chunkEntityIndex_t m_count = 0;                                    ///< Alive entity count in the chunk.
         chunkEntityIndex_t m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;      ///< Index of the viewed chunk.

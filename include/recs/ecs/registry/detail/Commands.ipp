@@ -3,10 +3,35 @@
 #include "../Events.hpp"
 #include "ecs/Registry.hpp"
 
+template <typename... Args>
+void ecs::AddComponentsCmd<Args...>::operator()(Registry& registry) const
+{
+    std::apply([&](Args&... comps) { registry.Entities().AddComponents(entity, std::move(comps)...); }, components);
+}
+
+template <ecs::IsComponent... Args>
+void ecs::RemoveComponentsCmd<Args...>::operator()(Registry& registry) const
+{
+    registry.Entities().RemoveComponents<Args...>(entity);
+}
+
+template <typename System>
+void ecs::DisableSystemCmd<System>::operator()(Registry& registry) const
+{
+    registry.Systems().Disable<System>();
+}
+
+template <typename System>
+void ecs::EnableSystemCmd<System>::operator()(Registry& registry) const
+{
+    registry.Systems().Enable<System>();
+}
+
 template <typename E, ecs::Recipe R>
 void ecs::CookCmd<E, R>::operator()(Registry& registry) const
 {
     PrefabEntity prefab;
+    prefab.AddTag<E>();
 
     recipe.apply(prefab);
     if ((feedback & CookFeedback::PRE_EVT_CALL) != CookFeedback::NONE)
@@ -20,35 +45,6 @@ void ecs::CookCmd<E, R>::operator()(Registry& registry) const
     {
         registry.Events().OnEvent<CreatedEntityEvt<E>>({entity});
     }
-}
-
-template<typename... Args>
-void ecs::AddComponentsCmd<Args...>::operator()(Registry& registry) const
-{
-    std::apply(
-        [&](Args&... comps)
-        {
-            registry.Entities().AddComponents(entity, std::move(comps)...);
-        },
-        components);
-}
-
-template<ecs::IsComponent... Args>
-void ecs::RemoveComponentsCmd<Args...>::operator()(Registry& registry) const
-{
-    registry.Entities().RemoveComponents<Args...>(entity);
-}
-
-template<typename System>
-void ecs::DisableSystemCmd<System>::operator()(Registry& registry) const
-{
-    registry.Systems().Disable<System>();
-}
-
-template<typename System>
-void ecs::EnableSystemCmd<System>::operator()(Registry& registry) const
-{
-    registry.Systems().Enable<System>();
 }
 
 inline ecs::CookFeedback operator|(ecs::CookFeedback v1, ecs::CookFeedback v2)

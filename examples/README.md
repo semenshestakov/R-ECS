@@ -6,6 +6,7 @@ directly onto the guides in [`docs/`](../docs/README.md).
 | File                                                           | Demonstrates | Guide |
 |----------------------------------------------------------------|--------------|-------|
 | [`Simple.cpp`](./Simple.cpp)                                   | Components, prefab, a movement system, the frame loop | [Getting started](../docs/en/guides/getting-started.md) |
+| [`Tags.cpp`](./Tags.cpp)                                       | `ecs::Tag`, `AddTag` / `RemoveTag`, `view` head semantics, filter-only tags, wrapper-tags, `GetArchetype` | [Entities & views](../docs/en/guides/entities-and-views.md) |
 | [`SystemsWithDependencies.cpp`](./SystemsWithDependencies.cpp) | `ECS_DEPENDENT_SYSTEMS` and DAG ordering | [Systems & scheduling](../docs/en/guides/systems-and-scheduling.md) |
 | [`Events.cpp`](./Events.cpp)                                   | `ECS_EVENT`, `OnEvent` vs `PushEvent` | [Events](../docs/en/guides/events.md) |
 | [`Commands.cpp`](./Commands.cpp)                               | `CreateEntityCmd` / `AddComponentsCmd` / `RemoveComponentsCmd` / `DeleteEntityCmd` | [Commands](../docs/en/guides/commands.md) |

@@ -6,6 +6,8 @@
 
 namespace ecs
 {
+    struct EntityWrapper;
+
     // Basic type aliases for memory management and component identification
     using byte = std::byte;               ///< Fundamental byte type for raw memory operations
     using bufferSize_t = unsigned int;    ///< Type for representing buffer sizes and memory capacities
@@ -27,13 +29,17 @@ namespace ecs
     struct Tag {};
 
     /**
-     * @brief Concept satisfied by any type deriving from ecs::Tag.
+     * @brief Concept satisfied by any type deriving from ecs::Tag, except EntityWrapper.
      *
      * Drives compile-time branching in the view machinery and in the registrator:
      * a tag is filter-only (contributes an archetype bit, never a data column and
      * never an element in the yielded tuple).
+     *
+     * EntityWrapper derives from Tag so that every *named* wrapper subclass is a tag,
+     * but the base wrapper itself is carved out here — it is the one wrapper head that
+     * adds no filter.
      */
-    template<typename T> concept IsTag = std::derived_from<T, Tag>;
+    template<typename T> concept IsTag =  std::derived_from<T, Tag> && !std::is_same_v<T, EntityWrapper>;
 
     /**
      * @brief Concept accepting any type as a component.

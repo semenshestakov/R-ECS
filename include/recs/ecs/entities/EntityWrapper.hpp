@@ -24,8 +24,14 @@ namespace ecs
      *
      * @note EntityWrapper does NOT automatically destroy the entity when destroyed.
      *       Call SelfDestroy() explicitly or use the manager's Destroy method.
+     *
+     * @note EntityWrapper derives from ecs::Tag: every *named* wrapper subclass is
+     *       therefore an archetype tag and, used as a view head, filters on its own
+     *       bit. The base EntityWrapper itself is excluded from IsTag (see the concept),
+     *       so `view<EntityWrapper, ...>` is the non-filtering handle. ecs::Tag is empty,
+     *       so EBO keeps sizeof(EntityWrapper) unchanged and EntityWrapperLike still holds.
      */
-    struct EntityWrapper
+    struct EntityWrapper : Tag
     {
         EntityWrapper() = delete;
 

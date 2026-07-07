@@ -63,9 +63,11 @@ for (auto [hp] : world.view<Health>())
 
 ### Getting the entity handle
 
-Lead the argument list with `Entity` to also receive the owning entity handle as
-the first element of each step. `Entity` is not a component — it is stripped from
-the archetype filter, so the view still matches on the remaining components only:
+Only the **first** argument (`Head`) chooses the handle yielded alongside the
+components; every later argument is a component (or a filter-only tag, see below).
+Lead the list with `Entity` to also receive the owning entity handle as the first
+element of each step. `Entity` is not a component — it is stripped from the archetype
+filter, so the view still matches on the remaining components only:
 
 ```cpp
 for (auto [entity, pos, vel] : world.view<Entity, Position2d, Velocity2d>())
@@ -76,6 +78,23 @@ for (auto [entity, pos, vel] : world.view<Entity, Position2d, Velocity2d>())
 ```
 
 `view<Entity>()` on its own walks every alive entity and yields just its handle.
+
+A view yields **exactly one** handle, chosen by the head. Putting a second handle
+after the head — another `Entity`, or any `EntityWrapper` type — is a **compile
+error**:
+
+```cpp
+world.view<Entity, Position2d, Player>();   // error: Player is a handle, not a component
+world.view<Frozen, Entity>();               // error: Entity may only be the head
+```
+
+You can also lead with a wrapper type to receive that wrapper instead of a raw
+`Entity` (see [Typed wrappers](#typed-wrappers)). `EntityWrapper` derives from
+`ecs::Tag`, so a **named** wrapper subclass is itself a tag and filters on its own
+bit — `view<Player, Health>()` yields a `Player` only for entities that carry the
+`Player` tag *and* own `Health`. The base `EntityWrapper` is the single exception: it
+is carved out of the tag concept, so `view<EntityWrapper, Health>()` adds no filter
+and yields a wrapper for every entity that owns `Health`.
 
 ### Optional components
 
@@ -115,6 +134,90 @@ auto [pos, vel] = world.GetComponents<Position2d, Velocity2d*>(entity);
 pos.x += 1.f;
 if (vel) pos.x += vel->x;
 ```
+
+## Tags
+
+A **tag** is a zero-sized marker that derives from `ecs::Tag`. It takes part in an
+entity's archetype — it occupies a bit — but carries **no per-entity data**, so no
+chunk column is ever allocated for it. Tags are pure filters.
+
+```cpp
+struct Frozen final : ecs::Tag {};
+struct Boss   final : ecs::Tag {};
+```
+
+Attach tags when building a prefab with `AddTag<T>()`, or to a live entity with
+`AddTag<Tags...>()` / `RemoveTag<Tags...>()` on the manager. Like `AddComponents`,
+these migrate the entity to the resulting archetype but construct no data; they are
+no-ops on a dead entity, and adding a tag already present does nothing:
+
+```cpp
+prefab.AddTag<Frozen>();               // on a prefab
+
+world.AddTag<Frozen, Boss>(entity);    // on a live entity
+world.RemoveTag<Frozen>(entity);
+```
+
+In a `view`, tags are **filter-only** wherever they appear — they contribute an
+archetype bit but are never yielded and never allocate a column. A plain tag used as
+the head still yields the `Entity`:
+
+```cpp
+for (auto [entity] : world.view<Frozen>())            // tag head -> yields Entity, filters on Frozen
+    ...
+
+for (auto [pos] : world.view<Position2d, Frozen>())   // Frozen filters; only Position2d is yielded
+    ...
+
+// Stack tags to narrow the query:
+for (auto [entity, pos] : world.view<Entity, Position2d, Frozen, Boss>())
+    ...                                               // frozen AND boss
+```
+
+### Wrapper-tags
+
+`EntityWrapper` derives from `ecs::Tag`, so **every named wrapper subclass is a
+tag** — no extra base is needed. Because `ecs::Tag` is empty it is folded away by
+empty-base optimization, so a wrapper stays `sizeof(EntityWrapper)` and still
+satisfies `EntityWrapperLike`. As a view head a named wrapper does **both** jobs: it
+yields the wrapper *and* filters on its own bit. Attach that bit like any tag, with
+`AddTag<Door>()`.
+
+```cpp
+struct Door final : ecs::EntityWrapper           // a named wrapper is already a tag
+{
+    using EntityWrapper::EntityWrapper;
+    Position2d& GetPosition() { return GetComponent<Position2d>(); }
+};
+
+prefab.AddTag<Door>();                            // mark the entity as a Door
+
+for (auto [door] : world.view<Door>())           // yields Door, filters on the Door bit
+    door.GetPosition().x += 1.f;
+```
+
+Contrast the handle heads: the base **`EntityWrapper`** selects a wrapper handle but
+adds no filter; a **plain tag** (`Frozen`) yields the `Entity` and filters; a **named
+wrapper** (`Door`, `Player`) yields that wrapper and filters on its own bit.
+
+> Because a named wrapper now filters on its own tag, an entity is only matched by
+> `view<Door>()` once it actually carries the `Door` tag (via `AddTag<Door>()` on a
+> prefab or a live entity). Creating an entity as `Create<Door>(...)` returns a `Door`
+> handle but does **not** set the bit on its own.
+
+### Inspecting an entity's archetype
+
+`GetArchetype(entity)` returns a const reference to the entity's archetype — its
+component-set fingerprint. Query membership by component id, which works for both
+components and tags:
+
+```cpp
+const ecs::Archetype& arch = world.GetArchetype(entity);
+bool frozen = arch.test(ecs::ComponentRegistrator::GetComponentId<Frozen>());
+```
+
+The reference stays valid until the entity is migrated (any add/remove of components
+or tags) or destroyed. `GetArchetype` asserts the entity is alive.
 
 ## Changing an entity's components
 

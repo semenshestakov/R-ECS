@@ -307,6 +307,12 @@ inline const ecs::byte* ecs::EntitiesManager::GetComponentData(const Entity& ent
     return m_storage.GetComponentData(m_entitiesLocationByEntityIndex[entity.id], componentId);
 }
 
+inline const ecs::Archetype& ecs::EntitiesManager::GetArchetype(const Entity& entity) const
+{
+    assert(IsAlive(entity));
+    return m_storage.getArchetype(m_entitiesLocationByEntityIndex[entity.id].archetypeIndex);
+}
+
 template<ecs::IsComponent ComponentCls>
 ComponentCls* ecs::EntitiesManager::TryGetComponent(const Entity& entity)
 {
@@ -375,6 +381,12 @@ auto ecs::EntitiesManager::view()
 template<typename Head, typename... Tail>
 auto ecs::EntitiesManager::viewDispatch()
 {
+    static_assert(
+        ((!std::same_as<component_bare_t<Tail>, Entity> && !EntityWrapperLike<component_bare_t<Tail>>) && ...),
+        "view<Head, Tail...>: only the Head argument selects the yielded handle. "
+        "Every Tail argument must be a component (Component / Component*) or a filter-only "
+        "tag — a second Entity or EntityWrapper (including a wrapper-tag) is not allowed.");
+
     if constexpr (std::same_as<Head, Entity>)
     {
         return detail::StorageView<Head, Tail...>{&m_storage};

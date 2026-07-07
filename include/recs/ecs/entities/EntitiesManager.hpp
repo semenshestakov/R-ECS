@@ -226,6 +226,22 @@ namespace ecs
         [[nodiscard]] const byte* GetComponentData(const Entity& entity, componentId_t componentId) const;
 
         /**
+         * @brief Returns the archetype an entity currently belongs to.
+         *
+         * The archetype is the entity's component-set fingerprint: it carries a bit for
+         * every component and tag the entity owns (`archetype.test(componentId)`). It is
+         * the storage's own archetype, so the reference stays valid until the entity is
+         * migrated (Add/Remove Components/Tags) or destroyed.
+         *
+         * @param entity Entity to inspect.
+         * @return Const reference to the entity's archetype.
+         * @note Asserts that the entity is alive.
+         * @note Example: bool frozen = manager.GetArchetype(e).test(
+         *                    ComponentRegistrator::GetComponentId<Frozen>());
+         */
+        [[nodiscard]] const Archetype& GetArchetype(const Entity& entity) const;
+
+        /**
          * @brief Gets total number of alive entities.
          * @return Count of entities currently alive in the manager
          */
@@ -240,14 +256,21 @@ namespace ecs
          * @return Range object supporting begin()/end() iteration
          * @note Example: for (auto [pos, vel] : manager.view<Position, Velocity>())
          *
-         * The first argument selects the entity handle yielded alongside the components:
+         * Only the first argument (`Head`) selects the entity handle yielded alongside the
+         * components:
          *  - `Entity`             yields the raw Entity (not part of the filter).
-         *  - an `EntityWrapperLike` type yields that wrapper (a wrapper-tag also filters
-         *    on its bit; a pure wrapper does not).
+         *  - the base `EntityWrapper` yields a wrapper and adds no filter.
+         *  - a named `EntityWrapper` subclass yields that wrapper and filters on its own
+         *    tag bit (EntityWrapper derives from ecs::Tag, so every subclass is a tag).
          *  - a tag type (`ecs::Tag`-derived) yields the Entity and filters on the tag.
-         * Tags anywhere in the argument list are filter-only: they contribute an
+         * Plain tags anywhere in the argument list are filter-only: they contribute an
          * archetype bit but are never yielded and never allocate a column.
-         * @note Example: for (auto [e] : manager.view<Door>())  // Door : EntityWrapper, ecs::Tag
+         *
+         * Every remaining (`Tail`) argument must be a component (`Component` / `Component*`)
+         * or a filter-only tag — never a second handle. Placing an `Entity` or another
+         * `EntityWrapper` handle after `Head` is a compile error: a view yields exactly one
+         * handle, chosen by `Head`.
+         * @note Example: for (auto [e] : manager.view<Door>())  // Door : EntityWrapper (a named wrapper is a tag)
          */
         template<typename... Args>
         auto view();

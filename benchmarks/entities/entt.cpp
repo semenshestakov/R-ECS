@@ -184,7 +184,6 @@ BENCHMARK_F(EnTTBenchmark, CreateDestroy_Cycles)(benchmark::State& state)
             benchmark::DoNotOptimize(0);
             state.SetItemsProcessed(BENCHMARK_M);
         }
-        state.SetBytesProcessed(int64_t(state.iterations()) * BENCHMARK_CYCLES * BENCHMARK_M * kP23Bytes * 2);
     }
 }
 

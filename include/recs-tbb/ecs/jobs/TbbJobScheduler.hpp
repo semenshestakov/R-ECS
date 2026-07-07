@@ -119,6 +119,22 @@ namespace ecs
         [[nodiscard]] std::size_t WorkerCount() const override;
 
         /**
+         * @brief Index of the calling worker within the arena, in [0, WorkerCount()).
+         *
+         * Maps tbb::this_task_arena::current_thread_index() onto the port's
+         * contract: a thread executing inside the arena (where parallel system
+         * Update and ParallelForEach bodies run) gets its arena slot; any other
+         * thread — notably the main thread between frames — returns
+         * kExternalWorker. This is what lets the command queue route per-worker,
+         * lock-free deferral.
+         *
+         * @return Arena slot index, or kExternalWorker outside the arena.
+         *
+         * @see IJobScheduler::WorkerIndex
+         */
+        [[nodiscard]] std::size_t WorkerIndex() const override;
+
+        /**
          * @brief Spawns a long-lived, out-of-frame service on the arena.
          *
          * Unlike Run (which executes @p job once), a service ticks @p tick

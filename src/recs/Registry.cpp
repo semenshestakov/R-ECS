@@ -9,16 +9,21 @@ ecs::Registry::Registry(SystemsManager systemManager) :
     m_systemManager(std::move(systemManager)),
     m_eventSystem(*this),
     m_scheduler(std::make_unique<SerialJobScheduler>())
-{}
+{
+    m_commandQueue.bindScheduler(*m_scheduler);
+}
 
 ecs::Registry::Registry() :
      m_eventSystem(*this),
      m_scheduler(std::make_unique<SerialJobScheduler>())
-{}
+{
+    m_commandQueue.bindScheduler(*m_scheduler);
+}
 
 void ecs::Registry::SetScheduler(std::unique_ptr<IJobScheduler> scheduler)
 {
     m_scheduler = scheduler ? std::move(scheduler) : std::make_unique<SerialJobScheduler>();
+    m_commandQueue.bindScheduler(*m_scheduler);
 }
 
 bool ecs::Registry::Init(void* args /* = nullptr */)

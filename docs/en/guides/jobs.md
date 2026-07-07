@@ -305,12 +305,21 @@ Two adjacent operations are instead made **thread-safe by design**, so they
 carry no main-thread restriction:
 
 - **Command queue.** `CommandQueue::Push` is the deferral channel for systems
-  and is callable from any thread: concurrent pushes are serialized by an
-  internal mutex. A parallel system queues its structural changes here, and they
-  run on the Registry's thread at the next `Flush()`, which takes that same mutex
-  only to swap the pending commands out, then executes them without the lock (so
-  it can't race a concurrent `Push`, never holds the lock across user code, and a
-  command may itself `Push` without deadlock).
+  and is callable from any thread. To keep the hot path off a shared lock, each
+  worker accumulates into its **own** bucket, selected by
+  `IJobScheduler::WorkerIndex()`: two workers never touch the same container, so
+  concurrent pushes from a parallel stage need no synchronization at all. Only
+  pushes from threads *outside* the pool — chiefly the main thread between frames
+  (`WorkerIndex()` returns `kExternalWorker`) — fall back to a single
+  mutex-guarded bucket, a rare and uncontended path. (A backend whose
+  `WorkerIndex()` returns the default `kExternalWorker` routes everything through
+  that bucket — correct, just unoptimized.) The deferred changes run on the
+  Registry's thread at the next `Flush()`, which snapshots every bucket — worker
+  buckets first, in index order, then the external one — before executing any
+  command, through a buffer it reuses across frames (no steady-state allocation).
+  A command may itself `Push` during the flush; it lands in a now-empty bucket
+  and is deferred to the next flush. Cross-thread order is therefore by worker
+  slot then insertion — deterministic given a fixed worker assignment.
 - **Component registration.** `ComponentRegistrator::Register` runs lazily the
   first time `GetComponentId<T>()` is reached — which can be deep inside a
   `view<...>` iteration. The per-type magic static bounds it to once per type,

@@ -94,6 +94,14 @@ std::size_t ecs::TbbJobScheduler::WorkerCount() const
     return static_cast<std::size_t>(std::max(1, m_impl->arena.max_concurrency()));
 }
 
+std::size_t ecs::TbbJobScheduler::WorkerIndex() const
+{
+    const int index = tbb::this_task_arena::current_thread_index();
+    if (index < 0) // tbb::task_arena::not_initialized — caller is not running inside the arena
+        return kExternalWorker;
+    return static_cast<std::size_t>(index);
+}
+
 ecs::ServiceHandle ecs::TbbJobScheduler::SpawnService(std::function<void()> tick, ServiceDesc /*desc*/)
 {
     if (!tick)

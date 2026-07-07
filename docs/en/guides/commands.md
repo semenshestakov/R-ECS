@@ -123,6 +123,18 @@ registry.Commands().size();    // how many commands are pending
 After a flush the queue is empty again. Commands queued during a flush run on
 the next frame, so chains of work spread predictably across frames.
 
+## Pushing from worker threads
+
+`Commands().Push(...)` is callable from any thread, so a system running on a
+worker during a parallel stage can defer structural changes freely. There is no
+shared lock on the hot path: each worker writes into its **own** bucket (keyed by
+the scheduler's `WorkerIndex()`), so concurrent pushes never contend. Pushes from
+the main thread between frames take a single, uncontended mutex instead. All
+buckets are drained on the Registry's thread at the next flush, worker buckets
+first in index order, then the main-thread bucket — a deterministic merge given a
+fixed worker assignment. See [Jobs & threading](./jobs.md#threading-rules) for
+the full model.
+
 ## Commands vs. immediate calls
 
 | | Immediate (`registry.Entities()....`) | Deferred (`registry.Commands().Push(...)`) |

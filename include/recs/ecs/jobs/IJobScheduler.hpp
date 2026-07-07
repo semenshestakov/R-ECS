@@ -80,6 +80,26 @@ namespace ecs
          */
         [[nodiscard]] virtual std::size_t WorkerCount() const = 0;
 
+        /// @brief Sentinel returned by WorkerIndex() for threads outside the worker pool (e.g. the main thread).
+        static constexpr std::size_t kExternalWorker = static_cast<std::size_t>(-1);
+
+        /**
+         * @brief Index of the calling worker within the pool, in [0, WorkerCount()).
+         *
+         * Routes per-worker, lock-free accumulation — most importantly the
+         * deferred command queue's per-worker buckets, which let parallel systems
+         * defer structural changes without contending on a shared mutex. Each
+         * worker that may run concurrently must report a distinct index in
+         * [0, WorkerCount()). A thread that is not one of the pool's workers — in
+         * particular the main thread issuing work between frames — returns
+         * kExternalWorker.
+         *
+         * The default returns kExternalWorker, so a backend that does not expose
+         * per-worker indices stays correct: every deferral falls back to the
+         * shared, mutex-guarded path, forgoing only the contention optimization.
+         */
+        [[nodiscard]] virtual std::size_t WorkerIndex() const { return kExternalWorker; }
+
         /**
          * @brief Spawns a long-lived, out-of-frame service.
          *

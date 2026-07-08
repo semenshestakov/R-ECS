@@ -95,6 +95,14 @@ namespace ecs
         [[nodiscard]] const ComponentCls* TryGetComponent() const;
 
         /**
+         * @brief Checks whether the wrapped entity carries the given tag.
+         * @tparam TagCls Tag type (must derive from ecs::Tag).
+         * @return true if the entity is alive and has the tag bit set.
+         */
+        template<IsTag TagCls>
+        [[nodiscard]] bool HasTag() const;
+
+        /**
          * @brief Gets mutable component data by component ID.
          * Low-level access for generic component operations.
          * @param componentId ID of requested component

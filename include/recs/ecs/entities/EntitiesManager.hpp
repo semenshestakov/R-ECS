@@ -128,6 +128,19 @@ namespace ecs
         void RemoveTag(const Entity& entity);
 
         /**
+         * @brief Checks whether an entity carries the given tag.
+         *
+         * Tests the tag's bit in the entity's archetype. Since a tag stores no data,
+         * this is the tag counterpart of TryGetComponent.
+         *
+         * @tparam TagCls Tag type (must derive from ecs::Tag).
+         * @param entity Entity to inspect.
+         * @return true if the entity is alive and its archetype has the tag bit set.
+         * @note Returns false (rather than asserting) if the entity is not alive.
+         */
+        template<IsTag TagCls> [[nodiscard]] bool HasTag(const Entity& entity) const;
+
+        /**
          * @brief Destroys entity if it exists.
          * Marks entity as dead, calls component destructors, and returns
          * entity ID to free list for reuse with incremented version.

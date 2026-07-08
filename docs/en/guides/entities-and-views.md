@@ -158,6 +158,16 @@ world.AddTag<Frozen, Boss>(entity);    // on a live entity
 world.RemoveTag<Frozen>(entity);
 ```
 
+Check whether a live entity carries a tag with `HasTag<T>()` — the tag counterpart
+of `TryGetComponent`: since a tag has no data there is nothing to return but a bool.
+It is available on the manager and, for convenience, on `EntityWrapper`; both return
+`false` (never assert) for a dead entity:
+
+```cpp
+bool frozen = world.HasTag<Frozen>(entity);   // on the manager
+bool frozen2 = wrapper.HasTag<Frozen>();      // on an EntityWrapper handle
+```
+
 In a `view`, tags are **filter-only** wherever they appear — they contribute an
 archetype bit but are never yielded and never allocate a column. A plain tag used as
 the head still yields the `Entity`:
@@ -215,6 +225,9 @@ components and tags:
 const ecs::Archetype& arch = world.GetArchetype(entity);
 bool frozen = arch.test(ecs::ComponentRegistrator::GetComponentId<Frozen>());
 ```
+
+For a single tag, prefer `HasTag<T>(entity)` over `GetArchetype` + `test` — it is
+the same check, spelled directly and safe on a dead entity (see above).
 
 The reference stays valid until the entity is migrated (any add/remove of components
 or tags) or destroyed. `GetArchetype` asserts the entity is alive.

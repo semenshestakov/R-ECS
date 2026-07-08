@@ -214,6 +214,15 @@ void ecs::EntitiesManager::RemoveTag(const Entity& entity)
     RemoveComponents<Tags...>(entity);
 }
 
+template<ecs::IsTag TagCls>
+bool ecs::EntitiesManager::HasTag(const Entity& entity) const
+{
+    if (!IsAlive(entity))
+        return false;
+
+    return GetArchetype(entity).test(ComponentRegistrator::GetComponentId<TagCls>());
+}
+
 template<ecs::IsComponent... Args>
 void ecs::EntitiesManager::RemoveComponents(const Entity& entity)
 {

@@ -163,6 +163,16 @@ world.AddTag<Frozen, Boss>(entity);    // на живой сущности
 world.RemoveTag<Frozen>(entity);
 ```
 
+Проверить, несёт ли живая сущность тег, можно через `HasTag<T>()` — это тег-аналог
+`TryGetComponent`: раз у тега нет данных, возвращать нечего, кроме bool. Метод
+доступен и у менеджера, и, для удобства, у `EntityWrapper`; оба возвращают `false`
+(без ассерта) для мёртвой сущности:
+
+```cpp
+bool frozen = world.HasTag<Frozen>(entity);   // у менеджера
+bool frozen2 = wrapper.HasTag<Frozen>();      // у хэндла EntityWrapper
+```
+
 В `view` теги везде **только фильтруют**: они дают бит в архетипе, но никогда не
 выдаются и не выделяют колонку. Чистый тег, поставленный головой, всё равно выдаёт
 `Entity`:
@@ -222,6 +232,9 @@ for (auto [door] : world.view<Door>())           // выдаёт Door, филь�
 const ecs::Archetype& arch = world.GetArchetype(entity);
 bool frozen = arch.test(ecs::ComponentRegistrator::GetComponentId<Frozen>());
 ```
+
+Для одного тега вместо `GetArchetype` + `test` лучше использовать `HasTag<T>(entity)`
+— та же проверка, но напрямую и безопасно для мёртвой сущности (см. выше).
 
 Ссылка остаётся валидной, пока сущность не мигрирует (любое добавление/удаление
 компонентов или тегов) или не будет уничтожена. `GetArchetype` ассертит, что

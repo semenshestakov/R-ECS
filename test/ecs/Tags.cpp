@@ -280,3 +280,42 @@ TEST_F(TagsTest, RemoveTag_ClearsBit_KeepsComponents)
     for (auto [entity] : manager.view<Frozen>()) { (void)entity; ++frozenCount; }
     EXPECT_EQ(frozenCount, 0u);
 }
+
+
+TEST_F(TagsTest, HasTag_ReflectsArchetypeBit)
+{
+    const auto e = manager.Create<Entity>(FrozenPrefab(1.f, 1.f));
+    const auto plain = manager.Create<Entity>(Plain2dPrefab());
+
+    EXPECT_TRUE(manager.HasTag<Frozen>(e));
+    EXPECT_FALSE(manager.HasTag<Hidden>(e));
+    EXPECT_FALSE(manager.HasTag<Frozen>(plain));
+
+    manager.RemoveTag<Frozen>(e);
+    EXPECT_FALSE(manager.HasTag<Frozen>(e));
+
+    manager.AddTag<Hidden>(plain);
+    EXPECT_TRUE(manager.HasTag<Hidden>(plain));
+}
+
+
+TEST_F(TagsTest, HasTag_FalseForDeadEntity)
+{
+    const Entity e = manager.Create<Entity>(FrozenPrefab(1.f, 1.f));
+    manager.Destroy(e);
+
+    EXPECT_FALSE(manager.HasTag<Frozen>(e));
+}
+
+
+TEST_F(TagsTest, EntityWrapper_HasTag_ForwardsToManager)
+{
+    const EntityWrapper wrapper = manager.Create<EntityWrapper>(FrozenPrefab(1.f, 1.f));
+    const EntityWrapper plain = manager.Create<EntityWrapper>(Plain2dPrefab());
+
+    EXPECT_TRUE(wrapper.HasTag<Frozen>());
+    EXPECT_FALSE(plain.HasTag<Frozen>());
+
+    wrapper.SelfDestroy();
+    EXPECT_FALSE(wrapper.HasTag<Frozen>());
+}

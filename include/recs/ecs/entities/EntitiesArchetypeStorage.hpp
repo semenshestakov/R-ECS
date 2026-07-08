@@ -244,10 +244,13 @@ namespace ecs
          * Automatically determines or finds appropriate archetype based on prefab's components.
          * @param prefabEntity Prefab containing component data
          * @param entityHandle Entity handle (id + version)
+         * @param extraTagId Optional zero-sized tag bit to fold into the entity's archetype on
+         *        top of the prefab's own components. Used to stamp a named EntityWrapper's own
+         *        tag onto entities created through Create<Wrapper>. INVALID_COMPONENT_ID adds nothing.
          * @return Location descriptor for created entity
          */
         template<PrefabEntityRef PrefabRef>
-        ArchetypedChunkEntityLocation Create(PrefabRef&& prefabEntity, Entity entityHandle);
+        ArchetypedChunkEntityLocation Create(PrefabRef&& prefabEntity, Entity entityHandle, componentId_t extraTagId = INVALID_COMPONENT_ID);
 
         /**
          * @brief Result of migrating an entity between archetypes.

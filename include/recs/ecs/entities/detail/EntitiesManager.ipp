@@ -108,7 +108,16 @@ ReturnType ecs::EntitiesManager::Create(PrefabRef&& prefabEntity)
     }
 
     assert(entity.id < m_lastEntityId);
-    m_entitiesLocationByEntityIndex[entity.id] = m_storage.Create(std::forward<PrefabRef>(prefabEntity), entity);
+
+    // A named EntityWrapper subclass is itself a tag (IsTag): creating through Create<Wrapper>
+    // stamps that wrapper's own bit onto the entity, so view<Wrapper> / HasTag<Wrapper> match it
+    // without the caller adding the tag by hand. The base EntityWrapper and Entity are excluded.
+    componentId_t wrapperTagId = INVALID_COMPONENT_ID;
+    if constexpr (IsTag<ReturnType>)
+        wrapperTagId = ComponentRegistrator::GetComponentId<ReturnType>();
+
+    m_entitiesLocationByEntityIndex[entity.id] =
+        m_storage.Create(std::forward<PrefabRef>(prefabEntity), entity, wrapperTagId);
     m_versionByEntityIndex[entity.id] = entity.version;
     ++m_isAliveEntitiesCount;
 

@@ -198,8 +198,9 @@ for (auto [entity, pos] : world.view<Entity, Position2d, Frozen, Boss>())
 tag** — no extra base is needed. Because `ecs::Tag` is empty it is folded away by
 empty-base optimization, so a wrapper stays `sizeof(EntityWrapper)` and still
 satisfies `EntityWrapperLike`. As a view head a named wrapper does **both** jobs: it
-yields the wrapper *and* filters on its own bit. Attach that bit like any tag, with
-`AddTag<Door>()`.
+yields the wrapper *and* filters on its own bit. Creating an entity through
+`Create<Door>(...)` stamps that bit automatically; you can also attach it like any
+tag with `AddTag<Door>()`.
 
 ```cpp
 struct Door final : ecs::EntityWrapper           // a named wrapper is already a tag
@@ -208,20 +209,22 @@ struct Door final : ecs::EntityWrapper           // a named wrapper is already a
     Position2d& GetPosition() { return GetComponent<Position2d>(); }
 };
 
-prefab.AddTag<Door>();                            // mark the entity as a Door
+Door door = world.Create<Door>(std::move(prefab)); // Create<Door> sets the Door bit for you
 
-for (auto [door] : world.view<Door>())           // yields Door, filters on the Door bit
-    door.GetPosition().x += 1.f;
+for (auto [d] : world.view<Door>())              // yields Door, filters on the Door bit
+    d.GetPosition().x += 1.f;
 ```
 
 Contrast the handle heads: the base **`EntityWrapper`** selects a wrapper handle but
 adds no filter; a **plain tag** (`Frozen`) yields the `Entity` and filters; a **named
 wrapper** (`Door`, `Player`) yields that wrapper and filters on its own bit.
 
-> Because a named wrapper now filters on its own tag, an entity is only matched by
-> `view<Door>()` once it actually carries the `Door` tag (via `AddTag<Door>()` on a
-> prefab or a live entity). Creating an entity as `Create<Door>(...)` returns a `Door`
-> handle but does **not** set the bit on its own.
+> A named wrapper filters on its own tag, so an entity is matched by `view<Door>()`
+> only once it carries the `Door` bit. `Create<Door>(...)` sets that bit as part of
+> creation — the wrapper's tag is stamped onto the archetype without touching the
+> source prefab (a prefab reused for a differently-typed entity stays untagged). An
+> entity built as `Create<Entity>(...)` still needs an explicit `AddTag<Door>()` to
+> join the view.
 
 ### Inspecting an entity's archetype
 

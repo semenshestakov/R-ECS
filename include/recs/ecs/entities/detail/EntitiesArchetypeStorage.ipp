@@ -241,10 +241,22 @@ inline const ecs::Archetype& ecs::EntitiesArchetypeStorage::getArchetype(const a
 }
 
 template<ecs::PrefabEntityRef PrefabRef>
-ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(PrefabRef&& prefabEntity, const Entity entityHandle)
+ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(PrefabRef&& prefabEntity, const Entity entityHandle,
+                                                                         const componentId_t extraTagId)
 {
-    const Archetype& archetype = prefabEntity.getArchetype();
-    const archetypeIndex_t archetypeIndex = findOrCreateArchetype(archetype);
+    // Fast path: the prefab already carries the final archetype (no wrapper tag to fold in).
+    // Otherwise stamp the wrapper's zero-sized tag bit onto a local archetype copy — the source
+    // prefab is left untouched so a caller may reuse it for a differently-typed entity.
+    const archetypeIndex_t archetypeIndex = [&]
+    {
+        if (extraTagId == INVALID_COMPONENT_ID)
+            return findOrCreateArchetype(prefabEntity.getArchetype());
+
+        Archetype archetype = prefabEntity.getArchetype();
+        archetype.set(extraTagId);
+        archetype.updateHash();
+        return findOrCreateArchetype(archetype);
+    }();
 
     return {
         .archetypeIndex=archetypeIndex,

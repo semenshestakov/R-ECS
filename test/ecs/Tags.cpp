@@ -397,3 +397,87 @@ TEST_F(TagsTest, GetTagIds_TracksMutation)
     manager.RemoveTag<Frozen>(e);
     EXPECT_FALSE(manager.GetTagIds(e).test(ComponentRegistrator::GetComponentId<Frozen>()));
 }
+
+
+// = = = = = = = = = =  Create<Wrapper> auto-stamps the wrapper's own tag  = = = = = = = = = =
+// A named EntityWrapper subclass is a tag. Creating an entity through Create<Wrapper> must set
+// that wrapper's bit, so the entity is matched by view<Wrapper> / HasTag<Wrapper> without the
+// caller adding the tag by hand (previously the bit was silently missing).
+
+TEST_F(TagsTest, CreateWrapper_StampsOwnTag)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(3.f, 4.f);   // note: no explicit AddTag<Door>()
+
+    const Door door = manager.Create<Door>(std::move(prefab));
+
+    EXPECT_TRUE(door.IsAlive());
+    EXPECT_TRUE(door.HasTag<Door>());
+    EXPECT_TRUE(manager.HasTag<Door>(door.getEntity()));
+    EXPECT_TRUE(manager.GetArchetype(door.getEntity()).test(ComponentRegistrator::GetComponentId<Door>()));
+    EXPECT_FLOAT_EQ(door.GetPosition().x, 3.f);
+}
+
+
+TEST_F(TagsTest, CreateWrapper_IsMatchedByWrapperView_WithoutManualTag)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(9.f, 9.f);
+    const Door door = manager.Create<Door>(std::move(prefab));
+    manager.Create<Entity>(Plain2dPrefab());     // no Door tag -> filtered out
+
+    size_t count = 0;
+    for (auto [wrapper] : manager.view<Door>())
+    {
+        static_assert(std::is_same_v<decltype(wrapper), Door>);
+        EXPECT_EQ(wrapper.getEntity(), door.getEntity());
+        EXPECT_FLOAT_EQ(wrapper.GetPosition().x, 9.f);
+        ++count;
+    }
+
+    EXPECT_EQ(count, 1u);
+}
+
+
+TEST_F(TagsTest, CreateWrapper_MatchedByWrapperViewWithComponent)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Health>(50.f);
+    prefab.AddComponent<Position2d>(1.f, 2.f);
+    manager.Create<Player>(std::move(prefab));   // no explicit AddTag<Player>()
+
+    size_t count = 0;
+    for (auto [player, hp] : manager.view<Player, Health>())
+    {
+        static_assert(std::is_same_v<decltype(player), Player>);
+        EXPECT_TRUE(player.HasTag<Player>());
+        EXPECT_FLOAT_EQ(hp.value, 50.f);
+        ++count;
+    }
+
+    EXPECT_EQ(count, 1u);
+}
+
+
+TEST_F(TagsTest, CreateBaseWrapper_AddsNoWrapperTag)
+{
+    // The base EntityWrapper is carved out of IsTag, so Create<EntityWrapper> stamps no bit.
+    const EntityWrapper wrapper = manager.Create<EntityWrapper>(Plain2dPrefab());
+
+    const collections::BitSet tags = manager.GetTagIds(wrapper.getEntity());
+    EXPECT_TRUE(tags.empty() || tags.max() == collections::BitSet::INVALID_INDEX);
+}
+
+
+TEST_F(TagsTest, CreateWrapper_LeavesSourcePrefabUntagged)
+{
+    PrefabEntity prefab;
+    prefab.AddComponent<Position2d>(7.f, 8.f);
+    const PrefabEntity& ref = prefab;            // const-ref -> copy path, prefab stays reusable
+
+    const Door door = manager.Create<Door>(ref);
+    const Entity plain = manager.Create<Entity>(ref);   // reuse the same prefab
+
+    EXPECT_TRUE(manager.HasTag<Door>(door.getEntity()));
+    EXPECT_FALSE(manager.HasTag<Door>(plain));   // the Door bit must not leak into the reused prefab
+}

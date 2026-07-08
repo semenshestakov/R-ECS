@@ -52,7 +52,23 @@ ecs::componentId_t ecs::ComponentRegistrator::Register()
 
     const auto componentId = static_cast<componentId_t>(index + 1);
     Super::collection()[index].second->componentId = componentId;
+
+    if constexpr (IsTag<ComponentCls>)
+        s_tagsMask.set(componentId);
+    else
+        s_componentsMask.set(componentId);
+
     return componentId;
+}
+
+/* static */ inline const collections::BitSet& ecs::ComponentRegistrator::GetTagsMask()
+{
+    return s_tagsMask;
+}
+
+/* static */ inline const collections::BitSet& ecs::ComponentRegistrator::GetComponentsMask()
+{
+    return s_componentsMask;
 }
 
 /* static */ inline const ecs::RegisterComponentInfo& ecs::ComponentRegistrator::GetInfo(const componentId_t componentId)

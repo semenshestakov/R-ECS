@@ -214,13 +214,18 @@ void ecs::EntitiesManager::RemoveTag(const Entity& entity)
     RemoveComponents<Tags...>(entity);
 }
 
-template<ecs::IsTag TagCls>
-bool ecs::EntitiesManager::HasTag(const Entity& entity) const
+inline bool ecs::EntitiesManager::HasTagById(const Entity& entity, const componentId_t tagId) const
 {
     if (!IsAlive(entity))
         return false;
 
-    return GetArchetype(entity).test(ComponentRegistrator::GetComponentId<TagCls>());
+    return GetArchetype(entity).test(tagId);
+}
+
+template<ecs::IsTag TagCls>
+bool ecs::EntitiesManager::HasTag(const Entity& entity) const
+{
+    return HasTagById(entity, ComponentRegistrator::GetComponentId<TagCls>());
 }
 
 template<ecs::IsComponent... Args>
@@ -320,6 +325,16 @@ inline const ecs::Archetype& ecs::EntitiesManager::GetArchetype(const Entity& en
 {
     assert(IsAlive(entity));
     return m_storage.getArchetype(m_entitiesLocationByEntityIndex[entity.id].archetypeIndex);
+}
+
+inline collections::BitSet ecs::EntitiesManager::GetTagIds(const Entity& entity) const
+{
+    return GetArchetype(entity) & ComponentRegistrator::GetTagsMask();
+}
+
+inline collections::BitSet ecs::EntitiesManager::GetComponentIds(const Entity& entity) const
+{
+    return GetArchetype(entity) & ComponentRegistrator::GetComponentsMask();
 }
 
 template<ecs::IsComponent ComponentCls>

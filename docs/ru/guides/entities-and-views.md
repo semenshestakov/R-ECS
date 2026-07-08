@@ -173,6 +173,15 @@ bool frozen = world.HasTag<Frozen>(entity);   // у менеджера
 bool frozen2 = wrapper.HasTag<Frozen>();      // у хэндла EntityWrapper
 ```
 
+У каждого есть низкоуровневый, нешаблонный аналог, принимающий componentId_t
+в рантайме вместо типа тега на этапе компиляции — то же разделение, что у
+`GetComponent<T>` / `GetComponentData(componentId)`:
+
+```cpp
+bool frozen3 = world.HasTagById(entity, ComponentRegistrator::GetComponentId<Frozen>());
+bool frozen4 = wrapper.HasTagById(ComponentRegistrator::GetComponentId<Frozen>());
+```
+
 В `view` теги везде **только фильтруют**: они дают бит в архетипе, но никогда не
 выдаются и не выделяют колонку. Чистый тег, поставленный головой, всё равно выдаёт
 `Entity`:
@@ -239,6 +248,23 @@ bool frozen = arch.test(ecs::ComponentRegistrator::GetComponentId<Frozen>());
 Ссылка остаётся валидной, пока сущность не мигрирует (любое добавление/удаление
 компонентов или тегов) или не будет уничтожена. `GetArchetype` ассертит, что
 сущность жива.
+
+Чтобы получить *все* теги или *все* компоненты сущности разом, а не проверять по
+одному, используйте `GetTagIds(entity)` / `GetComponentIds(entity)`. Оба метода
+пересекают архетип с общей на весь процесс маской из `ComponentRegistrator` (одна
+маска — все зарегистрированные id тегов, другая — все id компонентов с данными) и
+возвращают результат как обычный `collections::BitSet` — разовый снимок, а не
+зарегистрированный архетип: у него нет хеша, и он не привязан к хранилищу:
+
+```cpp
+for (ecs::componentId_t id : world.GetTagIds(entity))
+    ...                                    // каждый бит тега у сущности
+
+for (ecs::componentId_t id : world.GetComponentIds(entity))
+    ...                                    // каждый бит компонента с данными
+```
+
+Оба метода, как и `GetArchetype`, ассертят, что сущность жива.
 
 ## Изменение набора компонентов сущности
 

@@ -31,3 +31,9 @@ const ComponentCls* ecs::EntityWrapper::TryGetComponent() const
 {
     return std::bit_cast<const ComponentCls*>(GetComponentData(ComponentRegistrator::GetComponentId<ComponentCls>()));
 }
+
+template<ecs::IsTag TagCls>
+bool ecs::EntityWrapper::HasTag() const
+{
+    return HasTagById(ComponentRegistrator::GetComponentId<TagCls>());
+}

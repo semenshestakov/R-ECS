@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include "Utils.hpp"
+#include "collections/BitSet.hpp"
 #include "reg/Registrator.hpp"
 
 
@@ -120,6 +121,31 @@ namespace ecs
         template<IsComponent ComponentCls>
         static componentId_t GetComponentId();
 
+        /**
+         * @brief Returns the global mask of every registered tag's componentId bit.
+         *
+         * Bit `id` is set iff the component registered under `id` is a tag
+         * (zero-sized, `IsTag`). Grows automatically as new tag types register.
+         * Intersecting an entity's archetype with this mask isolates its tag bits,
+         * e.g. `EntitiesManager::GetTagIds`.
+         *
+         * @return Const reference to the process-wide tags mask.
+         */
+        [[nodiscard]] static const collections::BitSet& GetTagsMask();
+
+        /**
+         * @brief Returns the global mask of every registered (non-tag) component's
+         * componentId bit.
+         *
+         * Bit `id` is set iff the component registered under `id` carries data
+         * (`!IsTag`). Grows automatically as new component types register.
+         * Intersecting an entity's archetype with this mask isolates its data-bearing
+         * component bits, e.g. `EntitiesManager::GetComponentIds`.
+         *
+         * @return Const reference to the process-wide components mask.
+         */
+        [[nodiscard]] static const collections::BitSet& GetComponentsMask();
+
     private:
         /// Serializes first-time registration of distinct component types, which
         /// mutates the shared collection. The per-type magic static in
@@ -127,6 +153,14 @@ namespace ecs
         /// mutex guards two *different* types registering concurrently (e.g. both
         /// first touched inside a parallel view iteration).
         inline static std::mutex s_registrationMutex;
+
+        /// Bit `id` set for every registered tag componentId. Populated in Register()
+        /// under s_registrationMutex; see GetTagsMask().
+        inline static collections::BitSet s_tagsMask;
+
+        /// Bit `id` set for every registered non-tag componentId. Populated in
+        /// Register() under s_registrationMutex; see GetComponentsMask().
+        inline static collections::BitSet s_componentsMask;
     };
 
 }

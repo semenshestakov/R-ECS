@@ -119,6 +119,15 @@ namespace ecs
         [[nodiscard]] const byte* GetComponentData(componentId_t componentId) const;
 
         /**
+         * @brief Checks whether the wrapped entity carries the tag with given componentId.
+         * Low-level, non-template counterpart of HasTag<TagCls> — mirrors the
+         * GetComponent<T> / GetComponentData(componentId) split.
+         * @param tagId componentId of the tag to test.
+         * @return true if the entity is alive and has the tag bit set.
+         */
+        [[nodiscard]] bool HasTagById(componentId_t tagId) const;
+
+        /**
          * @brief Gets the underlying entity handle.
          * Provides access to the raw entity (ID + version) for cases where a
          * direct entity reference is needed.

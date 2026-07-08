@@ -28,3 +28,8 @@ const ecs::byte* ecs::EntityWrapper::GetComponentData(const componentId_t compon
     return m_managerRef.get().GetComponentData(m_entity, componentId);
 }
 
+bool ecs::EntityWrapper::HasTagById(const componentId_t tagId) const
+{
+    return m_managerRef.get().HasTagById(m_entity, tagId);
+}
+

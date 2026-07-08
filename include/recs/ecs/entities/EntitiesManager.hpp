@@ -141,6 +141,21 @@ namespace ecs
         template<IsTag TagCls> [[nodiscard]] bool HasTag(const Entity& entity) const;
 
         /**
+         * @brief Checks whether an entity carries the tag with the given componentId.
+         *
+         * Low-level, non-template counterpart of HasTag<TagCls> — mirrors the
+         * GetComponent<T> / GetComponentData(componentId) split. Generic code that
+         * only has a runtime componentId_t (no compile-time tag type) should use this
+         * instead of HasTag.
+         *
+         * @param entity Entity to inspect.
+         * @param tagId componentId of the tag to test.
+         * @return true if the entity is alive and its archetype has the bit set.
+         * @note Returns false (rather than asserting) if the entity is not alive.
+         */
+        [[nodiscard]] bool HasTagById(const Entity& entity, componentId_t tagId) const;
+
+        /**
          * @brief Destroys entity if it exists.
          * Marks entity as dead, calls component destructors, and returns
          * entity ID to free list for reuse with incremented version.
@@ -253,6 +268,35 @@ namespace ecs
          *                    ComponentRegistrator::GetComponentId<Frozen>());
          */
         [[nodiscard]] const Archetype& GetArchetype(const Entity& entity) const;
+
+        /**
+         * @brief Returns the componentIds of every tag the entity carries.
+         *
+         * Intersects the entity's archetype with `ComponentRegistrator::GetTagsMask()`.
+         * Unlike `GetArchetype`, the result is a plain `collections::BitSet` — a
+         * snapshot of tag bits, not a registered archetype (it carries no hash and
+         * isn't tied to any storage), so it stays valid independent of later
+         * mutations to the entity.
+         *
+         * @param entity Entity to inspect.
+         * @return BitSet with one bit set per tag the entity owns.
+         * @note Asserts that the entity is alive.
+         * @note Example: for (componentId_t id : world.GetTagIds(e)) ...
+         */
+        [[nodiscard]] collections::BitSet GetTagIds(const Entity& entity) const;
+
+        /**
+         * @brief Returns the componentIds of every data-bearing component the entity owns.
+         *
+         * Intersects the entity's archetype with `ComponentRegistrator::GetComponentsMask()`,
+         * i.e. the complement of GetTagIds: every set bit is a component with a chunk
+         * column, never a tag. Same snapshot semantics as GetTagIds.
+         *
+         * @param entity Entity to inspect.
+         * @return BitSet with one bit set per owned (non-tag) component.
+         * @note Asserts that the entity is alive.
+         */
+        [[nodiscard]] collections::BitSet GetComponentIds(const Entity& entity) const;
 
         /**
          * @brief Gets total number of alive entities.

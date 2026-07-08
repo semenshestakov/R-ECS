@@ -168,6 +168,14 @@ bool frozen = world.HasTag<Frozen>(entity);   // on the manager
 bool frozen2 = wrapper.HasTag<Frozen>();      // on an EntityWrapper handle
 ```
 
+Each has a low-level, non-template counterpart taking a runtime `componentId_t` instead
+of a compile-time tag type — the same split as `GetComponent<T>` / `GetComponentData(componentId)`:
+
+```cpp
+bool frozen3 = world.HasTagById(entity, ComponentRegistrator::GetComponentId<Frozen>());
+bool frozen4 = wrapper.HasTagById(ComponentRegistrator::GetComponentId<Frozen>());
+```
+
 In a `view`, tags are **filter-only** wherever they appear — they contribute an
 archetype bit but are never yielded and never allocate a column. A plain tag used as
 the head still yields the `Entity`:
@@ -231,6 +239,23 @@ the same check, spelled directly and safe on a dead entity (see above).
 
 The reference stays valid until the entity is migrated (any add/remove of components
 or tags) or destroyed. `GetArchetype` asserts the entity is alive.
+
+To list *every* tag or *every* component the entity owns instead of testing one at a
+time, use `GetTagIds(entity)` / `GetComponentIds(entity)`. Both intersect the
+archetype with a process-wide mask kept by `ComponentRegistrator` (one mask of every
+registered tag id, one of every registered data-bearing component id) and return the
+result as a plain `collections::BitSet` — a one-off snapshot, not a registered
+archetype, so it carries no hash and isn't tied to storage:
+
+```cpp
+for (ecs::componentId_t id : world.GetTagIds(entity))
+    ...                                    // every tag bit the entity has
+
+for (ecs::componentId_t id : world.GetComponentIds(entity))
+    ...                                    // every data-bearing component bit
+```
+
+Both assert the entity is alive, same as `GetArchetype`.
 
 ## Changing an entity's components
 

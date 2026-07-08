@@ -319,3 +319,81 @@ TEST_F(TagsTest, EntityWrapper_HasTag_ForwardsToManager)
     wrapper.SelfDestroy();
     EXPECT_FALSE(wrapper.HasTag<Frozen>());
 }
+
+
+TEST_F(TagsTest, HasTagById_MatchesTemplateOverload)
+{
+    const Entity e = manager.Create<Entity>(FrozenPrefab(1.f, 1.f));
+    const Entity plain = manager.Create<Entity>(Plain2dPrefab());
+    const componentId_t frozenId = ComponentRegistrator::GetComponentId<Frozen>();
+
+    EXPECT_TRUE(manager.HasTagById(e, frozenId));
+    EXPECT_FALSE(manager.HasTagById(plain, frozenId));
+
+    manager.Destroy(e);
+    EXPECT_FALSE(manager.HasTagById(e, frozenId));
+}
+
+
+TEST_F(TagsTest, EntityWrapper_HasTagById_ForwardsToManager)
+{
+    const EntityWrapper wrapper = manager.Create<EntityWrapper>(FrozenPrefab(1.f, 1.f));
+    const componentId_t frozenId = ComponentRegistrator::GetComponentId<Frozen>();
+
+    EXPECT_TRUE(wrapper.HasTagById(frozenId));
+
+    wrapper.SelfDestroy();
+    EXPECT_FALSE(wrapper.HasTagById(frozenId));
+}
+
+
+TEST_F(TagsTest, RegistratorMasks_ClassifyTagsAndComponents)
+{
+    const componentId_t frozenId = ComponentRegistrator::GetComponentId<Frozen>();
+    const componentId_t hiddenId = ComponentRegistrator::GetComponentId<Hidden>();
+    const componentId_t posId = ComponentRegistrator::GetComponentId<Position2d>();
+
+    EXPECT_TRUE(ComponentRegistrator::GetTagsMask().test(frozenId));
+    EXPECT_TRUE(ComponentRegistrator::GetTagsMask().test(hiddenId));
+    EXPECT_FALSE(ComponentRegistrator::GetTagsMask().test(posId));
+
+    EXPECT_FALSE(ComponentRegistrator::GetComponentsMask().test(frozenId));
+    EXPECT_TRUE(ComponentRegistrator::GetComponentsMask().test(posId));
+}
+
+
+TEST_F(TagsTest, GetTagIds_ReturnsOnlyTagBits)
+{
+    const Entity e = manager.Create<Entity>(FrozenPrefab(1.f, 1.f, /*frozen*/true, /*hidden*/true));
+
+    const collections::BitSet tags = manager.GetTagIds(e);
+
+    EXPECT_TRUE(tags.test(ComponentRegistrator::GetComponentId<Frozen>()));
+    EXPECT_TRUE(tags.test(ComponentRegistrator::GetComponentId<Hidden>()));
+    EXPECT_FALSE(tags.test(ComponentRegistrator::GetComponentId<Position2d>()));
+}
+
+
+TEST_F(TagsTest, GetComponentIds_ReturnsOnlyDataComponentBits)
+{
+    const Entity e = manager.Create<Entity>(FrozenPrefab(1.f, 1.f, /*frozen*/true, /*hidden*/true));
+
+    const collections::BitSet comps = manager.GetComponentIds(e);
+
+    EXPECT_TRUE(comps.test(ComponentRegistrator::GetComponentId<Position2d>()));
+    EXPECT_FALSE(comps.test(ComponentRegistrator::GetComponentId<Frozen>()));
+    EXPECT_FALSE(comps.test(ComponentRegistrator::GetComponentId<Hidden>()));
+}
+
+
+TEST_F(TagsTest, GetTagIds_TracksMutation)
+{
+    const Entity e = manager.Create<Entity>(Plain2dPrefab());
+    EXPECT_TRUE(manager.GetTagIds(e).empty() || manager.GetTagIds(e).max() == collections::BitSet::INVALID_INDEX);
+
+    manager.AddTag<Frozen>(e);
+    EXPECT_TRUE(manager.GetTagIds(e).test(ComponentRegistrator::GetComponentId<Frozen>()));
+
+    manager.RemoveTag<Frozen>(e);
+    EXPECT_FALSE(manager.GetTagIds(e).test(ComponentRegistrator::GetComponentId<Frozen>()));
+}

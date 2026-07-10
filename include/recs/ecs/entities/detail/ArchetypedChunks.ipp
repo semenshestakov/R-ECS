@@ -108,7 +108,6 @@ void ecs::ArchetypedChunks::iterator<ValueType, ComponentCls...>::advance()
 
 inline ecs::ArchetypedChunks::ArchetypedChunks(Archetype a_archetype) : m_archetype(std::move(a_archetype))
 {
-    assert(!m_archetype.empty());
     m_localIndexToEntityId.resize(1);
     m_chunksByComponentId.resize(m_archetype.max() + 1);
     m_chunksEntityCount.resize(1);

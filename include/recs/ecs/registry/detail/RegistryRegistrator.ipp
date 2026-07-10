@@ -34,3 +34,8 @@ template<typename T>
     assert(registryInfo != nullptr);
     return *registryInfo;
 }
+
+/* static */ inline bool ecs::RegistryRegistrator::contains(const std::string& name)
+{
+    return Registrator::contains(name);
+}

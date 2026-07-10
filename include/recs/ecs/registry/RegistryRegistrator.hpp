@@ -114,6 +114,16 @@ namespace ecs
          * @throws std::out_of_range if registry name not found
          */
         static const RegistryInfo& Get(const std::string& name);
+
+        /**
+         * @brief Checks whether a registry with the given name exists.
+         * @param name Name of the registry to look up
+         * @return true if a registry with the specified name was registered, false otherwise
+         *
+         * Unlike Get(), this never asserts or dereferences a missing entry, so callers can
+         * safely probe optional archetypes (e.g. a puzzle that contributes no systems).
+         */
+        [[nodiscard]] static bool contains(const std::string& name);
     };
 
 } // namespace ecs

@@ -252,6 +252,9 @@ namespace reg
          */
         [[nodiscard]] static bool contains(const std::string& name);
 
+        [[nodiscard]] static const void* debugStorage() noexcept;
+        [[nodiscard]] static std::size_t debugSlots() noexcept;
+
     };
 
 } // namespace reg

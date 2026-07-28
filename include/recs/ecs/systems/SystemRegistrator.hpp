@@ -82,6 +82,23 @@ namespace ecs
          */
         static const RegisterSystemInfo& Get(std::size_t index);
 
+        /**
+         * @brief Retrieves system registration information by index without asserting
+         * @param index The registration index to look up
+         * @return const RegisterSystemInfo* Pointer to the registration info, or nullptr
+         *         if the index does not map to a live registration
+         *
+         * Unlike Get(), this never dereferences a missing entry, so callers can safely
+         * probe an index that may be stale (e.g. desynchronised after a domain reload or
+         * sourced from a different module instance of the registry).
+         *
+         * @see Get(std::size_t index)
+         */
+        [[nodiscard]] static const RegisterSystemInfo* tryGet(std::size_t index);
+
+        static const void* debugStorage();
+        static std::size_t debugSlots();
+
     };
 
 }

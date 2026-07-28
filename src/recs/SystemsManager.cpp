@@ -1,4 +1,6 @@
 #include <ranges>
+#include <cassert>
+#include <cstdio>
 #include "event/EventUtils.hpp"
 #include "ecs/systems/SystemsManager.hpp"
 
@@ -157,12 +159,20 @@ bool ecs::SystemsManager::Register(const std::size_t systemRegIndex)
 {
     ECS_ASSERT_MAIN_THREAD("SystemsManager::Register");
 
-    const auto& systemInfo = SystemRegistrator::Get(systemRegIndex);
-    if(m_systemsMap.contains(systemInfo.hash))
+    const auto* systemInfo = SystemRegistrator::tryGet(systemRegIndex);
+    std::fprintf(stderr, "[RECS][read] idx=%zu tryGet=%p storage=%p slots=%zu makeNew=%p\n",
+                 systemRegIndex, static_cast<const void*>(systemInfo),
+                 SystemRegistrator::debugStorage(), SystemRegistrator::debugSlots(),
+                 systemInfo ? reinterpret_cast<void*>(systemInfo->makeNew) : nullptr);
+    assert(systemInfo != nullptr && "stale system index: SystemRegistrator desynchronised with the requested index");
+    if(systemInfo == nullptr)
         return false;
 
-    m_systemsMap[systemInfo.hash] = systemInfo.makeNew();
-    m_schedule.Add(*m_systemsMap[systemInfo.hash].get(), systemInfo.hash);
+    if(m_systemsMap.contains(systemInfo->hash))
+        return false;
+
+    m_systemsMap[systemInfo->hash] = systemInfo->makeNew();
+    m_schedule.Add(*m_systemsMap[systemInfo->hash].get(), systemInfo->hash);
     return true;
 }
 

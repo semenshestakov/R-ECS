@@ -150,16 +150,18 @@ namespace reg
     template <typename FactoryCls, RegistrationStrategy Strategy>
     FactoryCls* Registrator<FactoryCls, Strategy>::get(const std::size_t key)
     {
-        if (key == INVALID_INDEX)
+        if (key >= collection().size())
             return nullptr;
 
         if constexpr (Strategy == RegistrationStrategy::DEFAULT)
         {
-            return &collection()[key].value();
+            auto& slot = collection()[key];
+            return slot.has_value() ? &*slot : nullptr;
         }
         else if constexpr (Strategy == RegistrationStrategy::UNIQUE)
         {
-            return &collection()[key].second.value();
+            auto& slot = collection()[key].second;
+            return slot.has_value() ? &*slot : nullptr;
         }
         return nullptr;
     }
@@ -168,6 +170,18 @@ namespace reg
     bool Registrator<FactoryCls, Strategy>::contains(const std::string& name)
     {
         return get(name) != nullptr;
+    }
+
+    template <typename FactoryCls, RegistrationStrategy Strategy>
+    const void* Registrator<FactoryCls, Strategy>::debugStorage() noexcept
+    {
+        return static_cast<const void*>(&collection());
+    }
+
+    template <typename FactoryCls, RegistrationStrategy Strategy>
+    std::size_t Registrator<FactoryCls, Strategy>::debugSlots() noexcept
+    {
+        return collection().size();
     }
 
 } // namespace reg

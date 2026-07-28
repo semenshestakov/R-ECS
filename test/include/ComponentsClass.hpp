@@ -101,6 +101,21 @@ struct Speed
     float value = 1.f;
 };
 
+// Zero-sized archetype tags: contribute an archetype bit, never a data column.
+struct Frozen final : ecs::Tag {};
+struct Hidden final : ecs::Tag {};
+
+// Wrapper-tag: a named EntityWrapper subclass. Since EntityWrapper derives from Tag,
+// any named subclass is itself a tag — it both yields a wrapper handle and filters on
+// its own bit, while staying sizeof(EntityWrapper) thanks to EBO.
+struct Door final : ecs::EntityWrapper
+{
+    using EntityWrapper::EntityWrapper;
+
+    [[nodiscard]] Position2d& GetPosition() { return GetComponent<Position2d>(); }
+    [[nodiscard]] const Position2d& GetPosition() const { return GetComponent<Position2d>(); }
+};
+
 struct Player final : ecs::EntityWrapper
 {
     using EntityWrapper::EntityWrapper;

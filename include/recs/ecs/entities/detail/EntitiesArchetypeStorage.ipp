@@ -1,0 +1,331 @@
+#pragma once
+#include <cassert>
+#include "ecs/entities/EntitiesArchetypeStorage.hpp"
+#include "ecs/entities/PrefabEntity.hpp"
+
+// ======================================== EntitiesArchetypeStorage::iterator =========================================
+
+
+template<typename ValueType, ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::iterator(EntitiesArchetypeStorage* storage) :
+    m_storage(storage),
+    m_archetypeIndex(0)
+{
+    assert(storage != nullptr);
+
+    if (storage->m_storageByArchetypeIndex.empty())
+    {
+        m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+        return;
+    }
+
+    if (
+        !s_archetype.isSubsetOf(storage->m_storageByArchetypeIndex[m_archetypeIndex].archetype()) or
+        !storage->m_storageByArchetypeIndex[m_archetypeIndex].template begin<ValueType, ComponentCls...>()
+        )
+        advance();
+    else
+        m_archetypedChunksIt = m_storage->m_storageByArchetypeIndex[m_archetypeIndex].template begin<ValueType, ComponentCls...>();
+
+}
+
+template<typename ValueType, ecs::IsComponent... ComponentCls>
+typename ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::value_type ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator*() const
+{
+    return *m_archetypedChunksIt;
+}
+
+template<typename ValueType, ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>& ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++()
+{
+    advance();
+    return *this;
+}
+
+template<typename ValueType, ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...> ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator++(int)
+{
+    iterator copy = *this;
+    advance();
+    return copy;
+}
+
+template<typename ValueType, ecs::IsComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator==(const iterator& other) const
+{
+    return m_archetypedChunksIt == other.m_archetypedChunksIt && m_archetypeIndex == other.m_archetypeIndex;
+}
+
+template<typename ValueType, ecs::IsComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::operator!=(const iterator& other) const
+{
+    return !(*this == other);
+}
+
+
+template<typename ValueType, ecs::IsComponent... ComponentCls>
+void ecs::EntitiesArchetypeStorage::iterator<ValueType, ComponentCls...>::advance()
+{
+    assert(m_storage != nullptr);
+    assert(m_archetypeIndex != INVALID_ARCHETYPE_INDEX);
+
+    if (m_archetypedChunksIt)
+        ++m_archetypedChunksIt;
+
+    if (!m_archetypedChunksIt)
+    {
+        while (++m_archetypeIndex < m_storage->m_storageByArchetypeIndex.size())
+        {
+            if (
+                auto& chunks = m_storage->m_storageByArchetypeIndex[m_archetypeIndex];
+                s_archetype.isSubsetOf(chunks.archetype())
+                )
+            {
+                m_archetypedChunksIt = chunks.template begin<ValueType, ComponentCls...>();
+                if (m_archetypedChunksIt)
+                    return;
+            }
+        }
+
+        // end state
+        m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+        m_archetypedChunksIt = {};
+    }
+}
+
+// ==================================== EntitiesArchetypeStorage::chunk_iterator =======================================
+
+template<ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::chunk_iterator(EntitiesArchetypeStorage* storage) :
+    m_storage(storage),
+    m_archetypeIndex(0),
+    m_chunkIndex(0)
+{
+    assert(storage != nullptr);
+
+    if (storage->m_storageByArchetypeIndex.empty())
+    {
+        m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+        m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;
+        return;
+    }
+
+    seekFromCurrent();
+}
+
+template<ecs::IsComponent... ComponentCls>
+typename ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::value_type
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator*() const
+{
+    assert(m_storage != nullptr);
+    assert(m_archetypeIndex != INVALID_ARCHETYPE_INDEX);
+    return ChunkView<ComponentCls...>(&m_storage->m_storageByArchetypeIndex[m_archetypeIndex], m_chunkIndex);
+}
+
+template<ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>&
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator++()
+{
+    ++m_chunkIndex;
+    seekFromCurrent();
+    return *this;
+}
+
+template<ecs::IsComponent... ComponentCls>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>
+ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator++(int)
+{
+    chunk_iterator copy = *this;
+    ++(*this);
+    return copy;
+}
+
+template<ecs::IsComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator==(const chunk_iterator& other) const
+{
+    return m_archetypeIndex == other.m_archetypeIndex && m_chunkIndex == other.m_chunkIndex;
+}
+
+template<ecs::IsComponent... ComponentCls>
+bool ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::operator!=(const chunk_iterator& other) const
+{
+    return !(*this == other);
+}
+
+template<ecs::IsComponent... ComponentCls>
+void ecs::EntitiesArchetypeStorage::chunk_iterator<ComponentCls...>::seekFromCurrent()
+{
+    assert(m_storage != nullptr);
+
+    while (m_archetypeIndex < m_storage->m_storageByArchetypeIndex.size())
+    {
+        if (
+            ArchetypedChunks& chunks = m_storage->m_storageByArchetypeIndex[m_archetypeIndex];
+            s_archetype.isSubsetOf(chunks.archetype())
+            )
+        {
+            const chunkEntityIndex_t chunkCount = chunks.chunkCount();
+            while (m_chunkIndex < chunkCount)
+            {
+                if (chunks.aliveInChunk(m_chunkIndex) > 0)
+                    return;
+                ++m_chunkIndex;
+            }
+        }
+
+        ++m_archetypeIndex;
+        m_chunkIndex = 0;
+    }
+
+    // end state
+    m_archetypeIndex = INVALID_ARCHETYPE_INDEX;
+    m_chunkIndex = INVALID_CHUNK_ENTITY_INDEX;
+}
+
+// ============================================= EntitiesArchetypeStorage ==============================================
+
+template<typename... Args>
+auto ecs::EntitiesArchetypeStorage::begin()
+{
+    return view_iterator_t<iterator, Args...>(this);
+}
+
+template<typename... Args>
+auto ecs::EntitiesArchetypeStorage::end() const
+{
+    return view_iterator_t<iterator, Args...>();
+}
+
+template<typename... Args>
+auto ecs::EntitiesArchetypeStorage::chunksBegin()
+{
+    return chunk_iterator<Args...>(this);
+}
+
+template<typename... Args>
+auto ecs::EntitiesArchetypeStorage::chunksEnd() const
+{
+    return chunk_iterator<Args...>();
+}
+
+template<ecs::IsComponent ComponentCls>
+ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location)
+{
+    return std::bit_cast<ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetComponentId<ComponentCls>()));
+}
+
+template<ecs::IsComponent ComponentCls>
+const ComponentCls* ecs::EntitiesArchetypeStorage::TryGetComponent(const ArchetypedChunkEntityLocation& location) const
+{
+    return std::bit_cast<const ComponentCls*>(GetComponentData(location, ComponentRegistrator::GetComponentId<ComponentCls>()));
+}
+
+
+inline ecs::archetypeIndex_t ecs::EntitiesArchetypeStorage::findOrCreateArchetype(const Archetype& archetype)
+{
+    if (const auto it = m_archetypeIndexByHash.find(archetype.hash()); it != m_archetypeIndexByHash.end())
+        return it->second;
+
+    assert(m_archetypeIndexByHash.size() == m_storageByArchetypeIndex.size());
+    const archetypeIndex_t archetypeIndex = m_archetypeIndexByHash.size();
+
+    m_archetypeIndexByHash[archetype.hash()] = archetypeIndex;
+    m_storageByArchetypeIndex.emplace_back(archetype);
+    return archetypeIndex;
+}
+
+inline const ecs::Archetype& ecs::EntitiesArchetypeStorage::getArchetype(const archetypeIndex_t archetypeIndex) const
+{
+    assert(archetypeIndex < m_storageByArchetypeIndex.size());
+    return m_storageByArchetypeIndex[archetypeIndex].archetype();
+}
+
+template<ecs::PrefabEntityRef PrefabRef>
+ecs::ArchetypedChunkEntityLocation ecs::EntitiesArchetypeStorage::Create(PrefabRef&& prefabEntity, const Entity entityHandle,
+                                                                         const componentId_t extraTagId)
+{
+    // Fast path: the prefab already carries the final archetype (no wrapper tag to fold in).
+    // Otherwise stamp the wrapper's zero-sized tag bit onto a local archetype copy — the source
+    // prefab is left untouched so a caller may reuse it for a differently-typed entity.
+    const archetypeIndex_t archetypeIndex = [&]
+    {
+        if (extraTagId == INVALID_COMPONENT_ID)
+            return findOrCreateArchetype(prefabEntity.getArchetype());
+
+        Archetype archetype = prefabEntity.getArchetype();
+        archetype.set(extraTagId);
+        archetype.updateHash();
+        return findOrCreateArchetype(archetype);
+    }();
+
+    return {
+        .archetypeIndex=archetypeIndex,
+        .chunkEntityIndex=m_storageByArchetypeIndex[archetypeIndex].Create(std::forward<PrefabRef>(prefabEntity), entityHandle)
+    };
+}
+
+inline ecs::EntitiesArchetypeStorage::EntityMigration ecs::EntitiesArchetypeStorage::MigrateEntity(
+    const ArchetypedChunkEntityLocation& oldLocation, const Archetype& newArchetype, const Entity entityHandle
+    )
+{
+    const archetypeIndex_t newArchetypeIndex = findOrCreateArchetype(newArchetype);
+
+    const ArchetypedChunkEntityLocation newLocation {
+        .archetypeIndex=newArchetypeIndex,
+        .chunkEntityIndex=m_storageByArchetypeIndex[newArchetypeIndex].AllocateRawSlot(entityHandle)
+    };
+
+    // Move only the components shared by both archetypes. Components dropped by the
+    // migration stay in the old slot (destructed by Destroy below); components added by
+    // the migration are left raw for the caller to construct.
+    const Archetype& oldArchetype = m_storageByArchetypeIndex[oldLocation.archetypeIndex].archetype();
+    for (const componentId_t componentId : newArchetype)
+    {
+        if (!oldArchetype.test(componentId))
+            continue;
+
+        const RegisterComponentInfo& componentInfo = ComponentRegistrator::GetInfo(componentId);
+        if (componentInfo.isTag)
+            continue;
+
+        componentInfo.move(
+            /* to */    GetComponentData(newLocation, componentId),
+            /* from */  GetComponentData(oldLocation, componentId)
+        );
+    }
+
+    const Entity swapRemovedEntity = m_storageByArchetypeIndex[oldLocation.archetypeIndex].Destroy(oldLocation.chunkEntityIndex);
+
+    return {.newLocation=newLocation, .swapRemovedEntity=swapRemovedEntity};
+}
+
+inline ecs::Entity ecs::EntitiesArchetypeStorage::Destroy(const ArchetypedChunkEntityLocation& entityLocation)
+{
+    return m_storageByArchetypeIndex.at(entityLocation.archetypeIndex).Destroy(entityLocation.chunkEntityIndex);
+}
+
+inline ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId)
+{
+    assert(entityLocation.archetypeIndex < m_storageByArchetypeIndex.size());
+    return m_storageByArchetypeIndex.at(entityLocation.archetypeIndex).GetComponentData(entityLocation.chunkEntityIndex, componentId);
+}
+
+inline const ecs::byte* ecs::EntitiesArchetypeStorage::GetComponentData(const ArchetypedChunkEntityLocation& entityLocation, const componentId_t componentId) const
+{
+    assert(entityLocation.archetypeIndex < m_storageByArchetypeIndex.size());
+    return m_storageByArchetypeIndex[entityLocation.archetypeIndex].GetComponentData(entityLocation.chunkEntityIndex, componentId);
+}
+
+template<ecs::IsComponent ComponentCls>
+ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location)
+{
+    assert(location.archetypeIndex < m_storageByArchetypeIndex.size());
+    return m_storageByArchetypeIndex[location.archetypeIndex].template GetComponent<ComponentCls>(location.chunkEntityIndex);
+}
+
+template<ecs::IsComponent ComponentCls>
+const ComponentCls& ecs::EntitiesArchetypeStorage::GetComponent(const ArchetypedChunkEntityLocation& location) const
+{
+    assert(location.archetypeIndex < m_storageByArchetypeIndex.size());
+    return m_storageByArchetypeIndex[location.archetypeIndex].template GetComponent<ComponentCls>(location.chunkEntityIndex);
+}

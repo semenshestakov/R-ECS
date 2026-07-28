@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 #include "ecs/entities/EntitiesManager.hpp"
 
+#include <set>
+#include <type_traits>
 #include <unordered_set>
+#include <vector>
 
 #include "ComponentsClass.hpp"
 #include "ecs/entities/PrefabEntity.hpp"
@@ -195,6 +198,338 @@ TEST_F(EntitiesManagerTest, View_FiltersEntities)
     }
 
     EXPECT_EQ(count, 1);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Entity_YieldsAliveHandlesWithComponents)
+{
+    std::set<Entity> created;
+    created.insert(manager.Create<Entity>(Create2DPrefab(1.f, 2.f)));
+    created.insert(manager.Create<Entity>(Create2DPrefab(3.f, 4.f)));
+    created.insert(manager.Create<Entity>(Create2DPrefab(5.f, 6.f)));
+
+    std::set<Entity> seen;
+
+    for (auto [entity, pos] : manager.view<Entity, Position2d>())
+    {
+        EXPECT_TRUE(manager.IsAlive(entity));
+        // The handle yielded next to the components resolves to the very same slot.
+        EXPECT_EQ(&pos, &manager.GetComponent<Position2d>(entity));
+        seen.insert(entity);
+    }
+
+    EXPECT_EQ(seen, created);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Entity_MultipleComponents)
+{
+    const auto a = manager.Create<Entity>(CreateMixedPrefab());
+    const auto b = manager.Create<Entity>(CreateMixedPrefab());
+    const std::set<Entity> created {a, b};
+
+    std::set<Entity> seen;
+    size_t count = 0;
+
+    for (auto [entity, pos2d, pos3d] : manager.view<Entity, Position2d, Position3d>())
+    {
+        EXPECT_FLOAT_EQ(pos2d.x, 10.f);
+        EXPECT_FLOAT_EQ(pos3d.z, 3.f);
+        EXPECT_EQ(&pos2d, &manager.GetComponent<Position2d>(entity));
+        EXPECT_EQ(&pos3d, &manager.GetComponent<Position3d>(entity));
+        seen.insert(entity);
+        count++;
+    }
+
+    EXPECT_EQ(count, 2u);
+    EXPECT_EQ(seen, created);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Entity_DoesNotAffectArchetypeFilter)
+{
+    const Entity twoD = manager.Create<Entity>(Create2DPrefab());
+    manager.Create<Entity>(Create3DPrefab());   // lacks Position2d — must be skipped
+
+    std::set<Entity> seen;
+
+    for (auto [entity, pos2d] : manager.view<Entity, Position2d>())
+    {
+        (void)pos2d;
+        seen.insert(entity);
+    }
+
+    ASSERT_EQ(seen.size(), 1u);
+    EXPECT_EQ(*seen.begin(), twoD);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Entity_ReferencesAreWritable)
+{
+    const Entity e = manager.Create<Entity>(Create2DPrefab(1.f, 1.f));
+
+    for (auto [entity, pos] : manager.view<Entity, Position2d>())
+    {
+        EXPECT_EQ(entity, e);
+        pos.x = 42.f;   // write through the reference yielded beside the handle
+    }
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(e).x, 42.f);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Entity_HandleUsableWithManagerApi)
+{
+    manager.Create<Entity>(Create2DPrefab());
+    manager.Create<Entity>(Create2DPrefab());
+    manager.Create<Entity>(Create2DPrefab());
+
+    std::vector<Entity> harvested;
+    for (auto [entity, pos] : manager.view<Entity, Position2d>())
+    {
+        (void)pos;
+        harvested.push_back(entity);
+    }
+
+    ASSERT_EQ(harvested.size(), 3u);
+    for (const Entity e : harvested)
+    {
+        EXPECT_TRUE(manager.IsAlive(e));
+        manager.Destroy(e);
+    }
+
+    EXPECT_EQ(manager.size(), 0u);
+
+    size_t remaining = 0;
+    for (auto [entity, pos] : manager.view<Entity, Position2d>()) { (void)entity; (void)pos; ++remaining; }
+    EXPECT_EQ(remaining, 0u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_EntityOnly_YieldsEveryAliveEntity)
+{
+    std::set<Entity> created;
+    created.insert(manager.Create<Entity>(Create2DPrefab()));
+    created.insert(manager.Create<Entity>(Create3DPrefab()));
+    created.insert(manager.Create<Entity>(CreateMixedPrefab()));
+
+    std::set<Entity> seen;
+    for (auto [entity] : manager.view<Entity>())
+        seen.insert(entity);
+
+    EXPECT_EQ(seen, created);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Entity_SpansMultipleChunks)
+{
+    constexpr size_t total = MAX_ENTITIES_IN_CHUNK + 16;
+
+    std::set<Entity> created;
+    for (size_t i = 0; i < total; ++i)
+        created.insert(manager.Create<Entity>(Create2DPrefab(static_cast<float>(i), 0.f)));
+    ASSERT_EQ(created.size(), total);
+
+    std::set<Entity> seen;
+    for (auto [entity, pos] : manager.view<Entity, Position2d>())
+    {
+        // Correct handle even after crossing chunk boundaries.
+        EXPECT_EQ(&pos, &manager.GetComponent<Position2d>(entity));
+        seen.insert(entity);
+    }
+
+    EXPECT_EQ(seen.size(), total);
+    EXPECT_EQ(seen, created);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_PresentAndAbsent)
+{
+    manager.Create(Create2DPrefab(1.f, 2.f));    // Position2d only -> optional absent
+    manager.Create(CreateMixedPrefab());         // Position2d + Position3d -> optional present
+
+    size_t with2dOnly = 0;
+    size_t withBoth = 0;
+
+    for (auto [pos2d, pos3d] : manager.view<Position2d, Position3d*>())
+    {
+        static_assert(std::is_pointer_v<decltype(pos3d)>);
+
+        if (pos2d.x == 1.f)
+        {
+            EXPECT_EQ(pos3d, nullptr);
+            ++with2dOnly;
+        }
+        else
+        {
+            EXPECT_FLOAT_EQ(pos2d.x, 10.f);
+            ASSERT_NE(pos3d, nullptr);
+            EXPECT_FLOAT_EQ(pos3d->z, 3.f);
+            ++withBoth;
+        }
+    }
+
+    EXPECT_EQ(with2dOnly, 1u);
+    EXPECT_EQ(withBoth, 1u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_DoesNotAffectArchetypeFilter)
+{
+    manager.Create(Create2DPrefab());      // matches (has Position2d)
+    manager.Create(CreateMixedPrefab());   // matches (has Position2d)
+    manager.Create(Create3DPrefab());      // excluded (no Position2d)
+
+    size_t count = 0;
+    for (auto [pos2d, pos3d] : manager.view<Position2d, Position3d*>())
+    {
+        (void)pos2d; (void)pos3d;
+        ++count;
+    }
+
+    EXPECT_EQ(count, 2u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_PointerIsWritable)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    for (auto [pos2d, pos3d] : manager.view<Position2d, Position3d*>())
+    {
+        (void)pos2d;
+        ASSERT_NE(pos3d, nullptr);
+        pos3d->z = 42.f;   // write through the optional pointer
+    }
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(e).z, 42.f);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_WithEntity_MatchesTryGetComponent)
+{
+    manager.Create(Create2DPrefab());
+    manager.Create(CreateMixedPrefab());
+
+    size_t count = 0;
+    for (auto [entity, pos2d, pos3d] : manager.view<Entity, Position2d, Position3d*>())
+    {
+        (void)pos2d;
+        // The optional pointer is exactly what TryGetComponent would return for this entity.
+        EXPECT_EQ(pos3d, manager.TryGetComponent<Position3d>(entity));
+        ++count;
+    }
+
+    EXPECT_EQ(count, 2u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_OnlyOptional_VisitsEveryEntity)
+{
+    manager.Create(Create2DPrefab());      // no Position3d -> nullptr
+    manager.Create(CreateMixedPrefab());   // has Position3d
+    manager.Create(Create3DPrefab());      // has Position3d
+
+    size_t total = 0;
+    size_t present = 0;
+
+    for (auto [pos3d] : manager.view<Position3d*>())
+    {
+        ++total;
+        if (pos3d != nullptr)
+            ++present;
+    }
+
+    EXPECT_EQ(total, 3u);     // empty required filter -> every alive entity
+    EXPECT_EQ(present, 2u);
+}
+
+
+TEST_F(EntitiesManagerTest, View_Optional_RequiredStillFilters)
+{
+    manager.Create(CreateMixedPrefab());   // has both
+    manager.Create(Create3DPrefab());      // has Position3d but NOT Position2d
+
+    // Position3d required, Position2d optional: only entities owning Position3d match.
+    size_t count = 0;
+    size_t with2d = 0;
+    for (auto [pos3d, pos2d] : manager.view<Position3d, Position2d*>())
+    {
+        (void)pos3d;
+        ++count;
+        if (pos2d != nullptr)
+            ++with2d;
+    }
+
+    EXPECT_EQ(count, 2u);
+    EXPECT_EQ(with2d, 1u);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_RequiredAndOptional_Present)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d*>(e);
+
+    static_assert(std::is_pointer_v<decltype(pos3d)>);
+
+    EXPECT_EQ(&pos2d, &manager.GetComponent<Position2d>(e));
+    ASSERT_NE(pos3d, nullptr);
+    EXPECT_EQ(pos3d, manager.TryGetComponent<Position3d>(e));
+    EXPECT_FLOAT_EQ(pos2d.x, 10.f);
+    EXPECT_FLOAT_EQ(pos3d->z, 3.f);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_OptionalAbsent_IsNull)
+{
+    const Entity e = manager.Create<Entity>(Create2DPrefab(1.f, 2.f));
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d*>(e);
+
+    EXPECT_FLOAT_EQ(pos2d.x, 1.f);
+    EXPECT_EQ(pos3d, nullptr);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_ReferencesAreWritable)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d*>(e);
+    ASSERT_NE(pos3d, nullptr);
+
+    pos2d.x = 7.f;     // required reference
+    pos3d->z = 9.f;    // optional pointer
+
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(e).x, 7.f);
+    EXPECT_FLOAT_EQ(manager.GetComponent<Position3d>(e).z, 9.f);
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_AllRequired)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    auto [pos2d, pos3d] = manager.GetComponents<Position2d, Position3d>(e);
+
+    EXPECT_EQ(&pos2d, &manager.GetComponent<Position2d>(e));
+    EXPECT_EQ(&pos3d, &manager.GetComponent<Position3d>(e));
+}
+
+
+TEST_F(EntitiesManagerTest, GetComponents_ConstOverload)
+{
+    const Entity e = manager.Create<Entity>(CreateMixedPrefab());
+
+    const EntitiesManager& constManager = manager;
+    std::tuple<const Position2d&, const Position3d*> components =
+        constManager.GetComponents<Position2d, Position3d*>(e);
+
+    EXPECT_FLOAT_EQ(std::get<0>(components).x, 10.f);
+    ASSERT_NE(std::get<1>(components), nullptr);
+    EXPECT_FLOAT_EQ(std::get<1>(components)->z, 3.f);
 }
 
 
@@ -1522,7 +1857,7 @@ TEST_F(EntitiesManagerTest, Migration_InterleavedMigrations_PerEntityValuesStayC
 // and assert that the bookkeeping fields of ArchetypedChunks are updated correctly:
 //   - m_chunksEntityCount   : alive count per chunk
 //   - m_hasFreeEntityInChunk: which chunks still have free capacity
-//   - m_localIndexToEntityId: local-slot -> global entity id mapping (incl. swap-remove relocation)
+//   - m_localIndexToEntityId: local-slot -> Entity mapping (id + version; incl. swap-remove relocation)
 
 class ArchetypedChunksStateTest : public ::testing::Test
 {
@@ -1570,7 +1905,8 @@ TEST_F(ArchetypedChunksStateTest, Create_TracksCount_FreeBit_AndMapping)
     {
         EXPECT_EQ(getChunkByEntityIndex(locationOf(entities[i]).chunkEntityIndex), 0u);
         EXPECT_EQ(getLocalEntityIndex(locationOf(entities[i]).chunkEntityIndex), i);
-        EXPECT_EQ(chunks.m_localIndexToEntityId[0][i], entities[i].id);
+        EXPECT_EQ(chunks.m_localIndexToEntityId[0][i].id, entities[i].id);
+        EXPECT_EQ(chunks.m_localIndexToEntityId[0][i].version, entities[i].version);
     }
 }
 
@@ -1592,9 +1928,11 @@ TEST_F(ArchetypedChunksStateTest, DestroyMiddle_SwapRemoveUpdatesMappingAndCount
     EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
 
     // c now lives in the slot b used to occupy; the freed tail slot is cleared.
-    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0], a.id);
-    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1], c.id);
-    EXPECT_EQ(chunks.m_localIndexToEntityId[0][2], INVALID_ENTITY_ID);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0].id, a.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0].version, a.version);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1].id, c.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1].version, c.version);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][2], Entity{});
 
     // The manager-side location of c must follow the relocation.
     EXPECT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 1u);
@@ -1616,8 +1954,9 @@ TEST_F(ArchetypedChunksStateTest, DestroyLast_NoSwapRemove_OnlyClearsTail)
 
     EXPECT_EQ(chunks.m_chunksEntityCount[0], 1u);
     EXPECT_TRUE(chunks.m_hasFreeEntityInChunk.test(0));
-    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0], a.id);
-    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1], INVALID_ENTITY_ID);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0].id, a.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][0].version, a.version);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[0][1], Entity{});
 
     EXPECT_TRUE(manager.IsAlive(a));
     EXPECT_FALSE(manager.IsAlive(b));
@@ -1652,7 +1991,8 @@ TEST_F(ArchetypedChunksStateTest, FillChunk_ResetsFreeBit_AndAllocatesSecondChun
 
     EXPECT_EQ(getChunkByEntityIndex(locationOf(overflow).chunkEntityIndex), 1u);
     EXPECT_EQ(getLocalEntityIndex(locationOf(overflow).chunkEntityIndex), 0u);
-    EXPECT_EQ(chunks.m_localIndexToEntityId[1][0], overflow.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[1][0].id, overflow.id);
+    EXPECT_EQ(chunks.m_localIndexToEntityId[1][0].version, overflow.version);
     EXPECT_FLOAT_EQ(manager.GetComponent<Position2d>(overflow).x, 123.f);
 }
 
@@ -1669,16 +2009,19 @@ TEST_F(ArchetypedChunksStateTest, Migration_UpdatesBothSourceAndDestinationChunk
     ArchetypedChunks& source = chunksOf(a);
     EXPECT_EQ(source.m_chunksEntityCount[0], 2u);
     EXPECT_TRUE(source.m_hasFreeEntityInChunk.test(0));
-    EXPECT_EQ(source.m_localIndexToEntityId[0][0], a.id);
-    EXPECT_EQ(source.m_localIndexToEntityId[0][1], c.id);            // c relocated here
-    EXPECT_EQ(source.m_localIndexToEntityId[0][2], INVALID_ENTITY_ID);
+    EXPECT_EQ(source.m_localIndexToEntityId[0][0].id, a.id);
+    EXPECT_EQ(source.m_localIndexToEntityId[0][0].version, a.version);
+    EXPECT_EQ(source.m_localIndexToEntityId[0][1].id, c.id);            // c relocated here
+    EXPECT_EQ(source.m_localIndexToEntityId[0][1].version, c.version);
+    EXPECT_EQ(source.m_localIndexToEntityId[0][2], Entity{});
     EXPECT_EQ(getLocalEntityIndex(locationOf(c).chunkEntityIndex), 1u);
 
     // --- Destination archetype ({Position2d, Position3d}) bookkeeping ---
     ArchetypedChunks& dest = chunksOf(b);
     EXPECT_EQ(dest.m_chunksEntityCount[0], 1u);
     EXPECT_TRUE(dest.m_hasFreeEntityInChunk.test(0));
-    EXPECT_EQ(dest.m_localIndexToEntityId[0][0], b.id);
+    EXPECT_EQ(dest.m_localIndexToEntityId[0][0].id, b.id);
+    EXPECT_EQ(dest.m_localIndexToEntityId[0][0].version, b.version);
     EXPECT_EQ(getChunkByEntityIndex(locationOf(b).chunkEntityIndex), 0u);
     EXPECT_EQ(getLocalEntityIndex(locationOf(b).chunkEntityIndex), 0u);
 

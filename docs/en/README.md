@@ -18,6 +18,7 @@ dependency DAG; events and structural changes flow through type-safe queues.
 | [Events](./guides/events.md) | `ECS_EVENT`, `OnEvent` vs `PushEvent`, priority |
 | [Commands](./guides/commands.md) | Deferred `CreateEntityCmd` / `DeleteEntityCmd` / `AddComponentsCmd` |
 | [Recipes & cooking](./guides/recipes-and-cooking.md) | `Recipe`, `CookCmd`, `PrefabEvt` / `CreatedEntityEvt` |
+| [Jobs & threading](./guides/jobs.md) | `IJobScheduler`, `SetScheduler`, pluggable parallel backends |
 
 ## 📚 API reference
 
@@ -36,6 +37,7 @@ Generated from the source docstrings (run
 |--------|------|-------|
 | `ecs/Registry.hpp` | Central hub: owns entities, events, systems, context, command queue | [Getting started](./guides/getting-started.md) |
 | `ecs/ISystem.hpp` | CRTP base for systems + the `ECS_*` macros | [Systems & scheduling](./guides/systems-and-scheduling.md) |
+| `ecs/Context.hpp` | Main-thread-guarded adapter over `collections::SingletonStore` | [Jobs & threading](./guides/jobs.md) |
 
 ### `include/ecs/entities` — entities & storage
 
@@ -66,6 +68,16 @@ Generated from the source docstrings (run
 | `systems/EventSystem.hpp` | ECS event bridge: `OnEvent` / `PushEvent` / `FlushEvents` | [Events](./guides/events.md) |
 | `systems/SystemRegistrator.hpp` | Static auto-registration of system types | [Systems & scheduling](./guides/systems-and-scheduling.md) |
 | `systems/IBaseSystem.hpp` | Non-templated system interface | — |
+
+### `include/ecs/jobs` — threading port
+
+| Header | Role | Guide |
+|--------|------|-------|
+| `jobs/IJobScheduler.hpp` | Abstract threading backend (`ParallelFor`, `Run`, `Wait`) | [Jobs & threading](./guides/jobs.md) |
+| `jobs/SerialJobScheduler.hpp` | Default inline backend; core works with no threads | [Jobs & threading](./guides/jobs.md) |
+| `jobs/JobHandle.hpp` | Opaque value handle to in-flight work | [Jobs & threading](./guides/jobs.md) |
+| `jobs/FunctionRef.hpp` | Non-owning, allocation-free callable ref for hot loop bodies | [Jobs & threading](./guides/jobs.md) |
+| `jobs/ThreadAffinity.hpp` | `ECS_ASSERT_MAIN_THREAD` — debug main-thread checks for structural ops | [Jobs & threading](./guides/jobs.md) |
 
 ### `include/ecs/registry` — registry-level features
 

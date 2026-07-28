@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 4.0)
 project(R-ECS
-    VERSION 0.11.3
+    VERSION 0.12.6
     DESCRIPTION "Implementation of the Replication-Entities-Components-Systems in C++ using templates and modern language features."
     LANGUAGES CXX
 )
@@ -13,20 +13,75 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 endif()
 
-add_library(R-ECS INTERFACE)
-
-target_include_directories(R-ECS
-    INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+add_library(R-ECS
+    STATIC
+        src/recs/Registry.cpp
+        src/recs/EntityWrapper.cpp
+        src/recs/SystemsManager.cpp
+        src/recs/SystemsSchedule.cpp
+        src/recs/Commands.cpp
+        src/recs/ThreadAffinity.cpp
+        src/recs/SerialJobScheduler.cpp
 )
 
+target_include_directories(R-ECS
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/recs
+)
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark && Examples = = = = = = = = = = = = = = = = = = = = = = = = =
+# = = = = = = = = = = = = = = = = = = = = = = = = = all CMake options = = = = = = = = = = = = = = = = = = = = = = = = =
 
 option(IS_DOCS_GEN "Configure for documentation generation only (skip tests/benchmarks)" OFF)
 option(EXAMPLES_ENABLE "Build R-ECS examples (skip tests/benchmarks)" OFF)
 option(TEST_ENABLE "Configure for tests" OFF)
 option(BENCHMARK_ENABLE "Configure for benchmarks" OFF)
+option(RECS_BACKEND_ONETBB "Build the R-ECS::back_oneTBB job/service backend (requires oneTBB)" OFF)
+option(RECS_ONETBB_FETCH "Fetch oneTBB with FetchContent when find_package(TBB) fails" ON)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = Optional backends = = = = = = = = = = = = = = = = = = = = = = = = =
+
+if(RECS_BACKEND_ONETBB)
+    find_package(TBB CONFIG QUIET)
+
+    if(NOT TBB_FOUND AND RECS_ONETBB_FETCH)
+        message("= = = = = = = = = R-ECS fetching oneTBB = = = = = = = = =")
+        include(FetchContent)
+        set(TBB_TEST OFF CACHE BOOL "" FORCE)           # don't build oneTBB's own tests
+        set(TBB_STRICT OFF CACHE BOOL "" FORCE)         # don't let oneTBB warnings fail our build
+        set(TBBMALLOC_BUILD OFF CACHE BOOL "" FORCE)    # only the scheduler is needed
+        FetchContent_Declare(
+                onetbb
+                GIT_REPOSITORY https://github.com/uxlfoundation/oneTBB.git
+                GIT_TAG v2022.3.0
+        )
+        FetchContent_MakeAvailable(onetbb)
+        set(TBB_FOUND TRUE)
+    endif()
+
+    if(TBB_FOUND)
+        message("= = = = = = = = = R-ECS oneTBB backend enable = = = = = = = = =")
+        add_library(R-ECS-back-onetbb
+            STATIC
+                src/recs-tbb/TbbJobScheduler.cpp
+        )
+        add_library(R-ECS::back_oneTBB ALIAS R-ECS-back-onetbb)
+        target_link_libraries(R-ECS-back-onetbb
+            PUBLIC
+                R-ECS
+            PRIVATE
+                TBB::tbb
+        )
+        target_include_directories(R-ECS-back-onetbb
+            PUBLIC
+                ${CMAKE_CURRENT_SOURCE_DIR}/include/recs-tbb
+        )
+    else()
+        message(WARNING "[R-ECS] RECS_BACKEND_ONETBB=ON but oneTBB was not found and RECS_ONETBB_FETCH=OFF — backend skipped")
+    endif()
+endif()
+
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = Tests && Benchmark && Examples = = = = = = = = = = = = = = = = = = = = = = = = =
 
 if (EXAMPLES_ENABLE)
 
@@ -59,32 +114,45 @@ if(TEST_ENABLE)
 
     # Target
     add_executable(test_recs
+            test/main.cpp
             test/reg/Registrator.cpp
             test/event/Event.cpp
             test/event/Listener.cpp
             test/event/EventSystem.cpp
             test/collections/BitSet.cpp
-            test/collections/Context.cpp
+            test/collections/SingletonStore.cpp
             test/collections/CommandQueue.cpp
             test/collections/DirectedAcyclicGraph.cpp
             test/ecs/AutoRegistration.cpp
             test/ecs/EntitiesManager.cpp
+            test/ecs/Tags.cpp
             test/ecs/SystemsEvent.cpp
             test/ecs/EntitiesManagerStressTest.cpp
             test/ecs/Schedule.cpp
             test/ecs/EntityCommands.cpp
             test/ecs/SystemsManager.cpp
+            test/ecs/SystemsAccessAndDisable.cpp
+            test/ecs/SystemsResubscribe.cpp
+            test/ecs/SystemsToggleEvents.cpp
+            test/jobs/ParallelForEach.cpp
     )
+
     target_include_directories(test_recs
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/test/include
     )
     target_link_libraries(test_recs
         PRIVATE
-            gtest_main
-            gmock_main
+            gtest
+            gmock
             R-ECS
     )
+    # oneTBB backend tests are compiled only when that backend is built.
+    if(TARGET R-ECS-back-onetbb)
+        message("= = = = = = = = = R-ECS oneTBB backend tests enable = = = = = = = = =")
+        target_sources(test_recs PRIVATE test/jobs/TbbJobScheduler.cpp)
+        target_link_libraries(test_recs PRIVATE R-ECS::back_oneTBB)
+    endif()
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang")
         target_compile_options(test_recs PRIVATE -fbracket-depth=1024)
     endif()
@@ -139,9 +207,11 @@ if (BENCHMARK_ENABLE)
 
     # Target
     add_executable(recs_bench
+            benchmarks/main.cpp
             benchmarks/entities/ecs.cpp
             benchmarks/entities/entt.cpp
             benchmarks/entities/flecs.cpp
+            benchmarks/jobs/serial.cpp
     )
 
     target_include_directories(recs_bench
@@ -152,11 +222,20 @@ if (BENCHMARK_ENABLE)
     target_link_libraries(recs_bench
         PRIVATE
             benchmark::benchmark
-            benchmark::benchmark_main
             R-ECS
             EnTT::EnTT
             flecs::flecs
     )
+
+    # TbbJobScheduler benchmarks need the oneTBB backend — build them only when
+    # it is available (-DRECS_BACKEND_ONETBB=ON).
+    if(TARGET R-ECS::back_oneTBB)
+        target_sources(recs_bench PRIVATE benchmarks/jobs/tbb.cpp)
+        target_link_libraries(recs_bench PRIVATE R-ECS::back_oneTBB)
+    else()
+        message("[R-ECS] TbbJobScheduler benchmarks need -DRECS_BACKEND_ONETBB=ON — skipped")
+    endif()
+
     if(TARGET benchmark)
         target_compile_options(benchmark PRIVATE -Wno-format-nonliteral)
     endif()
@@ -170,18 +249,35 @@ endif()
 if(EXAMPLES_ENABLE)
     message("= = = = = = = = = R-ECS EXAMPLES enable = = = = = = = = =")
 
+    # Core examples run on the default SerialJobScheduler — link only R-ECS.
     set(RECS_EXAMPLES
         Commands
         Events
         RecipesAndCooking
         Simple
         SystemsWithDependencies
+        Tags
     )
 
     foreach(EXAMPLE ${RECS_EXAMPLES})
         add_executable(example_${EXAMPLE} examples/${EXAMPLE}.cpp)
         target_link_libraries(example_${EXAMPLE} PRIVATE R-ECS)
     endforeach()
+
+    # Jobs/Services install TbbJobScheduler — they need the oneTBB backend.
+    set(RECS_TBB_EXAMPLES
+        Jobs
+        Services
+    )
+
+    if(TARGET R-ECS::back_oneTBB)
+        foreach(EXAMPLE ${RECS_TBB_EXAMPLES})
+            add_executable(example_${EXAMPLE} examples/${EXAMPLE}.cpp)
+            target_link_libraries(example_${EXAMPLE} PRIVATE R-ECS R-ECS::back_oneTBB)
+        endforeach()
+    else()
+        message("[R-ECS] Examples ${RECS_TBB_EXAMPLES} need -DRECS_BACKEND_ONETBB=ON — skipped")
+    endif()
 else()
     message("[R-ECS] EXAMPLES disable")
 endif()

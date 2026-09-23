@@ -22,9 +22,9 @@ namespace ecs
      * during Init), then have parallel systems read them with get<T>(). Use
      * getOrEmplace only on the main thread, since it may construct.
      */
-    class Context final : protected collections::SingletonStore
+    class Context final : protected collections::SingletonStore<>
     {
-        using Super = collections::SingletonStore;
+        using Super = collections::SingletonStore<>;
     public:
         using Super::SingletonStore;
 

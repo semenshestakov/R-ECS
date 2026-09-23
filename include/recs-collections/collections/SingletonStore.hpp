@@ -1,6 +1,10 @@
 #pragma once
 #include <unordered_map>
 #include <memory>
+#include <functional>
+
+#include "AllocatorPolicy.hpp"
+#include "MutexPolicy.hpp"
 
 
 namespace collections
@@ -18,25 +22,35 @@ namespace collections
      * The class employs a type-erasure technique with a polymorphic base class to store
      * instances of arbitrary types while maintaining type safety. This allows the container
      * to hold heterogeneous types in a single homogeneous container. All stored objects
-     * are managed via std::unique_ptr, ensuring automatic cleanup when the SingletonStore is
-     * destroyed.
+     * are managed via a type-erased smart pointer, ensuring automatic cleanup when the
+     * SingletonStore is destroyed.
      *
      * Key features:
      * - Type-safe access: retrieve instances by their type with compile-time guarantees
      * - Automatic construction: instances are created on-demand when accessed
      * - Move-only semantics: prevents accidental copying of unique resources
-     * - Thread-unsafe: designed for single-threaded use (no internal synchronization)
+     * - Opt-in thread safety: pass a real mutex type as @p Mutex to guard every operation
+     *   with it; the default (`void`) disables locking entirely, at no runtime cost
+     * - Opt-in custom allocation: pass an allocator type as @p Alloc to allocate/construct/
+     *   destroy/deallocate stored instances through it; the default (`void`) uses plain new/delete
      *
      * The SingletonStore is particularly useful in ECS architectures for storing system-wide
      * resources, configuration objects, and shared services that need to be accessed
      * across different parts of the application without passing references explicitly.
      *
+     * @tparam Alloc Allocator type used to allocate stored instances, or `void` (default)
+     *         to use plain new/delete. See AllocatorPolicy.
+     * @tparam Mutex Mutex type used to synchronize access, or `void` (default) to disable
+     *         internal locking. See MutexPolicy.
+     *
      * @note This class is non-copyable but movable to support efficient transfer of ownership.
-     * @warning The container does not provide thread safety; external synchronization is
-     *          required for concurrent access from multiple threads.
+     * @warning With the default template arguments no synchronization is performed; pass a
+     *          mutex type as @p Mutex to make a given SingletonStore instance safe for
+     *          concurrent access from multiple threads.
      *
      */
-    class SingletonStore
+    template<typename Alloc = void, typename Mutex = void>
+    class SingletonStore : protected AllocatorPolicy<Alloc>, protected MutexPolicy<Mutex>
     {
     public:
         /**
@@ -50,16 +64,17 @@ namespace collections
         /**
          * @brief Destructor.
          *
-         * Automatically destroys all stored instances through their respective unique_ptr
-         * deleters. Each instance is properly destructed in the order of storage.
+         * Automatically destroys all stored instances through their respective deleters
+         * (which route through @p Alloc when one is configured). Each instance is properly
+         * destructed in the order of storage.
          */
         ~SingletonStore() = default;
 
         /**
          * @brief Deleted copy constructor.
          *
-         * Copying is disabled because std::unique_ptr members are non-copyable.
-         * This prevents accidental duplication of unique resources.
+         * Copying is disabled because the stored instances are held through a move-only
+         * smart pointer. This prevents accidental duplication of unique resources.
          */
         SingletonStore(const SingletonStore&) = delete;
 
@@ -96,13 +111,23 @@ namespace collections
          * @brief Constructs and stores a new instance of type T.
          *
          * Creates a new instance of type T using perfect forwarding of the provided
-         * arguments. If an instance of type T already exists, the behavior is
-         * implementation-defined (typically the new instance overwrites the old one).
+         * arguments. If an instance of type T already exists, it is replaced: the new
+         * instance is constructed, then the previous one is destroyed (any reference
+         * to it is invalidated). When @p Mutex is configured, the whole operation is
+         * performed under lock.
          *
          * @tparam T The type of object to construct.
          * @tparam Args The types of arguments to forward to T's constructor.
          * @param args The arguments to forward to T's constructor.
          * @return Reference to the newly constructed instance.
+         *
+         * @warning The mutex (when configured) only protects the container's internal
+         *          bookkeeping, not the lifetime of a previously returned reference: if
+         *          multiple threads call emplace<T>() for the *same* T concurrently,
+         *          each call still invalidates the instance any other thread may be
+         *          holding a reference to. Prefer creating shared instances up front on
+         *          one thread (e.g. during Init) and only reading them concurrently
+         *          afterwards with get<T>()/has<T>(), as ecs::Context's docs recommend.
          *
          * @example
          * @code
@@ -126,6 +151,7 @@ namespace collections
          * Accesses the previously stored instance of type T. The behavior is undefined
          * if no instance of type T exists in the SingletonStore (assertion will trigger in debug builds).
          * This method is more efficient than getOrEmplace() as it doesn't check for existence.
+         * When @p Mutex is configured, the lookup is performed under lock.
          *
          * @tparam T The type of instance to retrieve.
          * @return Reference to the stored instance of type T.
@@ -152,7 +178,9 @@ namespace collections
          *
          * Attempts to retrieve an existing instance of type T. If no instance exists,
          * it constructs a new one using the provided arguments and stores it.
-         * This method provides lazy initialization semantics.
+         * This method provides lazy initialization semantics. When @p Mutex is configured,
+         * the check and the construction happen under a single, uninterrupted lock, so two
+         * threads racing to lazily initialize the same type cannot both succeed.
          *
          * @tparam T The type of instance to retrieve or construct.
          * @tparam Args The types of arguments for construction (if needed).
@@ -178,6 +206,7 @@ namespace collections
          *
          * Performs a lookup to determine if an instance of the specified type has been
          * stored in the SingletonStore. This operation is constant time on average.
+         * When @p Mutex is configured, the lookup is performed under lock.
          *
          * @tparam T The type to check for existence.
          * @return true if an instance of type T exists, false otherwise.
@@ -196,7 +225,8 @@ namespace collections
          * @brief Removes the stored instance of type T from the SingletonStore.
          *
          * Destroys the stored instance of type T and removes it from the container.
-         * If no instance exists, the operation does nothing (no error).
+         * If no instance exists, the operation does nothing (no error). When @p Mutex
+         * is configured, the removal is performed under lock.
          *
          * @tparam T The type of instance to remove.
          *
@@ -247,6 +277,41 @@ namespace collections
             explicit Holder(Args... args) : value(std::forward<Args>(args)...) {}
         };
 
+        /// Type-erased deleter: plain delete when @p Alloc is void, otherwise a deleter
+        /// that routes destruction and deallocation back through the allocator that
+        /// performed the original allocation.
+        using Deleter = std::function<void(BaseHolder*)>;
+
+        /// Owning pointer to a stored instance's type-erased holder.
+        using HolderPtr = std::unique_ptr<BaseHolder, Deleter>;
+
+        /**
+         * @brief Allocates and constructs a Holder<T>, wiring up the matching deleter.
+         *
+         * When @p Alloc is configured, allocation/construction/destruction/deallocation
+         * all go through it (rebound to Holder<T>); the allocator used is captured by
+         * the deleter so the right allocator is used to free the memory later, even if
+         * it is a stateful instance. When @p Alloc is void, this is plain new, freed by
+         * plain delete.
+         *
+         * @tparam T The type to construct.
+         * @tparam Args The types of arguments to forward to T's constructor.
+         * @param args The arguments to forward to T's constructor.
+         * @return An owning, type-erased pointer to the new holder.
+         */
+        template<typename T, typename... Args>
+        HolderPtr makeHolder(Args&&... args);
+
+        /**
+         * @brief Core of emplace(), assuming the lock (if any) is already held.
+         *
+         * Exists so getOrEmplace() can perform its existence check and the construction
+         * under one uninterrupted critical section instead of releasing and re-acquiring
+         * the lock between them (which would reopen the race it exists to close).
+         */
+        template<typename T, typename... Args>
+        T& emplaceImpl(Args&&... args);
+
         using ctxId_t = std::size_t;        ///< Type alias for type identification keys
 
         /**
@@ -258,7 +323,7 @@ namespace collections
         static constexpr ctxId_t getStoreKey();
 
         /// Storage container mapping type IDs to their instances
-        std::unordered_map<ctxId_t, std::unique_ptr<BaseHolder>> m_data;
+        std::unordered_map<ctxId_t, HolderPtr> m_data;
     };
 
 } // namespace collections

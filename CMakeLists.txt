@@ -96,6 +96,7 @@ if(RECS_BACKEND_ONETBB)
             PUBLIC
                 ${CMAKE_CURRENT_SOURCE_DIR}/include/recs-tbb
         )
+        add_library(R-ECS::TTB ALIAS R-ECS-back-onetbb)
     else()
         message(WARNING "[R-ECS] RECS_BACKEND_ONETBB=ON but oneTBB was not found and RECS_ONETBB_FETCH=OFF — backend skipped")
     endif()

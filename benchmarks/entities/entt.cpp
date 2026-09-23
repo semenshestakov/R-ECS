@@ -92,8 +92,8 @@ BENCHMARK_F(EnTTBenchmark, View_100k)(benchmark::State& state)
         auto view = registry.view<Position2d, Position3d>();
         for (auto e : view)
         {
-            auto& pos2d = registry.get<Position2d>(e);
-            auto& pos3d = registry.get<Position3d>(e);
+            auto& pos2d = view.get<Position2d>(e);
+            auto& pos3d = view.get<Position3d>(e);
             benchmark::DoNotOptimize(pos2d);
             benchmark::DoNotOptimize(pos3d);
             ++count;
@@ -184,7 +184,6 @@ BENCHMARK_F(EnTTBenchmark, CreateDestroy_Cycles)(benchmark::State& state)
             benchmark::DoNotOptimize(0);
             state.SetItemsProcessed(BENCHMARK_M);
         }
-        state.SetBytesProcessed(int64_t(state.iterations()) * BENCHMARK_CYCLES * BENCHMARK_M * kP23Bytes * 2);
     }
 }
 

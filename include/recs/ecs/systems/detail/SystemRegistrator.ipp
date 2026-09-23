@@ -18,8 +18,6 @@ template<typename SystemCls>
 /* static */ ecs::SystemRegistrator::Registrator ecs::SystemRegistrator::Register()
 {
     Registrator reg = Registrator::Create<SystemCls>(typeid(SystemCls).name());
-    std::fprintf(stderr, "[RECS][reg] system=%s idx=%zu storage=%p slots=%zu\n",
-                 typeid(SystemCls).name(), reg.getIndex(), debugStorage(), debugSlots());
     for(const std::string& nameView: SystemCls::GetRegistryNames())
     {
         RegistryRegistrator::RegisterSystem(nameView, reg.getIndex());

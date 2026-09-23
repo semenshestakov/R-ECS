@@ -1,3 +1,5 @@
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = Head = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+
 cmake_minimum_required(VERSION 4.0)
 project(R-ECS
     VERSION 0.12.6
@@ -13,6 +15,20 @@ if(NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 endif()
 
+# = = = = = = = = = = = = = = = = = = = = = = = Library R-ECS-Collections = = = = = = = = = = = = = = = = = = = = = = =
+
+add_library(R-ECS-Collections
+    INTERFACE
+)
+
+target_include_directories(R-ECS-Collections
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/recs-collections
+)
+add_library(R-ECS::Collections ALIAS R-ECS-Collections)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = Library R-ECS = = = = = = = = = = = = = = = = = = = = = = = = = =
+
 add_library(R-ECS
     STATIC
         src/recs/Registry.cpp
@@ -27,6 +43,11 @@ add_library(R-ECS
 target_include_directories(R-ECS
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/recs
+)
+
+target_link_libraries(R-ECS
+    PUBLIC
+        R-ECS::Collections
 )
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = all CMake options = = = = = = = = = = = = = = = = = = = = = = = = =

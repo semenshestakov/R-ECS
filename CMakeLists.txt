@@ -27,6 +27,23 @@ target_include_directories(R-ECS-Collections
 )
 add_library(R-ECS::Collections ALIAS R-ECS-Collections)
 
+# = = = = = = = = = = = = = = = = = = = = = = = = = Library R-ECS-Event = = = = = = = = = = = = = = = = = = = = = = = = =
+
+add_library(R-ECS-Event
+    INTERFACE
+)
+
+target_include_directories(R-ECS-Event
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/recs-event
+)
+
+target_link_libraries(R-ECS-Event
+    INTERFACE
+        R-ECS::Collections
+)
+add_library(R-ECS::Event ALIAS R-ECS-Event)
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = Library R-ECS = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 add_library(R-ECS
@@ -48,6 +65,7 @@ target_include_directories(R-ECS
 target_link_libraries(R-ECS
     PUBLIC
         R-ECS::Collections
+        R-ECS::Event
 )
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = all CMake options = = = = = = = = = = = = = = = = = = = = = = = = =

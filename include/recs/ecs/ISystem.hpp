@@ -1,0 +1,413 @@
+#ifndef I_SYSTEM_HPP
+#define I_SYSTEM_HPP
+
+/**
+ * @file ISystem.hpp
+ * @brief Base interface template for all ECS systems with automatic event registration
+ *
+ * This header defines the core system interface that all concrete systems must inherit from.
+ * It provides automatic registration capabilities and event handling infrastructure.
+ */
+
+#include <array>
+#include "event/Listener.hpp"
+#include "common_recs/utils/ClassUtils.hpp"
+#include "systems/IBaseSystem.hpp"
+#include "systems/SystemRegistrator.hpp"
+
+
+namespace ecs
+{
+
+    /**
+     * @brief Template base class for all ECS systems
+     *
+     * @tparam SystemCls The concrete system class (CRTP pattern)
+     *
+     * This class serves as the foundation for all systems in the ECS architecture.
+     * It provides:
+     * - Automatic system registration with the Registry
+     * - Event registration and management capabilities
+     * - Default implementations of IBaseSystem interface methods
+     * - Type-safe event listener creation
+     *
+     * @note Uses CRTP (Curiously Recurring Template Pattern) for static polymorphism
+     * @note Automatically registers the system type during static initialization
+     *
+     * @par Example:
+     * @code
+     * class MySystem : public ISystem<MySystem> {
+     * public:
+     *     void Update(Registry& registry, const UpdateState& state) override
+     *     {
+     *         // System logic here
+     *     }
+     *
+     *     void onPlayerDied(Registry& registry, const PlayerDiedEvent& event);
+     *     ECS_EVENT(onPlayerDied, PlayerDiedEvent)
+     * };
+     * @endcode
+    */
+    template <typename SystemCls>
+    struct ISystem : IBaseSystem
+    {
+    DEEP_TEST_PROTECTED_ACCESS:
+        friend class SystemsManager;
+        using Super = ISystem<SystemCls>;                   ///< @brief Alias for the base class (ISystem<SystemCls>)
+        using SelfSystemCls = SystemCls;                    ///< @brief Alias for the concrete system class
+
+                                                            ///  @brief Event listener type alias for a specific event
+                                                            ///  @tparam Event The event type to listen for
+        template <class Event> using EventListener = event::Listener<event::callbackId_t, Registry&, const Event&>;
+
+    public:
+        /**
+         * @brief Default constructor
+         */
+        ISystem() : IBaseSystem() { }
+
+        /**
+         * @brief Creates a new instance of the concrete system
+         * @return Pointer to newly allocated system instance
+         *
+         * @note Implements IBaseSystem interface
+         */
+        [[nodiscard]] IBaseSystem* New() const override;
+
+        /**
+         * @brief Gets the type name of the concrete system
+         * @return string_view containing the demangled type name
+         *
+         * @note Implements IBaseSystem interface
+         */
+        [[nodiscard]] std::string_view name() const override;
+
+        /**
+         * @brief Initializes the system with given state
+         * @param state Initialization parameters
+         *
+         * @note Implements IBaseSystem interface
+         */
+        void Init(const InitState& state) override;
+
+        /**
+         * @brief Subscribes the system's event registrations to the provided EventSystem.
+         *
+         * Executes all previously registered event-binding functions stored in the system
+         * and attaches them to the given EventSystem instance. Each function typically
+         * binds the system's handlers to specific events.
+         *
+         * Subscription is guarded by an internal flag so this method attaches the
+         * handlers only once while the system stays enabled; the registration
+         * functions are retained so Unsubscribe()/Subscribe() can detach and
+         * re-attach them when the system is toggled. To refresh handler priorities
+         * later (e.g. after the schedule is recomputed) use SetEventsPriority(),
+         * which reorders in place rather than re-subscribing.
+         *
+         * @tparam SystemCls Concrete system class type used for CRTP-based system design.
+         *
+         * @param state Subscription state containing a reference to the EventSystem
+         *              and additional subscription parameters such as priority.
+         */
+        void Subscribe(const SubscribeState& state) override;
+
+        /**
+         * @brief Detaches every handler this system registered from the event system.
+         *
+         * Calls clear() on each owned listener (detaching the callbacks and
+         * resetting the listener's event pointer) and marks the system as not
+         * subscribed, so a later Subscribe() re-attaches the handlers cleanly.
+         * Safe to call when the system is already unsubscribed (no-op).
+         */
+        void Unsubscribe() override;
+
+        /**
+         * @brief Updates the dispatch priority of all this system's event handlers.
+         *
+         * Applies the given priority to every listener registered by the system,
+         * reordering event dispatch in place without re-subscribing. Used by
+         * SystemsManager to keep event order aligned with the recomputed schedule.
+         *
+         * @param priority The new priority for this system's handlers.
+         */
+        void SetEventsPriority(event::priority_t priority) override;
+
+    DEEP_TEST_PROTECTED_ACCESS:
+        /**
+         * @brief Registers an event handler for a specific event type
+         *
+         * @tparam Event The event type to handle
+         * @param method Pointer to member function that handles the event
+         * @return std::unique_ptr<EventListener<Event>> Listener instance managing the subscription
+         *
+         * Creates and registers an event listener for the specified event type.
+         * The listener will automatically subscribe to the event when the event system
+         * becomes available during system initialization.
+         *
+         * @note The returned unique_ptr must be stored as a member to keep the listener alive
+         * @see ECS_EVENT macro for convenient member declaration
+         */
+        template <class Event>
+        auto RegisterEvent(void (SystemCls::*method)(Registry&, const Event&)) -> std::unique_ptr<ISystem::EventListener<Event>>;
+
+        /**
+         * @brief Collection of event registration functions
+         *
+         * Stores lambdas that will register event listeners when the event system
+         * becomes available during system initialization.
+         */
+        std::vector<std::function<void(EventSystem&, event::priority_t)>> m_registerEventFunctions;
+
+        /**
+         * @brief Raw pointers to every listener registered by this system.
+         *
+         * Used by SetEventsPriority() to reprioritize handlers in place. The
+         * listeners themselves are owned by the system's ECS_EVENT members, so these
+         * pointers stay valid for the system's lifetime.
+         */
+        std::vector<event::AbstractListener<event::callbackId_t>*> m_eventListeners;
+
+        /**
+         * @brief Whether this system's handlers are currently attached to the event system.
+         *
+         * Guards Subscribe() so registration runs once while enabled, and lets
+         * Unsubscribe() skip work when already detached. Toggled by Subscribe()
+         * and Unsubscribe().
+         */
+        bool m_subscribed = false;
+
+        /**
+         * @brief Creates an array of system hashes for the specified system types.
+         *
+         * This function generates a `std::array` containing the unique hash values of the provided
+         * system types. It is primarily used for dependency management, allowing systems to
+         * declare their dependencies on other systems in a type-safe manner.
+         *
+         * @tparam SystemsArgs The system types to generate hashes for. Each type should be
+         *                     a valid system class that has a corresponding `getSystemHash`
+         *                     specialization.
+         *
+         * @return std::array<systemHash_t, sizeof...(SystemsArgs)> A constexpr array containing
+         *         the hash values of all specified system types, in the same order as the
+         *         template arguments.
+         *
+         * @note This function is `constexpr`, meaning the array is fully evaluated at compile
+         *       time, resulting in zero runtime overhead.
+         *
+         * @warning The `getSystemHash<SystemType>()` function must be `constexpr` for each
+         *          system type to enable compile-time evaluation. If any of the hashes cannot
+         *          be computed at compile time, the function will fail to be `constexpr`.
+         *
+         * @example
+         * @code
+         * // Generate hashes for three systems
+         * constexpr auto hashes = GetSystemsHashArray<ResourceSystem, InputSystem, PhysicsSystem>();
+         * static_assert(hashes.size() == 3);
+         *
+         * // Use in dependency declaration
+         * ecs::DependentSystems GetDependents() const override {
+         *     static constexpr auto s_dependents = GetSystemsHashArray<ResourceSystem, InputSystem>();
+         *     return {s_dependents.cbegin(), s_dependents.size()};
+         * }
+         * @endcode
+         *
+         * @see getSystemHash
+         * @see ECS_DEPENDENT_SYSTEMS macro
+         */
+        template <typename... SystemsArgs>
+        static constexpr std::array<systemHash_t, sizeof...(SystemsArgs)> GetSystemsHashArray();
+
+        /**
+         * @brief Builds an array of component access entries from accessor tags.
+         *
+         * Each accessor argument is one of ecs::Read<C>, ecs::Write<C> or
+         * ecs::ReadWrite<C>. The resulting array pairs each component's hash with
+         * its access kind and is consumed by GetComponentAccess() / ECS_ACCESS.
+         *
+         * @tparam Accessors The accessor tag types (Read/Write/ReadWrite of a component).
+         * @return std::array<ComponentAccessEntry, sizeof...(Accessors)> The access entries.
+         *
+         * @see ECS_ACCESS macro
+         */
+        template <typename... Accessors>
+        static std::array<ComponentAccessEntry, sizeof...(Accessors)> GetComponentAccessArray();
+
+    public:
+        /**
+         * @brief Returns the factory registration names for this component/system
+         * @return constexpr std::array<std::string, 0> Empty array (no registration names)
+         *
+         * This function should be overridden in derived classes to provide one or more
+         * factory names under which the component/system can be instantiated.
+         *
+         * @note By default returns an empty array, meaning no factory registration
+         * @note Override this function in derived classes using ECS_REGISTRY macro
+         * @note Must be static constexpr to allow compile-time registration
+         *
+         * @see ECS_REGISTRY macro for convenient override
+         *
+         * @example
+         * @code
+         * struct MySystem : ISystem<MySystem> {
+         *     static constexpr auto GetRegistryNames() {
+         *         return std::array<std::string_view, 2>{"my_system", "alt_name"};
+         *     }
+         * };
+         * @endcode
+         */
+        static constexpr auto GetRegistryNames()
+        {
+            return std::array<std::string, 0>();
+        }
+
+        /**
+         * @brief Static flag that triggers automatic system registration
+         *
+         * This static member's initialization causes the system type to be
+         * automatically registered with the SystemRegistrator.
+         */
+        [[maybe_unused]] static inline const auto RegisterInfo = SystemRegistrator::Register<SystemCls>();
+    };
+
+} // namespace ecs
+
+
+/**
+ * @def ECS_EVENT
+ * @brief Macro for declaring and initializing an event listener member
+ *
+ * @param _METHOD_NAME Name of the event handler method
+ * @param _EVENT Type of the event to listen for
+ *
+ * This macro simplifies the declaration of event listeners in system classes.
+ * It declares a private unique_ptr member for the listener and initializes it
+ * using RegisterEvent, then restores public access.
+ *
+ * @par Usage example:
+ * @code
+ * class MySystem : public ISystem<MySystem>
+ * {
+ * private:
+ *     ECS_EVENT(onPlayerDied, PlayerDiedEvent)
+ *     void onPlayerDied(Registry& registry, const PlayerDiedEvent& event);
+ *
+ *     ECS_EVENT(onScoreChanged, ScoreChangedEvent)
+ *     void onScoreChanged(Registry& registry, const ScoreChangedEvent& event);
+ * };
+ * @endcode
+ *
+ * @note The macro temporarily changes access to private, then restores public
+ * @warning The macro must be used inside the class body
+ * @see RegisterEvent
+ */
+#define ECS_EVENT(_METHOD_NAME, _EVENT) \
+    private: \
+    std::unique_ptr<Super::EventListener<_EVENT>> m_listener_##_METHOD_NAME = Super::RegisterEvent<_EVENT>(&SelfSystemCls::_METHOD_NAME); \
+    public:
+
+
+/**
+ * @brief Macro to generate GetDependents() override implementation.
+ *
+ * This macro creates a GetDependents() method that returns a DependentSystems object
+ * containing the hashes of the specified system types. It's designed for use in
+ * system classes that need to declare their dependencies on other systems.
+ *
+ * @param ... The system types that this system depends on.
+ *
+ * @example
+ * @code
+ * class RenderSystem : public ISystem<RenderSystem> {
+ *     ECS_DEPENDENT_SYSTEMS(ResourceSystem, InputSystem, PhysicsSystem)
+ * };
+ * @endcode
+ */
+#define ECS_DEPENDENT_SYSTEMS(...)                                          \
+    ecs::DependentSystems GetDependents() const override {                  \
+    static const auto s_dependents = GetSystemsHashArray<__VA_ARGS__>();    \
+    return {s_dependents.data(), s_dependents.size() }; }
+
+
+/**
+ * @brief Macro to generate GetWeakDependents() override implementation.
+ *
+ * Declares soft dependencies on the given system types. Unlike
+ * ECS_DEPENDENT_SYSTEMS, weak dependencies only constrain execution order; they
+ * are never followed when disabling cascades through the schedule.
+ *
+ * @param ... The system types this system weakly depends on.
+ *
+ * @example
+ * @code
+ * class HudSystem : public ISystem<HudSystem> {
+ *     ECS_WEAK_DEPENDENT_SYSTEMS(ScoreSystem)   // run after ScoreSystem, but
+ *                                               // stay enabled if it is disabled
+ * };
+ * @endcode
+ */
+#define ECS_WEAK_DEPENDENT_SYSTEMS(...)                                     \
+    ecs::DependentSystems GetWeakDependents() const override {              \
+    static const auto s_weakDependents = GetSystemsHashArray<__VA_ARGS__>();\
+    return {s_weakDependents.data(), s_weakDependents.size() }; }
+
+
+/**
+ * @brief Macro to generate GetComponentAccess() override implementation.
+ *
+ * Declares the components a system reads and/or writes using accessor tags
+ * (ecs::Read<C>, ecs::Write<C>). The scheduler turns this into data ordering
+ * edges: a reader runs after every writer of the same component, and two writers
+ * are ordered deterministically.
+ *
+ * @param ... One or more accessor tags.
+ *
+ * @example
+ * @code
+ * class PhysicsSystem : public ISystem<PhysicsSystem> {
+ *     ECS_ACCESS(ecs::Write<Position>, ecs::Read<Velocity>)
+ * };
+ * @endcode
+ */
+#define ECS_ACCESS(...)                                                     \
+    ecs::ComponentAccess GetComponentAccess() const override {             \
+    static const auto s_access = GetComponentAccessArray<__VA_ARGS__>();    \
+    return {s_access.data(), s_access.size() }; }
+
+
+/**
+ * @brief Macro to define factory registration names for an ECS system
+ *
+ * This macro should be used within a system class definition to specify
+ * one or more factory names under which the system will be registered.
+ * The names enable factory-based creation and lookup of the system type,
+ * and associate the system with the named Registry created via
+ * Registry::Create(name).
+ *
+ * @param ... One or more string literals representing factory names
+ *
+ * @note The macro:
+ *       1. Defines GetRegistryNames() as a public static constexpr function
+ *       2. Returns a std::array<std::string, N> with the specified names
+ *
+ * @warning Must be used inside a system class derived from ISystem<T>
+ * @warning Names must be string literals (compile-time constants)
+ *
+ * @see ISystem
+ * @see SystemRegistrator::Register
+ * @see Registry::Create
+ *
+ * @example
+ * @code
+ * struct MySystem : ecs::ISystem<MySystem> {
+ *     ECS_REGISTRY("my_system", "alt_name")
+ * };
+ * @endcode
+ */
+#define ECS_REGISTRY(...)                                                                                   \
+public:                                                                                                     \
+static constexpr auto GetRegistryNames() {                                                                  \
+constexpr const char* _arr[] = {__VA_ARGS__};                                                              \
+return std::array<std::string, sizeof(_arr) / sizeof(_arr[0])>{__VA_ARGS__};}
+
+#endif
+#include "systems/detail/ISystem.ipp"

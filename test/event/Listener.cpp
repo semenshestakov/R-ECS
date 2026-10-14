@@ -514,3 +514,44 @@ TEST_F(ListenerSingleTest, ListenerSystemDelete)
     EXPECT_CALL(mock, callWithInt(42)).Times(0);
     (*intEvent)(42);
 }
+
+
+TEST_F(ListenerSingleTest, SetPriorityReordersDispatchInPlace)
+{
+    std::vector<std::string> order;
+
+    SingleListener<int> a;
+    SingleListener<int> b;
+    a.subscribe(intEvent.get(), eventCallback_t<int>([&order](int) { order.push_back("A"); }), 10);
+    b.subscribe(intEvent.get(), eventCallback_t<int>([&order](int) { order.push_back("B"); }), 5);
+
+    order.clear();
+    (*intEvent)(0);
+    EXPECT_EQ(order, (std::vector<std::string>{"A", "B"}));
+
+    // Recompute: lower A's priority below B's, in place (no clear / no re-subscribe).
+    a.setPriority(1);
+
+    order.clear();
+    (*intEvent)(0);
+    EXPECT_EQ(order, (std::vector<std::string>{"B", "A"}));   // order flipped
+    EXPECT_EQ(order.size(), 2u);                              // no duplicate callbacks
+}
+
+
+TEST_F(ListenerSingleTest, EventSetPriorityKeepsOrdering)
+{
+    std::vector<int> order;
+    const callbackId_t idA = intEvent->add([&order](int) { order.push_back(1); }, 10);
+    intEvent->add([&order](int) { order.push_back(2); }, 5);
+
+    order.clear();
+    (*intEvent)(0);
+    EXPECT_EQ(order, (std::vector<int>{1, 2}));
+
+    intEvent->setPriority(idA, 1);   // push callback 1 behind callback 2
+
+    order.clear();
+    (*intEvent)(0);
+    EXPECT_EQ(order, (std::vector<int>{2, 1}));
+}

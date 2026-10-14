@@ -32,6 +32,7 @@ function guideItems(lang: string, labels: string[]) {
     'events',
     'commands',
     'recipes-and-cooking',
+    'jobs',
   ]
   return slugs.map((slug, i) => ({ text: labels[i], link: `/${lang}/guides/${slug}` }))
 }
@@ -44,6 +45,7 @@ const enGuides = [
   'Events',
   'Commands',
   'Recipes & cooking',
+  'Jobs',
 ]
 
 const ruGuides = [
@@ -54,6 +56,7 @@ const ruGuides = [
   'События',
   'Команды',
   'Рецепты и приготовление',
+  'Параллельная обработка',
 ]
 
 export default defineConfig({
